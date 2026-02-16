@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -27,9 +25,7 @@ export default function AddPage() {
   const sp = useSearchParams();
   const token = useMemo(() => sp.get("token") ?? "", [sp]);
 
-  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">(
-    "idle"
-  );
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
@@ -84,13 +80,7 @@ export default function AddPage() {
         }}
       >
         <strong>Statut :</strong>{" "}
-        {status === "idle"
-          ? "—"
-          : status === "loading"
-          ? "⏳"
-          : status === "ok"
-          ? "✅"
-          : "❌"}{" "}
+        {status === "idle" ? "—" : status === "loading" ? "⏳" : status === "ok" ? "✅" : "❌"}{" "}
         {message}
       </div>
     </main>
