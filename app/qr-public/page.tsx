@@ -4,28 +4,23 @@ export const dynamic = "force-dynamic";
 import QRCode from "qrcode";
 import { headers } from "next/headers";
 
-async function getBaseUrl() {
-  // Option 1 : variable d'env sur Vercel
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (envUrl && envUrl.trim()) return envUrl.replace(/\/+$/, "");
+type SP = { token?: string };
 
-  // Option 2 : fallback via headers
+async function getBaseUrl() {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? "https";
   return host ? `${proto}://${host}` : "http://localhost:3000";
 }
 
-export default async function QrPublicPage({
-  searchParams,
-}: {
-  searchParams: { token?: string };
+export default async function QrPublicPage(props: {
+  searchParams?: SP | Promise<SP>;
 }) {
-  const token = typeof searchParams?.token === "string" ? searchParams.token : "";
+  const sp = await props.searchParams;
+  const token = typeof sp?.token === "string" ? sp.token : "";
 
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}/add?token=${encodeURIComponent(token)}`;
-
   const dataUrl = await QRCode.toDataURL(url, { margin: 2, width: 420 });
 
   return (
