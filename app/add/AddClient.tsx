@@ -41,28 +41,36 @@ export default function AddClient() {
 
       const ownerId = getOrCreateOwnerId();
 
-      const res = await fetch("/api/cards/claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, ownerId }),
-      });
+      try {
+        const res = await fetch("/api/cards/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, ownerId }),
+        });
 
-      const data: any = await res.json().catch(() => ({}));
+        const data: any = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
+        if (!res.ok) {
+          setStatus("error");
+          setMessage(data?.error ?? "Erreur inconnue");
+          return;
+        }
+
+        setStatus("ok");
+        setMessage(
+          `Carte ajoutée ✅ 
+cardId=${data?.cardId ?? "?"} 
+already=${String(data?.already)} 
+storeId=${data?.storeId ?? "?"}`
+        );
+
+        // 🚫 On désactive la redirection automatique pour debug
+        // router.replace("/wallet");
+
+      } catch (err: any) {
         setStatus("error");
-        setMessage(data?.error ?? "Erreur inconnue");
-        return;
+        setMessage(String(err?.message ?? err ?? "Erreur réseau"));
       }
-
-      setStatus("ok");
-      setMessage(
-        `Carte ajoutée ✅ cardId=${data?.cardId ?? "?"} already=${String(
-          data?.already
-        )} storeId=${data?.storeId ?? "?"} — redirection…`
-      );
-
-      router.replace("/wallet");
     }
 
     run();
@@ -82,12 +90,35 @@ export default function AddClient() {
           border: "1px solid #ddd",
           borderRadius: 12,
           background: status === "error" ? "#fee2e2" : "#f8fafc",
+          whiteSpace: "pre-line",
         }}
       >
         <strong>Statut :</strong>{" "}
-        {status === "idle" ? "—" : status === "loading" ? "⏳" : status === "ok" ? "✅" : "❌"}{" "}
+        {status === "idle"
+          ? "—"
+          : status === "loading"
+          ? "⏳"
+          : status === "ok"
+          ? "✅"
+          : "❌"}{" "}
         {message}
       </div>
+
+      {status === "ok" && (
+        <div style={{ marginTop: 16 }}>
+          <button
+            onClick={() => router.replace("/wallet")}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              cursor: "pointer",
+            }}
+          >
+            Aller au wallet
+          </button>
+        </div>
+      )}
     </main>
   );
 }
