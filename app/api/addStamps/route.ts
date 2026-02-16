@@ -45,12 +45,33 @@ export async function POST(req: Request) {
       if (data.ownerId !== ownerId)
         return { ok: false as const, status: 403 as const, error: "ownerId mismatch" };
 
-      if (data.status !== "active") {
+      // ✅ Compat / auto-migration:
+      // Ancien modèle: data.active = "store_demo_1" (ou true)
+      // Nouveau modèle: data.status = "active"
+      const status = typeof data.status === "string" ? data.status : undefined;
+
+      const legacyActive =
+        data.active === true ||
+        (typeof data.active === "string" && data.active === storeId) ||
+        (typeof data.active === "string" && data.active.toLowerCase() === "active");
+
+      const shouldTreatAsActive = status === "active" || (!status && legacyActive);
+
+      if (!shouldTreatAsActive) {
         return {
           ok: false as const,
           status: 400 as const,
           error: "cannot add stamps to non-active card",
         };
+      }
+
+      // Si on est dans l'ancien modèle, on "répare" la carte maintenant
+      if (status !== "active") {
+        tx.update(cardRef, {
+          status: "active",
+          active: FieldValue.delete(), // supprime l'ancien champ si présent
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
 
       const goal =
