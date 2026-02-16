@@ -47,7 +47,7 @@ export default function AddClient() {
         body: JSON.stringify({ token, ownerId }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data: any = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         setStatus("error");
@@ -56,7 +56,12 @@ export default function AddClient() {
       }
 
       setStatus("ok");
-      setMessage("Carte ajoutée ✅ Redirection vers le wallet…");
+      setMessage(
+        `Carte ajoutée ✅ cardId=${data?.cardId ?? "?"} already=${String(
+          data?.already
+        )} storeId=${data?.storeId ?? "?"} — redirection…`
+      );
+
       router.replace("/wallet");
     }
 
@@ -80,13 +85,7 @@ export default function AddClient() {
         }}
       >
         <strong>Statut :</strong>{" "}
-        {status === "idle"
-          ? "—"
-          : status === "loading"
-          ? "⏳"
-          : status === "ok"
-          ? "✅"
-          : "❌"}{" "}
+        {status === "idle" ? "—" : status === "loading" ? "⏳" : status === "ok" ? "✅" : "❌"}{" "}
         {message}
       </div>
     </main>
