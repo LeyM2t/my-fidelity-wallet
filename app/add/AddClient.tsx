@@ -63,15 +63,11 @@ export default function AddClient() {
         }
 
         setStatus("ok");
-        setMessage(
-          [
-            "Carte ajoutée ✅",
-            `cardId=${data?.cardId ?? "?"}`,
-            `already=${String(data?.already)}`,
-            `storeId=${data?.storeId ?? "?"}`,
-            `ownerId=${ownerId}`,
-          ].join("\n")
-        );
+        setMessage("Carte ajoutée ✅ Redirection vers le wallet…");
+
+        setTimeout(() => {
+          router.replace("/wallet");
+        }, 800);
       } catch (err: any) {
         setStatus("error");
         setMessage(String(err?.message ?? err ?? "Erreur réseau"));
@@ -79,7 +75,7 @@ export default function AddClient() {
     }
 
     run();
-  }, [token]);
+  }, [token, router]);
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
@@ -95,7 +91,6 @@ export default function AddClient() {
           border: "1px solid #ddd",
           borderRadius: 12,
           background: status === "error" ? "#fee2e2" : "#f8fafc",
-          whiteSpace: "pre-line",
         }}
       >
         <strong>Statut :</strong>{" "}
@@ -108,41 +103,6 @@ export default function AddClient() {
           : "❌"}{" "}
         {message}
       </div>
-
-      {status === "ok" && (
-        <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            onClick={() => router.replace("/wallet")}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              cursor: "pointer",
-            }}
-          >
-            Aller au wallet
-          </button>
-
-          <button
-            onClick={() => {
-              // reset pour retester sans recharger tout le site
-              startedRef.current = false;
-              setStatus("idle");
-              setMessage("");
-              // rappel du useEffect via un petit refresh soft
-              router.refresh();
-            }}
-            style={{
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid #ddd",
-              cursor: "pointer",
-            }}
-          >
-            Re-tester
-          </button>
-        </div>
-      )}
     </main>
   );
 }
