@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function getOrCreateOwnerId() {
@@ -28,8 +28,14 @@ export default function AddClient() {
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
+  // évite double run en dev (React StrictMode)
+  const startedRef = useRef(false);
+
   useEffect(() => {
     async function run() {
+      if (startedRef.current) return;
+      startedRef.current = true;
+
       if (!token) {
         setStatus("error");
         setMessage("Token manquant (ex: /add?token=XXXX)");
@@ -52,21 +58,20 @@ export default function AddClient() {
 
         if (!res.ok) {
           setStatus("error");
-          setMessage(data?.error ?? "Erreur inconnue");
+          setMessage(data?.error ?? `Erreur HTTP ${res.status}`);
           return;
         }
 
         setStatus("ok");
         setMessage(
-          `Carte ajoutée ✅ 
-cardId=${data?.cardId ?? "?"} 
-already=${String(data?.already)} 
-storeId=${data?.storeId ?? "?"}`
+          [
+            "Carte ajoutée ✅",
+            `cardId=${data?.cardId ?? "?"}`,
+            `already=${String(data?.already)}`,
+            `storeId=${data?.storeId ?? "?"}`,
+            `ownerId=${ownerId}`,
+          ].join("\n")
         );
-
-        // 🚫 On désactive la redirection automatique pour debug
-        // router.replace("/wallet");
-
       } catch (err: any) {
         setStatus("error");
         setMessage(String(err?.message ?? err ?? "Erreur réseau"));
@@ -74,7 +79,7 @@ storeId=${data?.storeId ?? "?"}`
     }
 
     run();
-  }, [token, router]);
+  }, [token]);
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
@@ -105,7 +110,7 @@ storeId=${data?.storeId ?? "?"}`
       </div>
 
       {status === "ok" && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button
             onClick={() => router.replace("/wallet")}
             style={{
@@ -116,6 +121,25 @@ storeId=${data?.storeId ?? "?"}`
             }}
           >
             Aller au wallet
+          </button>
+
+          <button
+            onClick={() => {
+              // reset pour retester sans recharger tout le site
+              startedRef.current = false;
+              setStatus("idle");
+              setMessage("");
+              // rappel du useEffect via un petit refresh soft
+              router.refresh();
+            }}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid #ddd",
+              cursor: "pointer",
+            }}
+          >
+            Re-tester
           </button>
         </div>
       )}

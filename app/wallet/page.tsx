@@ -136,9 +136,34 @@ export default function WalletPage() {
     }
   }
 
+  // Sync initial
   useEffect(() => {
     if (!canSync) return;
     syncFromServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSync]);
+
+  // ✅ AUTO-REFRESH quand on revient sur l'onglet / la page
+  useEffect(() => {
+    if (!canSync) return;
+
+    const onFocus = () => {
+      syncFromServer();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        syncFromServer();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canSync]);
 
@@ -399,7 +424,15 @@ export default function WalletPage() {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      marginTop: 14,
+                      display: "flex",
+                      gap: 10,
+                      justifyContent: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <button
                       onClick={() => setQrCard(null)}
                       style={{
@@ -467,7 +500,15 @@ export default function WalletPage() {
               })()}
             </div>
 
-            <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <div
+              style={{
+                marginTop: 14,
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end",
+                flexWrap: "wrap",
+              }}
+            >
               <button
                 onClick={() => setConfirmReward(null)}
                 disabled={consuming}
