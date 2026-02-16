@@ -63,6 +63,15 @@ function shortId(id: string) {
   return id.length <= 10 ? id : `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
+/** Normalize status coming from Firestore/API */
+function normalizeStatus(s: unknown): "active" | "reward" | "other" {
+  if (typeof s !== "string" || s.trim() === "") return "active"; // default
+  const v = s.trim().toLowerCase();
+  if (v === "active") return "active";
+  if (v === "reward") return "reward";
+  return "other";
+}
+
 export default function WalletPage() {
   const [ownerId, setOwnerId] = useState<string>("");
   const [cards, setCards] = useState<FirestoreCard[]>([]);
@@ -134,13 +143,18 @@ export default function WalletPage() {
   }, [canSync]);
 
   const sortedCards = useMemo(() => {
-    return [...cards]
-      .filter((c) => c.status === "reward" || c.status === "active")
-      .sort((a, b) => {
-        if (a.status === "reward" && b.status !== "reward") return -1;
-        if (a.status !== "reward" && b.status === "reward") return 1;
-        return 0;
-      });
+    const visible = [...cards].filter((c) => {
+      const st = normalizeStatus(c.status);
+      return st === "active" || st === "reward";
+    });
+
+    return visible.sort((a, b) => {
+      const sa = normalizeStatus(a.status);
+      const sb = normalizeStatus(b.status);
+      if (sa === "reward" && sb !== "reward") return -1;
+      if (sa !== "reward" && sb === "reward") return 1;
+      return 0;
+    });
   }, [cards]);
 
   function getQrPayload(card: FirestoreCard) {
@@ -152,7 +166,9 @@ export default function WalletPage() {
   }
 
   function onCardClick(card: FirestoreCard) {
-    if (card.status === "active") {
+    const st = normalizeStatus(card.status);
+
+    if (st === "active") {
       if (!card.storeId) {
         setStatus("❌ Impossible d'afficher le QR : storeId manquant sur la carte active");
         return;
@@ -161,7 +177,7 @@ export default function WalletPage() {
       return;
     }
 
-    if (card.status === "reward") {
+    if (st === "reward") {
       setConfirmReward(card);
       return;
     }
@@ -261,7 +277,9 @@ export default function WalletPage() {
           {sortedCards.map((c) => {
             const stamps = typeof c.stamps === "number" ? c.stamps : 0;
             const goal = typeof c.goal === "number" ? c.goal : 10;
-            const isReward = c.status === "reward";
+
+            const st = normalizeStatus(c.status);
+            const isReward = st === "reward";
 
             const store = c.storeId ? stores[c.storeId] : undefined;
             const title = store?.name || (c.storeId ? c.storeId : "Commerce");
