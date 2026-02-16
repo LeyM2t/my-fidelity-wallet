@@ -12,29 +12,68 @@ export async function POST(req: Request) {
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     const ownerId = typeof body?.ownerId === "string" ? body.ownerId.trim() : "";
 
-    if (!token)
+    if (!token) {
       return NextResponse.json({ error: "token missing" }, { status: 400 });
+    }
 
-    if (!ownerId)
+    if (!ownerId) {
       return NextResponse.json({ error: "ownerId missing" }, { status: 400 });
+    }
 
     const claimId = safeIdFromToken(token);
     const claimRef = db.collection("claims").doc(claimId);
 
     const result = await db.runTransaction(async (tx) => {
-      const existing = await tx.get(claimRef);
+      const snap = await tx.get(claimRef);
 
-      if (existing.exists) {
-        const data = existing.data() as any;
+      // --- CASE A: claim exists
+      if (snap.exists) {
+        const data = snap.data() as any;
+
+        // A1) already claimed properly (has cardId)
+        if (data?.cardId) {
+          return {
+            cardId: String(data.cardId),
+            already: true,
+            storeId: data?.storeId ?? null,
+          };
+        }
+
+        // A2) pre-created claim (from /api/claims/create) but not consumed yet
+        const storeId = typeof data?.storeId === "string" && data.storeId.trim()
+          ? data.storeId.trim()
+          : "store_demo_1";
+
+        const cardRef = db.collection("cards").doc();
+
+        tx.set(cardRef, {
+          storeId,
+          ownerId,
+          stamps: 0,
+          goal: 10,
+          status: "active",
+          rewardAvailable: false,
+          rewardsUsed: 0,
+          sourceToken: token,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        tx.update(claimRef, {
+          ownerId,
+          cardId: cardRef.id,
+          claimedAt: FieldValue.serverTimestamp(),
+        });
+
         return {
-          cardId: data.cardId as string,
-          already: true,
-          storeId: data.storeId ?? null,
+          cardId: cardRef.id,
+          already: false,
+          storeId,
         };
       }
 
-      const storeId = "store_demo_1"; // pour l’instant fixe (à rendre dynamique plus tard)
-
+      // --- CASE B: claim does not exist (old dev behavior)
+      const storeId = "store_demo_1";
       const cardRef = db.collection("cards").doc();
 
       tx.set(cardRef, {
