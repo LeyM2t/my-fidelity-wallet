@@ -1,27 +1,19 @@
-// app/qr-public/page.tsx
-export const dynamic = "force-dynamic";
+"use client";
 
-import QRCode from "qrcode";
-import { headers } from "next/headers";
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { QRCodeCanvas } from "qrcode.react";
 
-type SP = { token?: string };
+export default function QrPublicPage() {
+  const searchParams = useSearchParams();
 
-async function getBaseUrl() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  return host ? `${proto}://${host}` : "http://localhost:3000";
-}
+  const token = searchParams.get("token") ?? "";
 
-export default async function QrPublicPage(props: {
-  searchParams?: SP | Promise<SP>;
-}) {
-  const sp = await props.searchParams;
-  const token = typeof sp?.token === "string" ? sp.token : "";
-
-  const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}/add?token=${encodeURIComponent(token)}`;
-  const dataUrl = await QRCode.toDataURL(url, { margin: 2, width: 420 });
+  const url = useMemo(() => {
+    const baseUrl =
+      typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    return `${baseUrl}/add?token=${encodeURIComponent(token)}`;
+  }, [token]);
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
@@ -31,8 +23,16 @@ export default async function QrPublicPage(props: {
         URL : <code>{url}</code>
       </div>
 
-      <div style={{ padding: 16, border: "1px solid #ddd", borderRadius: 16, display: "inline-block" }}>
-        <img src={dataUrl} alt="QR Code" />
+      <div
+        style={{
+          padding: 16,
+          border: "1px solid #ddd",
+          borderRadius: 16,
+          display: "inline-block",
+          background: "white",
+        }}
+      >
+        <QRCodeCanvas value={url} size={420} />
       </div>
 
       {!token ? (
