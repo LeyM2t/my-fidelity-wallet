@@ -1,138 +1,77 @@
 export type WalletCard = {
-  id: string;              // identifiant unique de LA carte (instance)
-  merchantId: string;      // identifiant commerce (ex: "get-your-crepe")
-  merchantName: string;
-  stamps: number;
-  goal: number;
-  rewardAvailable: boolean;
+  id: string; // unique local id
+  storeId: string;
+  customerId: string;
+
+  stamps: number;      // 0..target
+  target: number;      // ex: 10
+  rewardReady: boolean; // true si stamps >= target (ta logique actuelle peut varier)
   createdAt: number;
 };
 
-const KEY = "my_fidelity_wallet_v1";
-const CUSTOMER_KEY = "my_fidelity_customer_id_v1";
+const STORAGE_KEY = "my_fidelity_wallet_cards_v1";
 
-function safeParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
+function safeParse(json: string | null): WalletCard[] {
+  if (!json) return [];
   try {
-    return JSON.parse(raw) as T;
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as WalletCard[]) : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
-}
-
-export function getOrCreateCustomerId(): string {
-  if (typeof window === "undefined") return "unknown";
-  const existing = localStorage.getItem(CUSTOMER_KEY);
-  if (existing) return existing;
-
-  const created = crypto?.randomUUID?.() ?? generateId();
-  localStorage.setItem(CUSTOMER_KEY, created);
-  return created;
+function notifyWalletUpdated() {
+  // important: compatible SSR
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("wallet_updated"));
 }
 
 export function getCards(): WalletCard[] {
   if (typeof window === "undefined") return [];
-  return safeParse<WalletCard[]>(localStorage.getItem(KEY)) ?? [];
+  return safeParse(window.localStorage.getItem(STORAGE_KEY));
 }
 
 export function saveCards(cards: WalletCard[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(cards));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  notifyWalletUpdated();
 }
 
-export function clearCards(): WalletCard[] {
-  saveCards([]);
-  return [];
+export function clearCards() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+  notifyWalletUpdated();
 }
 
-function createNewActiveCard(
-  merchantId: string,
-  merchantName: string,
-  goal: number,
-  initialStamps = 0
-): WalletCard {
-  return {
-    id: `${merchantId}#${generateId()}`,
-    merchantId,
-    merchantName,
-    stamps: initialStamps,
-    goal: Number.isFinite(goal) && goal > 0 ? goal : 10,
-    rewardAvailable: false,
-    createdAt: Date.now(),
+export function addTestCard() {
+  const cards = getCards();
+  const now = Date.now();
+
+  const newCard: WalletCard = {
+    id: `card_${now}`,
+    storeId: "demo_store",
+    customerId: "demo_customer",
+    stamps: 0,
+    target: 10,
+    rewardReady: false,
+    createdAt: now,
   };
+
+  saveCards([newCard, ...cards]);
 }
 
-export function ensureActiveCard(
-  merchantId: string,
-  merchantName: string,
-  goal: number
-): WalletCard[] {
+/**
+ * Optionnel si tu l’utilises déjà:
+ * Met à jour une carte et déclenche l’event automatiquement via saveCards()
+ */
+export function upsertCard(updated: WalletCard) {
   const cards = getCards();
-  const hasActive = cards.some((c) => c.merchantId === merchantId && !c.rewardAvailable);
-  if (hasActive) return cards;
+  const idx = cards.findIndex((c) => c.id === updated.id);
+  const next = [...cards];
 
-  const newActive = createNewActiveCard(merchantId, merchantName || "Commerce", goal, 0);
-  const next = [newActive, ...cards];
+  if (idx >= 0) next[idx] = updated;
+  else next.unshift(updated);
+
   saveCards(next);
-  return next;
-}
-
-export function addTestCard(): WalletCard[] {
-  return ensureActiveCard("get-your-crepe", "Get Your Crêpe", 10);
-}
-
-export function applyAddStampsToCard(
-  cardId: string,
-  add: number
-): { nextCards: WalletCard[]; rewardsGained: number; activeCardIdAfter?: string } {
-  const cards = getCards();
-  const idx = cards.findIndex((c) => c.id === cardId);
-  if (idx === -1) return { nextCards: cards, rewardsGained: 0 };
-
-  const card = cards[idx];
-  const safeAdd = Math.max(0, Math.floor(add));
-  if (safeAdd === 0) return { nextCards: cards, rewardsGained: 0 };
-
-  // on n'ajoute pas sur une carte "récompense"
-  if (card.rewardAvailable) return { nextCards: cards, rewardsGained: 0 };
-
-  const goal = card.goal > 0 ? card.goal : 10;
-  const total = card.stamps + safeAdd;
-
-  const rewardsGained = Math.floor(total / goal);
-  const remainder = total % goal;
-
-  const nextCards = [...cards];
-
-  if (rewardsGained <= 0) {
-    nextCards[idx] = { ...card, stamps: total };
-    saveCards(nextCards);
-    return { nextCards, rewardsGained: 0 };
-  }
-
-  // la carte actuelle devient "récompense"
-  nextCards[idx] = { ...card, stamps: goal, rewardAvailable: true };
-
-  // nouvelle carte en cours avec le reste
-  const newActive = createNewActiveCard(card.merchantId, card.merchantName, goal, remainder);
-  nextCards.unshift(newActive);
-
-  saveCards(nextCards);
-  return { nextCards, rewardsGained, activeCardIdAfter: newActive.id };
-}
-
-export function consumeReward(
-  cardId: string
-): { nextCards: WalletCard[]; removed: boolean } {
-  const cards = getCards();
-  const card = cards.find((c) => c.id === cardId) ?? null;
-  if (!card || !card.rewardAvailable) return { nextCards: cards, removed: false };
-
-  const next = cards.filter((c) => c.id !== cardId);
-  saveCards(next);
-  return { nextCards: next, removed: true };
 }
