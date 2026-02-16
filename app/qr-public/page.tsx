@@ -1,58 +1,50 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+// app/qr-public/page.tsx
 import QRCode from "qrcode";
+import { headers } from "next/headers";
 
-function buildUrl(token: string) {
-  return `http://10.5.0.2:3000/add?token=${encodeURIComponent(token)}`;
+export const dynamic = "force-dynamic";
+
+function getBaseUrl() {
+  // Option 1 (recommandé) : variable d'env sur Vercel
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl && envUrl.trim()) return envUrl.replace(/\/+$/, "");
+
+  // Option 2 : fallback via headers (marque la page dynamic)
+  const h = headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : "http://localhost:3000";
 }
 
-export default function QrPublicPage() {
-  const params = useSearchParams();
-  const token = (params.get("token") || "DEMO").toUpperCase();
-  const [dataUrl, setDataUrl] = useState<string>("");
+export default async function QrPublicPage({
+  searchParams,
+}: {
+  searchParams: { token?: string };
+}) {
+  const token = typeof searchParams?.token === "string" ? searchParams.token : "";
 
-  useEffect(() => {
-    const url = buildUrl(token);
-    QRCode.toDataURL(url, { margin: 2, width: 320 })
-      .then(setDataUrl)
-      .catch(() => setDataUrl(""));
-  }, [token]);
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/add?token=${encodeURIComponent(token)}`;
+
+  const dataUrl = await QRCode.toDataURL(url, { margin: 2, width: 420 });
 
   return (
-    <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 500 }}>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>QR public (démo)</h1>
-      <p style={{ marginTop: 0, color: "#666" }}>
-        Token : <strong>{token}</strong>
-      </p>
+    <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 22, marginBottom: 8 }}>QR Public</h1>
 
-      {dataUrl ? (
-        <img
-          src={dataUrl}
-          alt="QR public"
-          style={{ marginTop: 16, border: "1px solid #ddd", borderRadius: 12 }}
-        />
-      ) : (
-        <p style={{ marginTop: 16 }}>Erreur génération QR…</p>
-      )}
+      <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+        URL : <code>{url}</code>
+      </div>
 
-      <p style={{ marginTop: 16 }}>
-        Scanne ce QR → ajoute la carte → retour wallet.
-      </p>
+      <div style={{ padding: 16, border: "1px solid #ddd", borderRadius: 16, display: "inline-block" }}>
+        <img src={dataUrl} alt="QR Code" />
+      </div>
 
-      <p style={{ marginTop: 8, color: "#666" }}>
-        URL : <br />
-        <code>{buildUrl(token)}</code>
-      </p>
-
-      <hr style={{ margin: "20px 0" }} />
-
-      <p style={{ color: "#666" }}>
-        Exemples :<br />
-        <code>/qr-public?token=DEMO</code><br />
-        <code>/qr-public?token=CREPE</code>
-      </p>
+      {!token ? (
+        <p style={{ marginTop: 12, color: "#b91c1c" }}>
+          ⚠️ token manquant dans l’URL (ex: /qr-public?token=XXXX)
+        </p>
+      ) : null}
     </main>
   );
 }
