@@ -1,4 +1,6 @@
 // app/add/page.tsx
+export const dynamic = "force-dynamic";
+
 "use client";
 
 import { useEffect } from "react";
@@ -10,8 +12,6 @@ export default function AddPage() {
 
   useEffect(() => {
     const token = searchParams.get("token") ?? "";
-    // Pour l’instant: on ne “crée” pas encore la carte ici.
-    // On valide juste le flux QR -> ouverture app.
     router.replace(`/wallet?token=${encodeURIComponent(token)}`);
   }, [router, searchParams]);
 
