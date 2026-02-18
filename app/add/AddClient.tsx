@@ -63,12 +63,19 @@ export default function AddClient() {
           return;
         }
 
+        const cardId = data?.cardId;
+        if (!cardId || typeof cardId !== "string") {
+          setStatus("error");
+          setMessage("cardId manquant dans la réponse serveur");
+          return;
+        }
+
         setStatus("ok");
-        setMessage("Carte ajoutée ✅ Redirection vers le wallet…");
+        setMessage("Carte prête ✅ Ouverture…");
 
         setTimeout(() => {
-          router.replace("/wallet");
-        }, 800);
+          router.replace(`/wallet/card/${encodeURIComponent(cardId)}`);
+        }, 600);
       } catch (err: any) {
         setStatus("error");
         setMessage(String(err?.message ?? err ?? "Erreur réseau"));
