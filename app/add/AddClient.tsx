@@ -3,20 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-function getOrCreateOwnerId() {
+function getOrCreateOwnerId(): string {
+  const key = "fw_ownerId"; // ✅ même clé que /wallet
   try {
-    const key = "dev_ownerId";
     const existing = localStorage.getItem(key);
     if (existing && existing.trim()) return existing.trim();
 
     const id =
-      (globalThis.crypto as any)?.randomUUID?.() ??
-      `owner_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `owner_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 
     localStorage.setItem(key, id);
     return id;
   } catch {
-    return `owner_${Math.random().toString(36).slice(2)}`;
+    return `owner_${Math.random().toString(16).slice(2)}_${Date.now()}`;
   }
 }
 
@@ -94,13 +95,7 @@ export default function AddClient() {
         }}
       >
         <strong>Statut :</strong>{" "}
-        {status === "idle"
-          ? "—"
-          : status === "loading"
-          ? "⏳"
-          : status === "ok"
-          ? "✅"
-          : "❌"}{" "}
+        {status === "idle" ? "—" : status === "loading" ? "⏳" : status === "ok" ? "✅" : "❌"}{" "}
         {message}
       </div>
     </main>
