@@ -6,75 +6,93 @@ function safeIdFromToken(token: string) {
   return token.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 200);
 }
 
+type CardStatus = "active" | "reward";
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     const ownerId = typeof body?.ownerId === "string" ? body.ownerId.trim() : "";
 
-    if (!token) {
-      return NextResponse.json({ error: "token missing" }, { status: 400 });
-    }
+    if (!token) return NextResponse.json({ error: "token missing" }, { status: 400 });
+    if (!ownerId) return NextResponse.json({ error: "ownerId missing" }, { status: 400 });
 
-    if (!ownerId) {
-      return NextResponse.json({ error: "ownerId missing" }, { status: 400 });
-    }
-
-    const claimId = safeIdFromToken(token);
-    const claimRef = db.collection("claims").doc(claimId);
+    const tokenId = safeIdFromToken(token);
 
     const result = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(claimRef);
+      // 1) read claim
+      const claimRef = db.collection("claims").doc(tokenId);
+      const claimSnap = await tx.get(claimRef);
 
-      // --- CASE A: claim exists
-      if (snap.exists) {
-        const data = snap.data() as any;
-
-        // A1) already claimed properly (has cardId)
-        if (data?.cardId) {
-          return {
-            cardId: String(data.cardId),
-            already: true,
-            storeId: data?.storeId ?? null,
-          };
-        }
-
-        // A2) pre-created claim (from /api/claims/create) but not consumed yet
-        const storeId = typeof data?.storeId === "string" && data.storeId.trim()
-          ? data.storeId.trim()
-          : "store_demo_1";
-
-        const cardRef = db.collection("cards").doc();
-
-        tx.set(cardRef, {
-          storeId,
-          ownerId,
-          stamps: 0,
-          goal: 10,
-          status: "active",
-          rewardAvailable: false,
-          rewardsUsed: 0,
-          sourceToken: token,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-
-        tx.update(claimRef, {
-          ownerId,
-          cardId: cardRef.id,
-          claimedAt: FieldValue.serverTimestamp(),
-        });
-
-        return {
-          cardId: cardRef.id,
-          already: false,
-          storeId,
-        };
+      if (!claimSnap.exists) {
+        throw new Error("claim not found (token invalid or expired)");
       }
 
-      // --- CASE B: claim does not exist (old dev behavior)
-      const storeId = "store_demo_1";
+      const claim = claimSnap.data() as any;
+      const storeId = typeof claim?.storeId === "string" ? claim.storeId.trim() : "";
+
+      if (!storeId) {
+        throw new Error("claim is missing storeId");
+      }
+
+      // 2) anti-dup: search existing ACTIVE card for (storeId, ownerId)
+      const activeQuery = db
+        .collection("cards")
+        .where("storeId", "==", storeId)
+        .where("ownerId", "==", ownerId)
+        .where("status", "==", "active")
+        .limit(1);
+
+      const activeSnap = await tx.get(activeQuery);
+
+      if (!activeSnap.empty) {
+        const doc = activeSnap.docs[0];
+        const cardId = doc.id;
+
+        // keep claim in sync
+        tx.set(
+          claimRef,
+          {
+            ownerId,
+            cardId,
+            claimedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        return { cardId, storeId, status: "active" as CardStatus, existing: true };
+      }
+
+      // 3) if no active, check reward (optional, but useful)
+      const rewardQuery = db
+        .collection("cards")
+        .where("storeId", "==", storeId)
+        .where("ownerId", "==", ownerId)
+        .where("status", "==", "reward")
+        .limit(1);
+
+      const rewardSnap = await tx.get(rewardQuery);
+
+      if (!rewardSnap.empty) {
+        const doc = rewardSnap.docs[0];
+        const cardId = doc.id;
+
+        tx.set(
+          claimRef,
+          {
+            ownerId,
+            cardId,
+            claimedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        return { cardId, storeId, status: "reward" as CardStatus, existing: true };
+      }
+
+      // 4) create new ACTIVE card
       const cardRef = db.collection("cards").doc();
+      const now = FieldValue.serverTimestamp();
 
       tx.set(cardRef, {
         storeId,
@@ -85,30 +103,29 @@ export async function POST(req: Request) {
         rewardAvailable: false,
         rewardsUsed: 0,
         sourceToken: token,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: now,
+        updatedAt: now,
       });
 
-      tx.set(claimRef, {
-        token,
-        ownerId,
-        cardId: cardRef.id,
-        storeId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
+      // 5) update claim
+      tx.set(
+        claimRef,
+        {
+          ownerId,
+          cardId: cardRef.id,
+          claimedAt: now,
+        },
+        { merge: true }
+      );
 
-      return {
-        cardId: cardRef.id,
-        already: false,
-        storeId,
-      };
+      return { cardId: cardRef.id, storeId, status: "active" as CardStatus, existing: false };
     });
 
-    return NextResponse.json({ ok: true, ...result });
-  } catch (e: any) {
+    return NextResponse.json(result);
+  } catch (err: any) {
     return NextResponse.json(
-      { error: String(e?.message ?? e) },
-      { status: 500 }
+      { error: String(err?.message ?? err ?? "unknown error") },
+      { status: 400 }
     );
   }
 }
