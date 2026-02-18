@@ -176,7 +176,7 @@ export default function WalletPage() {
               </div>
 
               <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={() => router.push(`/wallet/card?id=${encodeURIComponent(c.id)}`)}>Open</button>
+                <button onClick={() => router.push(`/wallet/card/${encodeURIComponent(c.id)}`)}>Open</button>
               </div>
             </div>
           ))}
