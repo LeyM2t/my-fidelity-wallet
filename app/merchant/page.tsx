@@ -63,6 +63,10 @@ export default function MerchantPage() {
         <a href="/scan" style={{ alignSelf: "center" }}>
           Aller au scan commerçant (/scan)
         </a>
+
+        <a href="/merchant/template" style={{ alignSelf: "center" }}>
+          Personnaliser la carte (V2.5)
+        </a>
       </div>
 
       {err ? <div style={{ marginBottom: 12, color: "crimson" }}>Erreur : {err}</div> : null}
