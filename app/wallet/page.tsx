@@ -17,9 +17,26 @@ type FirestoreCard = {
   updatedAt?: any;
 };
 
+type CardTemplate = {
+  title?: string;
+  textColor?: string;
+
+  // ton modèle Firestore
+  bgColor?: string;
+  bgType?: "solid" | "gradient" | string;
+  gradient?: { from?: string; to?: string; angle?: number };
+
+  bgImageEnabled?: boolean;
+  bgImageUrl?: string;
+  bgImageOpacity?: number;
+
+  logoUrl?: string;
+
+  // ton champ "font" (ex: "inter")
+  font?: string;
+};
+
 function getOrCreateOwnerId(): string {
-  // On garde un identifiant client stable (non-auth) côté navigateur.
-  // C’est nécessaire tant qu’on n’a pas de système de récupération / login client.
   const key = "fw_ownerId";
   try {
     const existing = localStorage.getItem(key);
@@ -31,9 +48,17 @@ function getOrCreateOwnerId(): string {
     localStorage.setItem(key, id);
     return id;
   } catch {
-    // Si localStorage indispo (rare), on génère un id en mémoire (non persistant).
     return `owner_${Math.random().toString(16).slice(2)}_${Date.now()}`;
   }
+}
+
+function fontToCss(font?: string) {
+  const f = (font || "").toLowerCase().trim();
+  if (!f) return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("inter")) return "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("oswald")) return "Oswald, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("poppins")) return "Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
 }
 
 export default function WalletPage() {
@@ -43,6 +68,9 @@ export default function WalletPage() {
   const [cards, setCards] = useState<FirestoreCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
+  // cache templates par storeId
+  const [templates, setTemplates] = useState<Record<string, CardTemplate | null | undefined>>({});
 
   const canFetch = useMemo(() => ownerId.trim().length > 0, [ownerId]);
 
@@ -62,8 +90,6 @@ export default function WalletPage() {
       }
 
       const data = await res.json();
-
-      // On tolère plusieurs formats de réponse pour éviter de casser si ton API renvoie {cards:[...]}
       const list: any[] = Array.isArray(data) ? data : Array.isArray(data?.cards) ? data.cards : [];
 
       const normalized: FirestoreCard[] = list.map((c) => ({
@@ -80,7 +106,6 @@ export default function WalletPage() {
         updatedAt: c.updatedAt,
       }));
 
-      // tri simple: rewards d’abord puis actives, puis plus récentes (si possible)
       normalized.sort((a, b) => {
         const sa = a.status === "reward" ? 0 : 1;
         const sb = b.status === "reward" ? 0 : 1;
@@ -97,8 +122,45 @@ export default function WalletPage() {
     }
   }, [ownerId, canFetch]);
 
+  // fetch templates (quand on a des cartes)
   useEffect(() => {
-    // init ownerId côté client
+    const storeIds = Array.from(new Set(cards.map((c) => c.storeId).filter(Boolean)));
+    const toFetch = storeIds.filter((id) => !(id in templates));
+
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+
+    async function run() {
+      for (const storeId of toFetch) {
+        try {
+          const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, { cache: "no-store" });
+          if (!res.ok) {
+            if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: null }));
+            continue;
+          }
+          const data = await res.json();
+          const tpl =
+            data?.cardTemplate ||
+            data?.store?.cardTemplate ||
+            data?.data?.cardTemplate ||
+            null;
+
+          if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: (tpl || null) as CardTemplate | null }));
+        } catch {
+          if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: null }));
+        }
+      }
+    }
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cards, templates]);
+
+  useEffect(() => {
     const id = getOrCreateOwnerId();
     setOwnerId(id);
   }, []);
@@ -106,10 +168,8 @@ export default function WalletPage() {
   useEffect(() => {
     if (!canFetch) return;
 
-    // 1) initial
     fetchCards();
 
-    // 2) refresh quand l’app revient au premier plan (PWA/mobile)
     const onFocus = () => fetchCards();
     const onVisibility = () => {
       if (document.visibilityState === "visible") fetchCards();
@@ -123,6 +183,138 @@ export default function WalletPage() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [canFetch, fetchCards]);
+
+  function renderMiniCard(c: FirestoreCard) {
+    const tpl = templates[c.storeId] || null;
+
+    const title = tpl?.title || c.storeId;
+    const textColor = tpl?.textColor || "#ffffff";
+    const fontFamily = fontToCss(tpl?.font);
+
+    const bgColor = tpl?.bgColor || "#111827";
+    const bgImageEnabled = Boolean(tpl?.bgImageEnabled && tpl?.bgImageUrl);
+    const bgImageUrl = bgImageEnabled ? String(tpl?.bgImageUrl) : "";
+    const bgImageOpacity =
+      typeof tpl?.bgImageOpacity === "number" ? tpl!.bgImageOpacity : 0.6;
+
+    const logoUrl = tpl?.logoUrl || "";
+
+    // si un jour tu utilises gradient
+    const gradientFrom = tpl?.gradient?.from;
+    const gradientTo = tpl?.gradient?.to;
+    const gradientAngle = typeof tpl?.gradient?.angle === "number" ? tpl!.gradient!.angle : 45;
+    const gradientCss =
+      gradientFrom && gradientTo
+        ? `linear-gradient(${gradientAngle}deg, ${gradientFrom}, ${gradientTo})`
+        : "";
+
+    const overlayBg =
+      tpl?.bgType === "gradient" && gradientCss ? gradientCss : bgColor;
+
+    return (
+      <button
+        key={c.id}
+        onClick={() => router.push(`/wallet/card/${encodeURIComponent(c.id)}`)}
+        style={{
+          textAlign: "left",
+          border: "0",
+          padding: 0,
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            borderRadius: 18,
+            overflow: "hidden",
+            minHeight: 130,
+            boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
+          }}
+        >
+          {/* BG image */}
+          {bgImageUrl ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage: `url(${bgImageUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                transform: "scale(1.02)",
+              }}
+            />
+          ) : null}
+
+          {/* Overlay */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: overlayBg,
+              opacity: bgImageUrl ? bgImageOpacity : 1,
+            }}
+          />
+
+          {/* Content */}
+          <div
+            style={{
+              position: "relative",
+              padding: 16,
+              color: textColor,
+              fontFamily,
+              display: "flex",
+              gap: 14,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
+              {logoUrl ? (
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 14,
+                    background: "rgba(255,255,255,0.18)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  <img
+                    src={logoUrl}
+                    alt="logo"
+                    style={{ width: "88%", height: "88%", objectFit: "contain" }}
+                  />
+                </div>
+              ) : null}
+
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {title}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.9 }}>
+                  Status: {c.status}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right", flex: "0 0 auto" }}>
+              <div style={{ fontSize: 22, fontWeight: 900 }}>
+                {c.stamps}/{c.goal}
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>
+                Reward: {c.status === "reward" || c.rewardAvailable ? "READY" : "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  }
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
@@ -149,37 +341,8 @@ export default function WalletPage() {
       {!loading && cards.length === 0 ? (
         <p style={{ opacity: 0.7 }}>No cards yet.</p>
       ) : (
-        <div style={{ display: "grid", gap: 12 }}>
-          {cards.map((c) => (
-            <div
-              key={c.id}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 12,
-                padding: 12,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>Store: {c.storeId}</div>
-                  <div style={{ opacity: 0.8, fontSize: 13 }}>Status: {c.status}</div>
-                </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 20, fontWeight: 800 }}>
-                    {c.stamps}/{c.goal}
-                  </div>
-                  <div style={{ fontSize: 13, opacity: 0.8 }}>
-                    Reward: {c.status === "reward" || c.rewardAvailable ? "READY" : "—"}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={() => router.push(`/wallet/card/${encodeURIComponent(c.id)}`)}>Open</button>
-              </div>
-            </div>
-          ))}
+        <div style={{ display: "grid", gap: 14 }}>
+          {cards.map((c) => renderMiniCard(c))}
         </div>
       )}
     </main>

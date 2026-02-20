@@ -15,12 +15,19 @@ type FirestoreCard = {
 };
 
 type CardTemplate = {
-  bgColor?: string;
+  title?: string;
   textColor?: string;
-  fontFamily?: string; // ex: "Inter", "Oswald", etc.
-  logoUrl?: string;
+
+  bgColor?: string;
+  bgType?: "solid" | "gradient" | string;
+  gradient?: { from?: string; to?: string; angle?: number };
+
+  bgImageEnabled?: boolean;
   bgImageUrl?: string;
-  // tu peux ajouter d'autres champs si tu en as (accentColor, etc.)
+  bgImageOpacity?: number;
+
+  logoUrl?: string;
+  font?: string;
 };
 
 function getOwnerId(): string {
@@ -32,7 +39,16 @@ function getOwnerId(): string {
   }
 }
 
-export default function CardPage() {
+function fontToCss(font?: string) {
+  const f = (font || "").toLowerCase().trim();
+  if (!f) return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("inter")) return "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("oswald")) return "Oswald, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  if (f.includes("poppins")) return "Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+}
+
+export default function CardQrPage() {
   const router = useRouter();
   const params = useParams<{ cardId: string }>();
   const cardId = String(params?.cardId ?? "");
@@ -53,15 +69,12 @@ export default function CardPage() {
       }
 
       try {
-        // 1) Charger la carte (via /api/cards)
-        const res = await fetch(
-          `/api/cards?ownerId=${encodeURIComponent(ownerId)}`,
-          { cache: "no-store" }
-        );
+        const res = await fetch(`/api/cards?ownerId=${encodeURIComponent(ownerId)}`, {
+          cache: "no-store",
+        });
         const data = await res.json();
         const list = Array.isArray(data) ? data : data?.cards || [];
-
-        const found = list.find((c: any) => c.id === cardId);
+        const found = list.find((c: any) => String(c.id) === cardId);
 
         if (!found) {
           setError("Card not found.");
@@ -71,8 +84,6 @@ export default function CardPage() {
 
         setCard(found);
 
-        // 2) Charger le template du store (via /api/stores/[storeId])
-        //    On essaie plusieurs formes de réponse pour être robuste.
         const storeRes = await fetch(`/api/stores/${encodeURIComponent(found.storeId)}`, {
           cache: "no-store",
         });
@@ -87,12 +98,11 @@ export default function CardPage() {
 
           setTemplate(tpl);
         } else {
-          // Pas bloquant : on affiche la carte sans template
           setTemplate(null);
         }
 
         setLoading(false);
-      } catch (e: any) {
+      } catch {
         setError("Error loading card.");
         setLoading(false);
       }
@@ -103,7 +113,6 @@ export default function CardPage() {
 
   const qrPayload = useMemo(() => {
     if (!card) return "";
-    // payload minimal demandé : storeId, ownerId, cardId
     return JSON.stringify({
       storeId: card.storeId,
       ownerId: card.ownerId,
@@ -112,21 +121,36 @@ export default function CardPage() {
   }, [card]);
 
   const applied = useMemo(() => {
-    const bgColor = template?.bgColor || "#111827"; // fallback sombre
     const textColor = template?.textColor || "#ffffff";
-    const fontFamily = template?.fontFamily || "system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    const bgImageUrl = template?.bgImageUrl || "";
-    const logoUrl = template?.logoUrl || "";
+    const fontFamily = fontToCss(template?.font);
 
-    return { bgColor, textColor, fontFamily, bgImageUrl, logoUrl };
-  }, [template]);
+    const bgColor = template?.bgColor || "#111827";
+    const bgImageEnabled = Boolean(template?.bgImageEnabled && template?.bgImageUrl);
+    const bgImageUrl = bgImageEnabled ? String(template?.bgImageUrl) : "";
+    const bgImageOpacity =
+      typeof template?.bgImageOpacity === "number" ? template!.bgImageOpacity : 0.6;
+
+    const gradientFrom = template?.gradient?.from;
+    const gradientTo = template?.gradient?.to;
+    const gradientAngle = typeof template?.gradient?.angle === "number" ? template!.gradient!.angle : 45;
+    const gradientCss =
+      gradientFrom && gradientTo
+        ? `linear-gradient(${gradientAngle}deg, ${gradientFrom}, ${gradientTo})`
+        : "";
+
+    const overlayBg =
+      template?.bgType === "gradient" && gradientCss ? gradientCss : bgColor;
+
+    const title = template?.title || card?.storeId || "Card";
+
+    return { textColor, fontFamily, bgImageUrl, bgImageOpacity, overlayBg, title };
+  }, [template, card]);
 
   async function deleteCard() {
     if (!card) return;
     if (!confirm("Delete this card?")) return;
 
     const ownerId = getOwnerId();
-
     const res = await fetch("/api/cards/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,9 +168,8 @@ export default function CardPage() {
     if (!qrPayload) return;
     try {
       await navigator.clipboard.writeText(qrPayload);
-      alert("QR payload copied.");
     } catch {
-      alert("Copy failed.");
+      // pas bloquant
     }
   }
 
@@ -155,127 +178,117 @@ export default function CardPage() {
   if (!card) return null;
 
   return (
-    <main style={{ padding: 24, maxWidth: 820, margin: "0 auto" }}>
-      <button onClick={() => router.push("/wallet")}>← Back</button>
-
-      <h1 style={{ marginTop: 16 }}>Your loyalty card</h1>
-
-      {/* Carte stylée par template */}
-      <section
-        style={{
-          marginTop: 16,
-          borderRadius: 16,
-          padding: 18,
-          color: applied.textColor,
-          fontFamily: applied.fontFamily,
-          backgroundColor: applied.bgColor,
-          backgroundImage: applied.bgImageUrl ? `url(${applied.bgImageUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          position: "relative",
-          overflow: "hidden",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
-        }}
-      >
-        {/* léger voile si bgImage pour lisibilité */}
-        {applied.bgImageUrl ? (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(0,0,0,0.25)",
-              pointerEvents: "none",
-            }}
-          />
-        ) : null}
-
-        <div style={{ position: "relative", display: "flex", gap: 16, alignItems: "center" }}>
-          {/* Logo */}
-          {applied.logoUrl ? (
-            <img
-              src={applied.logoUrl}
-              alt="Store logo"
-              style={{
-                width: 56,
-                height: 56,
-                objectFit: "contain",
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.14)",
-                padding: 6,
-              }}
-            />
-          ) : null}
-
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, opacity: 0.9 }}>Store</div>
-            <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
-              {card.storeId}
-            </div>
-            <div style={{ marginTop: 10, fontSize: 28, fontWeight: 800 }}>
-              {card.stamps}/{card.goal}
-            </div>
-            <div style={{ marginTop: 6, fontSize: 14, opacity: 0.9 }}>
-              Status: {card.status}
-              {card.rewardAvailable ? " • Reward available" : ""}
-            </div>
-          </div>
-        </div>
-
-        {/* QR client (pour scan commerçant) */}
+    <main style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      {/* BG image */}
+      {applied.bgImageUrl ? (
         <div
           style={{
-            position: "relative",
-            marginTop: 18,
-            display: "flex",
-            gap: 16,
-            alignItems: "flex-start",
-            flexWrap: "wrap",
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${applied.bgImageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transform: "scale(1.03)",
+          }}
+        />
+      ) : null}
+
+      {/* Overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: applied.overlayBg,
+          opacity: applied.bgImageUrl ? applied.bgImageOpacity : 1,
+        }}
+      />
+
+      {/* Content */}
+      <div
+        style={{
+          position: "relative",
+          minHeight: "100vh",
+          padding: 20,
+          color: applied.textColor,
+          fontFamily: applied.fontFamily,
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          maxWidth: 720,
+          margin: "0 auto",
+        }}
+      >
+        <button
+          onClick={() => router.push("/wallet")}
+          style={{ alignSelf: "flex-start" }}
+        >
+          ← Back
+        </button>
+
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, opacity: 0.9 }}>Your loyalty QR</div>
+            <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {applied.title}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 14, opacity: 0.9 }}>
+              {card.stamps}/{card.goal} • {card.status}
+            </div>
+          </div>
+
+          <button
+            onClick={deleteCard}
+            style={{
+              background: "rgba(255,0,0,0.88)",
+              color: "white",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "0",
+              cursor: "pointer",
+              flex: "0 0 auto",
+            }}
+          >
+            Delete card
+          </button>
+        </div>
+
+        {/* QR plein écran (grand) */}
+        <div
+          style={{
+            flex: 1,
+            display: "grid",
+            placeItems: "center",
           }}
         >
           <div
             style={{
-              background: "rgba(255,255,255,0.92)",
-              padding: 10,
-              borderRadius: 12,
+              background: "rgba(255,255,255,0.95)",
+              padding: 16,
+              borderRadius: 18,
+              boxShadow: "0 14px 40px rgba(0,0,0,0.28)",
             }}
+            onClick={copyQrPayload}
           >
-            <QRCodeCanvas value={qrPayload} size={160} includeMargin />
-          </div>
-
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>QR client (à montrer au commerçant)</div>
-            <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9, wordBreak: "break-word" }}>
-              {qrPayload}
-            </div>
-
-            <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button onClick={copyQrPayload} style={{ padding: "8px 10px" }}>
-                Copy payload
-              </button>
-
-              <button
-                onClick={deleteCard}
-                style={{
-                  background: "rgba(255,0,0,0.85)",
-                  color: "white",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                }}
-              >
-                Delete card
-              </button>
-            </div>
+            <QRCodeCanvas
+              value={qrPayload}
+              // taille grande mais safe mobile
+              size={320}
+              includeMargin
+            />
           </div>
         </div>
-      </section>
 
-      {/* Debug léger */}
-      <details style={{ marginTop: 16 }}>
-        <summary>Debug</summary>
-        <pre style={{ whiteSpace: "pre-wrap", marginTop: 10 }}>
+        <div style={{ fontSize: 12, opacity: 0.85, textAlign: "center", paddingBottom: 10 }}>
+          Montre ce QR au commerçant pour ajouter des tampons.
+        </div>
+
+        <details style={{ opacity: 0.9 }}>
+          <summary>Debug</summary>
+          <pre style={{ whiteSpace: "pre-wrap", marginTop: 10 }}>
 {JSON.stringify({ card, template }, null, 2)}
-        </pre>
-      </details>
+          </pre>
+        </details>
+      </div>
     </main>
   );
 }
