@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import CardCanvas from "@/components/CardCanvas";
 
 type FirestoreCard = {
   id: string;
@@ -28,7 +29,6 @@ type CardTemplate = {
   bgImageOpacity?: number;
   bgImageUrl?: string;
   logoUrl?: string;
-  // (optionnel) si tu veux exploiter plus tard les box
   bgImageBox?: { x: number; y: number; width: number; height: number };
   logoBox?: { x: number; y: number; width: number; height: number };
 };
@@ -50,7 +50,7 @@ function getOrCreateOwnerId(): string {
 }
 
 function safeCssUrl(url: string): string {
-  // Ici on n'accepte que les URLs relatives (ex: /bg.png) pour éviter des surprises
+  // Ici on n'accepte que les URLs relatives (ex: /bg.png)
   const u = (url || "").trim();
   if (!u) return "";
   if (u.startsWith("/")) return u;
@@ -90,6 +90,22 @@ function templateToCss(tpl: CardTemplate | undefined | null) {
   };
 }
 
+function templateToCardCanvasTemplate(css: ReturnType<typeof templateToCss>) {
+  // CardCanvas supporte : bgColor, bgGradient, bgImageUrl, bgImageOpacity, logoUrl, title, scoreText
+  // On map le gradient/baseBackground -> bgGradient (si c'est un linear-gradient) sinon bgColor.
+  const base = css.baseBackground || "";
+  const isGradient = base.includes("linear-gradient(");
+
+  return {
+    title: css.title,
+    bgColor: isGradient ? undefined : base,
+    bgGradient: isGradient ? base : undefined,
+    bgImageUrl: css.bgImageEnabled ? css.bgImageUrl : "",
+    bgImageOpacity: css.bgImageOpacity,
+    logoUrl: css.logoUrl,
+  };
+}
+
 export default function WalletPage() {
   const router = useRouter();
 
@@ -111,11 +127,7 @@ export default function WalletPage() {
           const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, { cache: "no-store" });
           if (!res.ok) return [storeId, null] as const;
           const data = await res.json();
-          const tpl =
-            data?.cardTemplate ||
-            data?.store?.cardTemplate ||
-            data?.data?.cardTemplate ||
-            null;
+          const tpl = data?.cardTemplate || data?.store?.cardTemplate || data?.data?.cardTemplate || null;
           return [storeId, tpl as CardTemplate | null] as const;
         } catch {
           return [storeId, null] as const;
@@ -238,8 +250,8 @@ export default function WalletPage() {
             const tpl = templatesByStore[c.storeId];
             const css = templateToCss(tpl);
 
-            // ratio exact du builder : 420x220
-            const aspectRatio = "420 / 220";
+            const canvasTpl = templateToCardCanvasTemplate(css);
+            const titleToShow = canvasTpl.title || c.storeId;
 
             return (
               <button
@@ -261,89 +273,18 @@ export default function WalletPage() {
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      aspectRatio,
-                      background: css.baseBackground,
-                      color: css.textColor,
-                      fontFamily: css.fontFamily,
+                  {/* ✅ La mini-card est maintenant un canvas 420x220 scalé automatiquement */}
+                  <CardCanvas
+                    template={{
+                      ...canvasTpl,
+                      title: titleToShow,
+                      scoreText: `${c.stamps}/${c.goal}`,
                     }}
-                  >
-                    {/* Image de fond avec opacité (sans teinter le texte) */}
-                    {css.bgImageEnabled && css.bgImageUrl ? (
-                      <img
-                        src={css.bgImageUrl}
-                        alt=""
-                        aria-hidden="true"
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          opacity: css.bgImageOpacity,
-                          transform: "scale(1.02)",
-                        }}
-                      />
-                    ) : null}
+                  />
 
-                    {/* léger voile pour lisibilité */}
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.18)",
-                      }}
-                    />
-
-                    {/* Contenu */}
-                    <div style={{ position: "absolute", inset: 0, padding: 18, display: "flex", gap: 14 }}>
-                      {/* Zone texte (gauche) */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {css.title || c.storeId}
-                        </div>
-
-                        <div style={{ marginTop: 6, fontSize: 16, opacity: 0.9 }}>
-                          Status: {c.status}
-                        </div>
-                      </div>
-
-                      {/* Zone droite : score + logo */}
-                      <div style={{ width: "34%", position: "relative" }}>
-                        <div style={{ position: "absolute", top: 0, right: 0, fontSize: 22, fontWeight: 800 }}>
-                          {c.stamps}/{c.goal}
-                        </div>
-
-                        {css.logoUrl ? (
-                          <div
-                            style={{
-                              position: "absolute",
-                              right: 0,
-                              top: 44,
-                              width: "100%",
-                              height: "calc(100% - 44px)",
-                              borderRadius: 18,
-                              background: "rgba(255,255,255,0.12)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: 10,
-                            }}
-                          >
-                            <img
-                              src={css.logoUrl}
-                              alt=""
-                              aria-hidden="true"
-                              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
+                  {/* (optionnel) petite ligne info sous la carte */}
+                  <div style={{ padding: "10px 12px", background: "rgba(0,0,0,0.02)" }}>
+                    <div style={{ fontSize: 13, opacity: 0.9 }}>Status: {c.status}</div>
                   </div>
                 </div>
               </button>
