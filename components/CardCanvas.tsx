@@ -6,15 +6,12 @@ type CardTemplate = {
   title?: string;
   scoreText?: string;
 
-  // background
   bgColor?: string;
   bgGradient?: string;
 
-  // image de fond
   bgImageUrl?: string;
-  bgImageOpacity?: number; // 0..1
+  bgImageOpacity?: number;
 
-  // logo
   logoUrl?: string;
 };
 
@@ -28,7 +25,12 @@ function clamp01(n: number) {
 
 export default function CardCanvas({ template }: { template: CardTemplate }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const titleRef = useRef<HTMLDivElement | null>(null);
+
   const [scale, setScale] = useState(1);
+
+  // font du titre (en px) ajustée automatiquement pour tenir sur 1 ligne
+  const [titlePx, setTitlePx] = useState<number>(38);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -44,15 +46,38 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
     return () => ro.disconnect();
   }, []);
 
-  const background = template.bgGradient
-    ? template.bgGradient
-    : template.bgColor || "#111827";
+  // Recalcule la taille du titre quand le scale ou le texte change
+  useEffect(() => {
+    const base = 38 * scale;
+    setTitlePx(base);
 
+    const raf = requestAnimationFrame(() => {
+      const el = titleRef.current;
+      if (!el) return;
+
+      // On veut que le texte rentre dans la largeur dispo (1 ligne)
+      const maxW = el.clientWidth;
+      const sw = el.scrollWidth;
+
+      if (maxW <= 0 || sw <= 0) return;
+
+      if (sw > maxW) {
+        // ratio pour faire rentrer (petite marge)
+        const ratio = (maxW / sw) * 0.98;
+        const minPx = 16 * scale; // limite basse pour pas devenir illisible
+        const next = Math.max(minPx, base * ratio);
+        setTitlePx(next);
+      }
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [scale, template.title]);
+
+  const background = template.bgGradient ? template.bgGradient : template.bgColor || "#111827";
   const bgOpacity = clamp01(template.bgImageOpacity ?? 0.6);
 
   return (
     <div ref={wrapRef} style={{ width: "100%" }}>
-      {/* Ratio 420/220 */}
       <div
         style={{
           position: "relative",
@@ -70,7 +95,6 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             ["--s" as any]: scale,
           }}
         >
-          {/* Background image (n'affecte pas le texte) */}
           {template.bgImageUrl ? (
             <img
               src={template.bgImageUrl}
@@ -88,7 +112,6 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             />
           ) : null}
 
-          {/* petit voile pour lisibilité */}
           <div
             aria-hidden="true"
             style={{
@@ -98,7 +121,6 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             }}
           />
 
-          {/* Contenu */}
           <div
             style={{
               position: "absolute",
@@ -108,7 +130,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
               gap: `calc(14px * var(--s))`,
             }}
           >
-            {/* GAUCHE = titre haut + score bas */}
+            {/* GAUCHE */}
             <div
               style={{
                 flex: 1,
@@ -118,23 +140,24 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                 justifyContent: "space-between",
               }}
             >
-              {/* Titre (haut gauche) */}
+              {/* Titre (1 ligne, auto-fit) */}
               <div
+                ref={titleRef}
                 style={{
-                  fontSize: `calc(38px * var(--s))`,
+                  fontSize: `${titlePx}px`,
                   fontWeight: 800,
                   lineHeight: 1.05,
                   color: "white",
                   whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  overflow: "hidden", // on évite de casser la carte si qqchose va mal
                   textShadow: "0 2px 12px rgba(0,0,0,0.35)",
                 }}
+                title={template.title || ""}
               >
                 {template.title ?? ""}
               </div>
 
-              {/* Score (bas gauche) */}
+              {/* Score bas gauche */}
               <div
                 style={{
                   alignSelf: "flex-start",
@@ -151,13 +174,8 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
               </div>
             </div>
 
-            {/* DROITE = gros logo */}
-            <div
-              style={{
-                width: "36%",
-                position: "relative",
-              }}
-            >
+            {/* DROITE = logo gros */}
+            <div style={{ width: "36%", position: "relative" }}>
               {template.logoUrl ? (
                 <div
                   style={{
