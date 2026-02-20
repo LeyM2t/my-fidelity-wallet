@@ -35,6 +35,20 @@ function parseClientPayload(raw: string): ClientPayload | null {
   };
 }
 
+function getScanSecret(storeId: string) {
+  try {
+    return localStorage.getItem(`fw_scanSecret_${storeId}`) || "";
+  } catch {
+    return "";
+  }
+}
+
+function setScanSecret(storeId: string, value: string) {
+  try {
+    localStorage.setItem(`fw_scanSecret_${storeId}`, value);
+  } catch {}
+}
+
 export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
@@ -44,15 +58,22 @@ export default function ScanPage() {
 
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
 
+  const [scanSecret, setScanSecretState] = useState<string>("");
+
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   const isDev = process.env.NODE_ENV !== "production";
 
-  async function postJson<T>(url: string, body: any): Promise<T> {
+  async function postJson<T>(url: string, body: any, headersExtra?: Record<string, string>): Promise<T> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (headersExtra) {
+      for (const [k, v] of Object.entries(headersExtra)) headers[k] = v;
+    }
+
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
     });
 
@@ -100,6 +121,11 @@ export default function ScanPage() {
 
         if (p?.cardId) setCurrentCardId(p.cardId);
 
+        if (p?.storeId) {
+          // charger le secret mémorisé pour ce store
+          setScanSecretState(getScanSecret(p.storeId));
+        }
+
         setStatus(p ? "✅ QR client reconnu" : "⚠️ QR non reconnu (JSON attendu)");
       },
       { highlightScanRegion: true, highlightCodeOutline: true }
@@ -127,7 +153,18 @@ export default function ScanPage() {
     }
     setPayload(manualParsed);
     if (manualParsed?.cardId) setCurrentCardId(manualParsed.cardId);
+
+    if (manualParsed?.storeId) {
+      setScanSecretState(getScanSecret(manualParsed.storeId));
+    }
   }, [raw, manualParsed]);
+
+  function buildScanSecretHeader(storeId: string) {
+    const v = scanSecret.trim();
+    if (!v) return {};
+    // header seulement si l'utilisateur l'a renseigné
+    return { "x-scan-secret": v };
+  }
 
   async function doEarn(add: number) {
     if (!payload) return setStatus("❌ Pas de payload client (scanne un QR ou colle un JSON).");
@@ -146,12 +183,16 @@ export default function ScanPage() {
         rewardCardId?: string | null;
         surplus?: number;
         createdRewardIds?: string[];
-      }>("/api/addStamps", {
-        storeId: payload.storeId,
-        ownerId: payload.ownerId,
-        cardId: currentCardId,
-        add,
-      });
+      }>(
+        "/api/addStamps",
+        {
+          storeId: payload.storeId,
+          ownerId: payload.ownerId,
+          cardId: currentCardId,
+          add,
+        },
+        buildScanSecretHeader(payload.storeId)
+      );
 
       // ✅ si rollover : on switch sur la nouvelle carte active
       if (out.activeCardId && out.activeCardId !== currentCardId) {
@@ -187,7 +228,8 @@ export default function ScanPage() {
           storeId: payload.storeId,
           ownerId: payload.ownerId,
           cardId: currentCardId,
-        }
+        },
+        buildScanSecretHeader(payload.storeId) // optionnel si tu sécurises aussi consumeReward un jour
       );
 
       setStatus(
@@ -252,6 +294,36 @@ export default function ScanPage() {
 
         <div>
           <div style={{ padding: 12, border: "1px solid #eee", borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Sécurité (V2)</div>
+
+            <label style={{ display: "block", fontSize: 12, color: "#555" }}>
+              Scan secret (stocké sur ce device)
+              <input
+                value={scanSecret}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setScanSecretState(v);
+                  if (payload?.storeId) setScanSecret(payload.storeId, v);
+                }}
+                placeholder="ex: GYCrepe-2026-Secret!"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1px solid #ddd",
+                  marginTop: 6,
+                }}
+              />
+            </label>
+
+            <p style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+              Mode compat : si <code>stores/{`{storeId}`}.scanSecret</code> n’existe pas, ça passe.  
+              Si il existe, il faut que ce champ corresponde au header <code>x-scan-secret</code>.
+            </p>
+
+            <hr style={{ margin: "14px 0" }} />
+
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Actions (serveur)</div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -291,7 +363,8 @@ export default function ScanPage() {
                   value={raw}
                   onChange={(e) => setRaw(e.target.value)}
                   placeholder={`Colle ici un JSON client, ex:
-{"storeId":"store_1","ownerId":"client_1"}`}
+{"storeId":"store_1","ownerId":"client_1","cardId":"..."}`
+                  }
                   style={{
                     width: "100%",
                     minHeight: 120,

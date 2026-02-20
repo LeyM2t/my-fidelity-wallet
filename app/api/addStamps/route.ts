@@ -9,6 +9,30 @@ type Body = {
   add?: number;
 };
 
+async function authorizeAddStamps(req: Request, storeId: string) {
+  // Mode compat :
+  // - si stores/{storeId}.scanSecret n'existe pas -> OK
+  // - si il existe -> header x-scan-secret doit matcher
+  const scanSecretHeader = (req.headers.get("x-scan-secret") || "").trim();
+
+  const storeRef = db.collection("stores").doc(storeId);
+  const storeSnap = await storeRef.get();
+  const storeData = storeSnap.exists ? (storeSnap.data() as any) : null;
+
+  const requiredSecret =
+    typeof storeData?.scanSecret === "string" ? storeData.scanSecret.trim() : "";
+
+  if (!requiredSecret) {
+    return { ok: true as const, mode: "compat-no-secret" as const };
+  }
+
+  if (!scanSecretHeader || scanSecretHeader !== requiredSecret) {
+    return { ok: false as const, status: 403 as const, error: "forbidden" };
+  }
+
+  return { ok: true as const, mode: "secret-ok" as const };
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body;
@@ -26,6 +50,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "cardId missing" }, { status: 400 });
     if (!Number.isFinite(add) || add <= 0)
       return NextResponse.json({ error: "add must be positive" }, { status: 400 });
+
+    // ✅ SECURITY (V2 scanSecret)
+    const auth = await authorizeAddStamps(req, storeId);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
     const cardsCol = db.collection("cards");
     const cardRef = cardsCol.doc(cardId);
@@ -69,16 +99,14 @@ export async function POST(req: Request) {
       if (status !== "active") {
         tx.update(cardRef, {
           status: "active",
-          active: FieldValue.delete(), // supprime l'ancien champ si présent
+          active: FieldValue.delete(),
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
 
-      const goal =
-        typeof data.goal === "number" && data.goal > 0 ? data.goal : 10;
+      const goal = typeof data.goal === "number" && data.goal > 0 ? data.goal : 10;
 
-      const stamps =
-        typeof data.stamps === "number" && data.stamps >= 0 ? data.stamps : 0;
+      const stamps = typeof data.stamps === "number" && data.stamps >= 0 ? data.stamps : 0;
 
       let total = stamps + add;
 
@@ -107,7 +135,6 @@ export async function POST(req: Request) {
       // ------------------------
       // CAS 2 : atteint / dépasse goal
       // ------------------------
-
       const surplusAfterFirst = total - goal;
 
       // La carte actuelle devient reward
@@ -172,6 +199,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
+    // (Optionnel) on pourrait renvoyer auth.mode en debug, mais je le laisse clean
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json(
