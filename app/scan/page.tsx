@@ -65,7 +65,11 @@ export default function ScanPage() {
 
   const isDev = process.env.NODE_ENV !== "production";
 
-  async function postJson<T>(url: string, body: any, headersExtra?: Record<string, string>): Promise<T> {
+  async function postJson<T>(
+    url: string,
+    body: any,
+    headersExtra?: Record<string, string>
+  ): Promise<T> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (headersExtra) {
       for (const [k, v] of Object.entries(headersExtra)) headers[k] = v;
@@ -102,6 +106,14 @@ export default function ScanPage() {
       throw new Error(msg);
     }
     return json as T;
+  }
+
+  // ✅ FIX TypeScript: retourne toujours Record<string,string> sans undefined
+  function buildScanSecretHeader(storeId: string): Record<string, string> {
+    const v = scanSecret.trim();
+    const headers: Record<string, string> = {};
+    if (v) headers["x-scan-secret"] = v;
+    return headers;
   }
 
   useEffect(() => {
@@ -158,13 +170,6 @@ export default function ScanPage() {
       setScanSecretState(getScanSecret(manualParsed.storeId));
     }
   }, [raw, manualParsed]);
-
-  function buildScanSecretHeader(storeId: string) {
-    const v = scanSecret.trim();
-    if (!v) return {};
-    // header seulement si l'utilisateur l'a renseigné
-    return { "x-scan-secret": v };
-  }
 
   async function doEarn(add: number) {
     if (!payload) return setStatus("❌ Pas de payload client (scanne un QR ou colle un JSON).");
@@ -232,9 +237,7 @@ export default function ScanPage() {
         buildScanSecretHeader(payload.storeId) // optionnel si tu sécurises aussi consumeReward un jour
       );
 
-      setStatus(
-        `✅ Consume OK — ${out.deleted ? "supprimée" : out.alreadyGone ? "déjà supprimée" : "ok"}`
-      );
+      setStatus(`✅ Consume OK — ${out.deleted ? "supprimée" : out.alreadyGone ? "déjà supprimée" : "ok"}`);
     } catch (e: any) {
       setStatus(`❌ Consume erreur: ${String(e?.message ?? e)}`);
     } finally {
@@ -318,8 +321,8 @@ export default function ScanPage() {
             </label>
 
             <p style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
-              Mode compat : si <code>stores/{`{storeId}`}.scanSecret</code> n’existe pas, ça passe.  
-              Si il existe, il faut que ce champ corresponde au header <code>x-scan-secret</code>.
+              Mode compat : si <code>stores/{`{storeId}`}.scanSecret</code> n’existe pas, ça passe. Si il existe, il faut
+              que ce champ corresponde au header <code>x-scan-secret</code>.
             </p>
 
             <hr style={{ margin: "14px 0" }} />
@@ -363,8 +366,7 @@ export default function ScanPage() {
                   value={raw}
                   onChange={(e) => setRaw(e.target.value)}
                   placeholder={`Colle ici un JSON client, ex:
-{"storeId":"store_1","ownerId":"client_1","cardId":"..."}`
-                  }
+{"storeId":"store_1","ownerId":"client_1","cardId":"..."}`}
                   style={{
                     width: "100%",
                     minHeight: 120,
