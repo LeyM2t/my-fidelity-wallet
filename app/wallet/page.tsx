@@ -17,23 +17,25 @@ type FirestoreCard = {
   updatedAt?: any;
 };
 
+type Box = { x: number; y: number; width: number; height: number };
+
 type CardTemplate = {
   title?: string;
   textColor?: string;
+  font?: string;
 
-  // ton modèle Firestore
   bgColor?: string;
-  bgType?: "solid" | "gradient" | string;
-  gradient?: { from?: string; to?: string; angle?: number };
+
+  bgType?: "solid" | "gradient";
+  gradient?: { angle?: number; from?: string; to?: string };
 
   bgImageEnabled?: boolean;
-  bgImageUrl?: string;
   bgImageOpacity?: number;
+  bgImageUrl?: string;
+  bgImageBox?: Box;
 
   logoUrl?: string;
-
-  // ton champ "font" (ex: "inter")
-  font?: string;
+  logoBox?: Box;
 };
 
 function getOrCreateOwnerId(): string {
@@ -52,13 +54,37 @@ function getOrCreateOwnerId(): string {
   }
 }
 
-function fontToCss(font?: string) {
-  const f = (font || "").toLowerCase().trim();
-  if (!f) return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
-  if (f.includes("inter")) return "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial";
-  if (f.includes("oswald")) return "Oswald, system-ui, -apple-system, Segoe UI, Roboto, Arial";
-  if (f.includes("poppins")) return "Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial";
-  return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function canvasSizeFromTemplate(tpl?: CardTemplate | null) {
+  // ton builder semble travailler sur 420x220 (d’après Firestore)
+  const w = tpl?.bgImageBox?.width;
+  const h = tpl?.bgImageBox?.height;
+  return {
+    w: typeof w === "number" && w > 0 ? w : 420,
+    h: typeof h === "number" && h > 0 ? h : 220,
+  };
+}
+
+function toPct(n: number, base: number) {
+  if (!Number.isFinite(n) || !Number.isFinite(base) || base <= 0) return 0;
+  return (n / base) * 100;
+}
+
+function computeBackground(tpl?: CardTemplate | null) {
+  const bgColor = tpl?.bgColor || "#111827";
+  const bgType = tpl?.bgType || "solid";
+
+  if (bgType === "gradient") {
+    const angle = tpl?.gradient?.angle ?? 45;
+    const from = tpl?.gradient?.from || "#111827";
+    const to = tpl?.gradient?.to || "#0b1220";
+    return `linear-gradient(${angle}deg, ${from}, ${to})`;
+  }
+
+  return bgColor;
 }
 
 export default function WalletPage() {
@@ -70,7 +96,7 @@ export default function WalletPage() {
   const [error, setError] = useState<string>("");
 
   // cache templates par storeId
-  const [templates, setTemplates] = useState<Record<string, CardTemplate | null | undefined>>({});
+  const [templates, setTemplates] = useState<Record<string, CardTemplate | null>>({});
 
   const canFetch = useMemo(() => ownerId.trim().length > 0, [ownerId]);
 
@@ -114,51 +140,44 @@ export default function WalletPage() {
       });
 
       setCards(normalized);
+
+      // charger les templates manquants (1 fetch par storeId)
+      const uniqueStores = Array.from(new Set(normalized.map((c) => c.storeId).filter(Boolean)));
+      const missing = uniqueStores.filter((sid) => !(sid in templates));
+
+      if (missing.length) {
+        const fetched: Record<string, CardTemplate | null> = {};
+        await Promise.all(
+          missing.map(async (storeId) => {
+            try {
+              const r = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, { cache: "no-store" });
+              if (!r.ok) {
+                fetched[storeId] = null;
+                return;
+              }
+              const storeData = await r.json();
+              const tpl =
+                storeData?.cardTemplate ||
+                storeData?.store?.cardTemplate ||
+                storeData?.data?.cardTemplate ||
+                null;
+
+              fetched[storeId] = tpl;
+            } catch {
+              fetched[storeId] = null;
+            }
+          })
+        );
+
+        setTemplates((prev) => ({ ...prev, ...fetched }));
+      }
     } catch (e: any) {
       setError(e?.message ?? "Unknown error");
       setCards([]);
     } finally {
       setLoading(false);
     }
-  }, [ownerId, canFetch]);
-
-  // fetch templates (quand on a des cartes)
-  useEffect(() => {
-    const storeIds = Array.from(new Set(cards.map((c) => c.storeId).filter(Boolean)));
-    const toFetch = storeIds.filter((id) => !(id in templates));
-
-    if (toFetch.length === 0) return;
-
-    let cancelled = false;
-
-    async function run() {
-      for (const storeId of toFetch) {
-        try {
-          const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, { cache: "no-store" });
-          if (!res.ok) {
-            if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: null }));
-            continue;
-          }
-          const data = await res.json();
-          const tpl =
-            data?.cardTemplate ||
-            data?.store?.cardTemplate ||
-            data?.data?.cardTemplate ||
-            null;
-
-          if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: (tpl || null) as CardTemplate | null }));
-        } catch {
-          if (!cancelled) setTemplates((prev) => ({ ...prev, [storeId]: null }));
-        }
-      }
-    }
-
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cards, templates]);
+  }, [ownerId, canFetch, templates]);
 
   useEffect(() => {
     const id = getOrCreateOwnerId();
@@ -183,138 +202,6 @@ export default function WalletPage() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [canFetch, fetchCards]);
-
-  function renderMiniCard(c: FirestoreCard) {
-    const tpl = templates[c.storeId] || null;
-
-    const title = tpl?.title || c.storeId;
-    const textColor = tpl?.textColor || "#ffffff";
-    const fontFamily = fontToCss(tpl?.font);
-
-    const bgColor = tpl?.bgColor || "#111827";
-    const bgImageEnabled = Boolean(tpl?.bgImageEnabled && tpl?.bgImageUrl);
-    const bgImageUrl = bgImageEnabled ? String(tpl?.bgImageUrl) : "";
-    const bgImageOpacity =
-      typeof tpl?.bgImageOpacity === "number" ? tpl!.bgImageOpacity : 0.6;
-
-    const logoUrl = tpl?.logoUrl || "";
-
-    // si un jour tu utilises gradient
-    const gradientFrom = tpl?.gradient?.from;
-    const gradientTo = tpl?.gradient?.to;
-    const gradientAngle = typeof tpl?.gradient?.angle === "number" ? tpl!.gradient!.angle : 45;
-    const gradientCss =
-      gradientFrom && gradientTo
-        ? `linear-gradient(${gradientAngle}deg, ${gradientFrom}, ${gradientTo})`
-        : "";
-
-    const overlayBg =
-      tpl?.bgType === "gradient" && gradientCss ? gradientCss : bgColor;
-
-    return (
-      <button
-        key={c.id}
-        onClick={() => router.push(`/wallet/card/${encodeURIComponent(c.id)}`)}
-        style={{
-          textAlign: "left",
-          border: "0",
-          padding: 0,
-          background: "transparent",
-          cursor: "pointer",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            borderRadius: 18,
-            overflow: "hidden",
-            minHeight: 130,
-            boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
-          }}
-        >
-          {/* BG image */}
-          {bgImageUrl ? (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backgroundImage: `url(${bgImageUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                transform: "scale(1.02)",
-              }}
-            />
-          ) : null}
-
-          {/* Overlay */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: overlayBg,
-              opacity: bgImageUrl ? bgImageOpacity : 1,
-            }}
-          />
-
-          {/* Content */}
-          <div
-            style={{
-              position: "relative",
-              padding: 16,
-              color: textColor,
-              fontFamily,
-              display: "flex",
-              gap: 14,
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
-              {logoUrl ? (
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: "rgba(255,255,255,0.18)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                    flex: "0 0 auto",
-                  }}
-                >
-                  <img
-                    src={logoUrl}
-                    alt="logo"
-                    style={{ width: "88%", height: "88%", objectFit: "contain" }}
-                  />
-                </div>
-              ) : null}
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {title}
-                </div>
-                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.9 }}>
-                  Status: {c.status}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ textAlign: "right", flex: "0 0 auto" }}>
-              <div style={{ fontSize: 22, fontWeight: 900 }}>
-                {c.stamps}/{c.goal}
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>
-                Reward: {c.status === "reward" || c.rewardAvailable ? "READY" : "—"}
-              </div>
-            </div>
-          </div>
-        </div>
-      </button>
-    );
-  }
 
   return (
     <main style={{ padding: 24, fontFamily: "Arial", maxWidth: 720, margin: "0 auto" }}>
@@ -341,8 +228,138 @@ export default function WalletPage() {
       {!loading && cards.length === 0 ? (
         <p style={{ opacity: 0.7 }}>No cards yet.</p>
       ) : (
-        <div style={{ display: "grid", gap: 14 }}>
-          {cards.map((c) => renderMiniCard(c))}
+        <div style={{ display: "grid", gap: 12 }}>
+          {cards.map((c) => {
+            const tpl = templates[c.storeId] ?? null;
+            const { w, h } = canvasSizeFromTemplate(tpl);
+
+            const bg = computeBackground(tpl);
+            const textColor = tpl?.textColor || "#ffffff";
+            const title = tpl?.title || c.storeId;
+            const fontFamily = tpl?.font || "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+            const bgImageEnabled = tpl?.bgImageEnabled !== false; // default true
+            const bgImageUrl = tpl?.bgImageUrl || "";
+            const bgImgOpacity = clamp(typeof tpl?.bgImageOpacity === "number" ? tpl!.bgImageOpacity! : 0.75, 0, 1);
+
+            const logoUrl = tpl?.logoUrl || "";
+            const logoBox = tpl?.logoBox;
+
+            const logoStyle =
+              logoUrl && logoBox
+                ? {
+                    position: "absolute" as const,
+                    left: `${toPct(logoBox.x, w)}%`,
+                    top: `${toPct(logoBox.y, h)}%`,
+                    width: `${toPct(logoBox.width, w)}%`,
+                    height: `${toPct(logoBox.height, h)}%`,
+                    borderRadius: 14,
+                    overflow: "hidden" as const,
+                    background: "rgba(255,255,255,0.18)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }
+                : null;
+
+            return (
+              <button
+                key={c.id}
+                onClick={() => router.push(`/wallet/card/${encodeURIComponent(c.id)}`)}
+                style={{
+                  textAlign: "left",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: 22,
+                  padding: 0,
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                {/* mini carte avec ratio proche du builder */}
+                <div
+                  style={{
+                    position: "relative",
+                    borderRadius: 22,
+                    overflow: "hidden",
+                    aspectRatio: `${w} / ${h}`,
+                    background: bg,
+                    color: textColor,
+                    fontFamily,
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.25)",
+                  }}
+                >
+                  {/* image de fond */}
+                  {bgImageEnabled && bgImageUrl ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        backgroundImage: `url(${bgImageUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        opacity: bgImgOpacity,
+                      }}
+                    />
+                  ) : null}
+
+                  {/* voile léger pour lisibilité */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "rgba(0,0,0,0.18)",
+                    }}
+                  />
+
+                  {/* logo positionné */}
+                  {logoStyle ? (
+                    <div style={logoStyle}>
+                      <img
+                        src={logoUrl}
+                        alt="logo"
+                        style={{ width: "90%", height: "90%", objectFit: "contain" }}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* texte */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "6%",
+                      top: "18%",
+                      right: "6%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {title}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 18, opacity: 0.9 }}>
+                        Status: {c.status}
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }}>
+                        {c.stamps}/{c.goal}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 18, opacity: 0.9 }}>
+                        Reward: {c.status === "reward" || c.rewardAvailable ? "READY" : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* petit padding bas (optionnel) */}
+                <div style={{ padding: 10, opacity: 0.0 }}>.</div>
+              </button>
+            );
+          })}
         </div>
       )}
     </main>
