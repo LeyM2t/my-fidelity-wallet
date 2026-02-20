@@ -1,24 +1,21 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type CardTemplate = {
   title?: string;
-  scoreText?: string; // ex "8/10"
-  // Background
-  bgColor?: string; // ex "#111827"
-  bgGradient?: string; // ex "linear-gradient(...)"
-  bgImageUrl?: string; // url
-  bgImageOpacity?: number; // 0..1
-  // Logo
-  logoUrl?: string;
-};
+  scoreText?: string;
 
-type Props = {
-  template: CardTemplate;
-  // Si tu veux forcer une taille (sinon il s’adapte au parent)
-  maxWidth?: number; // px
-  className?: string;
+  // background
+  bgColor?: string;
+  bgGradient?: string;
+
+  // image de fond
+  bgImageUrl?: string;
+  bgImageOpacity?: number; // 0..1
+
+  // logo
+  logoUrl?: string;
 };
 
 const BASE_W = 420;
@@ -29,11 +26,10 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-export default function CardCanvas({ template, maxWidth, className }: Props) {
+export default function CardCanvas({ template }: { template: CardTemplate }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
 
-  // calc le scale = width / 420
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -48,30 +44,15 @@ export default function CardCanvas({ template, maxWidth, className }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  const bgStyle = useMemo<React.CSSProperties>(() => {
-    const style: React.CSSProperties = {};
-    if (template.bgGradient) {
-      style.backgroundImage = template.bgGradient;
-    } else if (template.bgColor) {
-      style.background = template.bgColor;
-    } else {
-      style.background = "#0b0f19";
-    }
-    return style;
-  }, [template.bgColor, template.bgGradient]);
+  const background = template.bgGradient
+    ? template.bgGradient
+    : template.bgColor || "#111827";
 
-  const imgOpacity = clamp01(template.bgImageOpacity ?? 0.35);
+  const bgOpacity = clamp01(template.bgImageOpacity ?? 0.6);
 
   return (
-    <div
-      ref={wrapRef}
-      className={className}
-      style={{
-        width: "100%",
-        maxWidth: maxWidth ? `${maxWidth}px` : undefined,
-      }}
-    >
-      {/* Container ratio */}
+    <div ref={wrapRef} style={{ width: "100%" }}>
+      {/* Ratio 420/220 */}
       <div
         style={{
           position: "relative",
@@ -79,102 +60,129 @@ export default function CardCanvas({ template, maxWidth, className }: Props) {
           aspectRatio: `${BASE_W} / ${BASE_H}`,
         }}
       >
-        {/* Canvas logique 420x220 */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            borderRadius: `calc(18px * ${scale})`,
+            borderRadius: 22,
             overflow: "hidden",
-            ...bgStyle,
-
-            // variable de scale dispo partout
+            background,
             ["--s" as any]: scale,
           }}
         >
-          {/* Background image */}
+          {/* Background image (n'affecte pas le texte) */}
           {template.bgImageUrl ? (
-            <div
+            <img
+              src={template.bgImageUrl}
+              alt=""
+              aria-hidden="true"
               style={{
                 position: "absolute",
                 inset: 0,
-                backgroundImage: `url(${template.bgImageUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                opacity: imgOpacity,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: bgOpacity,
+                transform: "scale(1.02)",
               }}
             />
           ) : null}
 
-          {/* contenu */}
+          {/* petit voile pour lisibilité */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.18)",
+            }}
+          />
+
+          {/* Contenu */}
           <div
             style={{
-              position: "relative",
-              height: "100%",
-              width: "100%",
-              // padding logique, scalé
+              position: "absolute",
+              inset: 0,
               padding: `calc(18px * var(--s))`,
               display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
+              gap: `calc(14px * var(--s))`,
             }}
           >
-            {/* top row */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: `calc(12px * var(--s))` }}>
-              {/* logo */}
-              <div style={{ display: "flex", alignItems: "center", gap: `calc(10px * var(--s))` }}>
-                {template.logoUrl ? (
-                  <img
-                    src={template.logoUrl}
-                    alt="logo"
-                    style={{
-                      width: `calc(56px * var(--s))`,
-                      height: `calc(56px * var(--s))`,
-                      objectFit: "contain",
-                      borderRadius: `calc(12px * var(--s))`,
-                    }}
-                  />
-                ) : null}
-
-                {/* titre */}
-                <div
-                  style={{
-                    fontSize: `calc(36px * var(--s))`,
-                    lineHeight: 1.05,
-                    fontWeight: 800,
-                    color: "white",
-                    maxWidth: "100%",
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    textShadow: "0 1px 12px rgba(0,0,0,0.35)",
-                  }}
-                >
-                  {template.title ?? ""}
-                </div>
-              </div>
-            </div>
-
-            {/* bottom row */}
-            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-              {/* score */}
+            {/* GAUCHE = titre haut + score bas */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              {/* Titre (haut gauche) */}
               <div
                 style={{
-                  fontSize: `calc(28px * var(--s))`,
+                  fontSize: `calc(38px * var(--s))`,
+                  fontWeight: 800,
+                  lineHeight: 1.05,
+                  color: "white",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  textShadow: "0 2px 12px rgba(0,0,0,0.35)",
+                }}
+              >
+                {template.title ?? ""}
+              </div>
+
+              {/* Score (bas gauche) */}
+              <div
+                style={{
+                  alignSelf: "flex-start",
+                  fontSize: `calc(26px * var(--s))`,
                   fontWeight: 800,
                   color: "white",
                   padding: `calc(10px * var(--s)) calc(14px * var(--s))`,
                   borderRadius: `calc(14px * var(--s))`,
-                  background: "rgba(0,0,0,0.25)",
+                  background: "rgba(0,0,0,0.28)",
                   backdropFilter: "blur(6px)",
                 }}
               >
                 {template.scoreText ?? ""}
               </div>
+            </div>
 
-              {/* placeholder zone (ex: petit pictogramme / rien) */}
-              <div />
+            {/* DROITE = gros logo */}
+            <div
+              style={{
+                width: "36%",
+                position: "relative",
+              }}
+            >
+              {template.logoUrl ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: `calc(18px * var(--s))`,
+                    background: "rgba(255,255,255,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: `calc(10px * var(--s))`,
+                  }}
+                >
+                  <img
+                    src={template.logoUrl}
+                    alt=""
+                    aria-hidden="true"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
