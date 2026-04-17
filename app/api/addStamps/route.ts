@@ -1,29 +1,47 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import { requireMerchantUid } from "@/lib/merchantAuth"; // ✅ AJOUT
 
 type Body = {
-  storeId?: string;
-  ownerId?: string;
   cardId?: string;
   add?: number;
 };
 
 async function authorizeAddStamps(req: Request, storeId: string) {
-  // Mode compat :
-  // - si stores/{storeId}.scanSecret n'existe pas -> OK
-  // - si il existe -> header x-scan-secret doit matcher
   const scanSecretHeader = (req.headers.get("x-scan-secret") || "").trim();
 
   const storeRef = db.collection("stores").doc(storeId);
   const storeSnap = await storeRef.get();
-  const storeData = storeSnap.exists ? (storeSnap.data() as any) : null;
 
+  if (!storeSnap.exists) {
+    return { ok: false as const, status: 404 as const, error: "store not found" };
+  }
+
+  const storeData = storeSnap.data() as any;
+
+  // 🔐 NOUVEAU : vérifier merchant connecté
+  const merchantUid = await requireMerchantUid();
+
+  if (!merchantUid) {
+    return { ok: false as const, status: 401 as const, error: "not authenticated" };
+  }
+
+  if (storeData.merchantId !== merchantUid) {
+    return { ok: false as const, status: 403 as const, error: "not your store" };
+  }
+
+  // 🔐 EXISTANT : scanSecret
   const requiredSecret =
     typeof storeData?.scanSecret === "string" ? storeData.scanSecret.trim() : "";
 
+  const isProd = process.env.NODE_ENV === "production";
+
   if (!requiredSecret) {
-    return { ok: true as const, mode: "compat-no-secret" as const };
+    if (isProd) {
+      return { ok: false as const, status: 403 as const, error: "scanSecret required" };
+    }
+    return { ok: true as const, mode: "dev-compat-no-secret" as const };
   }
 
   if (!scanSecretHeader || scanSecretHeader !== requiredSecret) {
@@ -37,25 +55,20 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body;
 
-    const storeId = typeof body.storeId === "string" ? body.storeId : "";
-    const ownerId = typeof body.ownerId === "string" ? body.ownerId : "";
     const cardId = typeof body.cardId === "string" ? body.cardId : "";
     const add = typeof body.add === "number" ? body.add : NaN;
 
-    if (!storeId)
-      return NextResponse.json({ error: "storeId missing" }, { status: 400 });
-    if (!ownerId)
-      return NextResponse.json({ error: "ownerId missing" }, { status: 400 });
     if (!cardId)
       return NextResponse.json({ error: "cardId missing" }, { status: 400 });
+
     if (!Number.isFinite(add) || add <= 0)
       return NextResponse.json({ error: "add must be positive" }, { status: 400 });
 
-    // ✅ SECURITY (V2 scanSecret)
-    const auth = await authorizeAddStamps(req, storeId);
-    if (!auth.ok) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
+    if (!Number.isInteger(add))
+      return NextResponse.json({ error: "add must be an integer" }, { status: 400 });
+
+    if (add > 50)
+      return NextResponse.json({ error: "add too large" }, { status: 400 });
 
     const cardsCol = db.collection("cards");
     const cardRef = cardsCol.doc(cardId);
@@ -68,18 +81,19 @@ export async function POST(req: Request) {
       }
 
       const data = snap.data() || {};
+      const storeId = typeof data.storeId === "string" ? data.storeId : "";
 
-      if (data.storeId !== storeId)
-        return { ok: false as const, status: 403 as const, error: "storeId mismatch" };
+      if (!storeId) {
+        return { ok: false as const, status: 400 as const, error: "card missing storeId" };
+      }
 
-      if (data.ownerId !== ownerId)
-        return { ok: false as const, status: 403 as const, error: "ownerId mismatch" };
+      // 🔐 AUTH complète (merchant + secret)
+      const auth = await authorizeAddStamps(req, storeId);
+      if (!auth.ok) {
+        return { ok: false as const, status: auth.status, error: auth.error };
+      }
 
-      // ✅ Compat / auto-migration:
-      // Ancien modèle: data.active = "store_demo_1" (ou true)
-      // Nouveau modèle: data.status = "active"
       const status = typeof data.status === "string" ? data.status : undefined;
-
       const legacyActive =
         data.active === true ||
         (typeof data.active === "string" && data.active === storeId) ||
@@ -95,7 +109,6 @@ export async function POST(req: Request) {
         };
       }
 
-      // Si on est dans l'ancien modèle, on "répare" la carte maintenant
       if (status !== "active") {
         tx.update(cardRef, {
           status: "active",
@@ -105,14 +118,10 @@ export async function POST(req: Request) {
       }
 
       const goal = typeof data.goal === "number" && data.goal > 0 ? data.goal : 10;
-
       const stamps = typeof data.stamps === "number" && data.stamps >= 0 ? data.stamps : 0;
 
       let total = stamps + add;
 
-      // ------------------------
-      // CAS 1 : pas encore atteint
-      // ------------------------
       if (total < goal) {
         tx.update(cardRef, {
           stamps: total,
@@ -132,12 +141,8 @@ export async function POST(req: Request) {
         };
       }
 
-      // ------------------------
-      // CAS 2 : atteint / dépasse goal
-      // ------------------------
       const surplusAfterFirst = total - goal;
 
-      // La carte actuelle devient reward
       tx.update(cardRef, {
         stamps: goal,
         status: "reward",
@@ -146,8 +151,6 @@ export async function POST(req: Request) {
       });
 
       const createdRewardIds: string[] = [cardId];
-
-      // Si gros ajout (ex: +25), on peut générer plusieurs rewards
       let surplus = surplusAfterFirst;
 
       while (surplus >= goal) {
@@ -155,7 +158,7 @@ export async function POST(req: Request) {
 
         tx.set(rewardRef, {
           storeId,
-          ownerId,
+          ownerId: data.ownerId,
           stamps: goal,
           goal,
           status: "reward",
@@ -168,12 +171,11 @@ export async function POST(req: Request) {
         surplus -= goal;
       }
 
-      // Nouvelle carte active pour le surplus restant
       const activeRef = cardsCol.doc();
 
       tx.set(activeRef, {
         storeId,
-        ownerId,
+        ownerId: data.ownerId,
         stamps: surplus,
         goal,
         status: "active",
@@ -199,7 +201,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
-    // (Optionnel) on pourrait renvoyer auth.mode en debug, mais je le laisse clean
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json(

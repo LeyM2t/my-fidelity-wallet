@@ -1,0 +1,220 @@
+{
+  "language": {
+    "en": "Anglais",
+    "fr": "Français",
+    "es": "Espagnol"
+  },
+
+  "clientLogin": {
+    "title": {
+      "login": "Connexion client",
+      "signup": "Créer un compte client"
+    },
+    "placeholders": {
+      "email": "Email",
+      "password": "Mot de passe"
+    },
+    "buttons": {
+      "loading": "Chargement...",
+      "login": "Se connecter",
+      "signup": "Créer mon compte",
+      "switchToSignup": "Créer un compte",
+      "switchToLogin": "J’ai déjà un compte"
+    },
+    "errors": {
+      "requiredFields": "Email et mot de passe obligatoires",
+      "sessionCreationFailed": "Échec de création de session",
+      "generic": "Une erreur est survenue"
+    }
+  },
+
+  "wallet": {
+    "brand": "FIDELITY WALLET",
+    "error": "Erreur",
+    "title": "Mes wallets",
+    "subtitle": "Crée et organise tes cartes de fidélité",
+    "main": "Mon wallet principal",
+    "custom": "Wallet personnalisé",
+    "create": "+ Créer un wallet",
+    "scan": "Scanner un QR",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation...",
+    "logout": "Se déconnecter",
+    "logoutLoading": "Déconnexion...",
+    "noWallet": "Aucun wallet",
+    "noWalletDesc": "Crée ton premier wallet pour commencer",
+    "cards": {
+      "zero": "Aucune carte",
+      "one": "1 carte de fidélité",
+      "many": "{count} cartes de fidélité"
+    },
+    "buttons": {
+      "delete": "Supprimer"
+    },
+    "prompt": {
+      "createWallet": "Nom du wallet"
+    },
+    "confirm": {
+      "deleteWallet": "Supprimer ce wallet ?"
+    }
+  },
+
+  "scan": {
+  "checkingSession": "Vérification de la session client...",
+  "back": "Retour",
+  "title": "Scanner le QR du client",
+  "description": "Scannez le QR du client pour ajouter des points ou valider une récompense.",
+    "errorTitle": "Erreur",
+    "startingCamera": "Démarrage caméra...",
+    "cameraUnavailable": "Caméra non disponible",
+    "earn": "+1 tampon",
+    "reward": "Récompense",
+    "scanSecret": "Clé scan (optionnel)",
+    "status": {
+      "pending": "Scan en attente...",
+      "invalid": "QR non reconnu",
+      "detected": "Client détecté",
+      "cameraError": "Erreur caméra",
+      "adding": "Ajout du tampon...",
+      "added": "Tampon ajouté",
+      "addError": "Échec de l’ajout",
+      "validating": "Validation de la récompense...",
+      "validated": "Récompense validée",
+      "rewardError": "Erreur récompense"
+    },
+    "errors": {
+      "invalidQR": "QR non reconnu. Scanne le QR affiché par le commerçant.",
+      "sessionCheckFailed": "Échec de vérification de session client.",
+      "sessionError": "Erreur de vérification de session.",
+      "cameraUnavailable": "La caméra ne peut pas être utilisée. Utilise HTTPS ou autorise la caméra.",
+      "cameraError": "Erreur caméra / permission."
+    }
+  },
+
+  "walletDetail": {
+    "back": "Retour",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation...",
+    "mainWallet": "Mon wallet principal",
+    "fallbackWallet": "Wallet",
+    "headerLabel": "Wallet",
+    "realCards_one": "1 vraie carte de fidélité",
+    "realCards_other": "{count} vraies cartes de fidélité",
+    "customWalletReady": "Wallet personnalisé prêt. L’association réelle des cartes arrive ensuite.",
+    "errorTitle": "Erreur",
+    "openCard": "Ouvrir la carte",
+    "rewardReady": "Récompense prête",
+    "active": "Active",
+    "empty": {
+      "title": "Aucune carte dans ce wallet",
+      "description": "C’est normal pour le moment. Les wallets personnalisés sont déjà visibles dans l’interface, mais la vraie association des cartes sera ajoutée quand on créera le modèle Firestore du wallet."
+    },
+    "errors": {
+      "unknown": "Erreur inconnue"
+    }
+  },
+
+  "card": {
+    "back": "Retour",
+    "loading": "Chargement...",
+    "showQR": "Montre ce QR au commerçant",
+    "progress": "Progression",
+    "store": "Commerce",
+    "rewardReady": "Récompense prête",
+    "active": "Carte active",
+    "delete": "Supprimer la carte",
+    "deleting": "Suppression...",
+    "confirmDelete": "Supprimer cette carte ?",
+    "errors": {
+      "loadCards": "Erreur de chargement des cartes",
+      "loadCard": "Erreur de chargement de la carte",
+      "notFound": "Carte introuvable",
+      "invalidId": "ID de carte invalide",
+      "deleteFailed": "Échec de la suppression"
+    }
+  },
+
+  "merchant": {
+    "loading": "Chargement...",
+    "logoutLoading": "Déconnexion...",
+    "logout": "Se déconnecter",
+    "createTitle": "Créer mon commerce",
+    "createDescription": "Commence par créer ton commerce pour obtenir un QR que les clients pourront scanner.",
+    "placeholder": "Nom du commerce",
+    "creating": "Création...",
+    "createButton": "Créer mon commerce",
+    "qrDescription": "Affiche ce QR au client pour qu’il ajoute ta carte à son wallet.",
+    "regenerating": "Régénération...",
+    "regenerate": "Régénérer QR",
+    "qrLoading": "Chargement QR...",
+    "qrUnavailable": "QR indisponible",
+    "openScan": "Ouvrir le scan commerçant",
+    "customize": "Personnaliser la carte",
+    "errors": {
+      "loadStore": "Erreur chargement store",
+      "network": "Erreur réseau",
+      "nameRequired": "Entre un nom de commerce",
+      "createStore": "Erreur création",
+      "token": "Erreur token",
+      "logout": "Erreur logout"
+    }
+  },
+
+  "merchantLogin": {
+  "title": "Connexion commerçant",
+  "subtitle": "Connectez-vous pour accéder à la page de scan",
+  "email": "Email",
+  "password": "Mot de passe",
+  "loading": "Chargement...",
+  "login": "Se connecter",
+  "errors": {
+    "sessionLogin": "Erreur de session",
+    "login": "Erreur de connexion"
+  }
+},
+
+  "merchantQr": {
+    "title": "QR code commerçant",
+    "merchantId": "Merchant ID (unique)",
+    "merchantIdHelp": "Conseil : lettres/chiffres/underscore. Exemple : GETYOURCREPE",
+    "merchantName": "Nom affiché sur la carte",
+    "goal": "Objectif (tampons)",
+    "defaultName": "Commerce",
+    "copy": "Copier le lien",
+    "open": "Ouvrir (test)",
+    "loadingQR": "Chargement du QR…",
+    "copySuccess": "Lien copié ✅",
+    "copyFail": "Impossible de copier automatiquement. Copie manuelle : ",
+    "note": "Note : en local, le QR contiendra ton IP/port. En production, ce sera ton domaine."
+  },
+
+  "merchantTemplate": {
+    "pageTitle": "Créateur de carte",
+    "pageDescription": "Personnalise le style, les couleurs, les images et la mise en page.",
+    "merchantTemplate": "Template commerçant",
+    "back": "Retour",
+    "save": "Sauvegarder",
+    "saving": "Sauvegarde...",
+    "refresh": "Actualiser",
+    "loading": "Chargement...",
+    "saved": "Template sauvegardé ✅",
+    "error": "Erreur"
+  },
+
+  "addClient": {
+    "title": "Ajouter la carte",
+    "token": "Token",
+    "empty": "(vide)",
+    "status": "Statut",
+    "checkingSession": "Vérification de la session...",
+    "addingCard": "Ajout de la carte...",
+    "success": "Carte prête ✅ Ouverture…",
+    "errors": {
+      "missingToken": "Token manquant (ex: /add?token=XXXX)",
+      "sessionCheck": "Échec de vérification de session client",
+      "missingCardId": "cardId manquant dans la réponse serveur",
+      "http": "Erreur HTTP",
+      "network": "Erreur réseau"
+    }
+  }
+}

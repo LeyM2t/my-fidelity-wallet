@@ -12,138 +12,9 @@ function sanitizeStoreId(storeId: string) {
   return storeId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 200);
 }
 
-function isHex6(v: any) {
-  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v.trim());
-}
-
-function clampNumber(v: any, min: number, max: number, fallback: number) {
-  const n = typeof v === "number" && Number.isFinite(v) ? v : fallback;
-  return Math.min(max, Math.max(min, n));
-}
-
-type Box = { x: number; y: number; width: number; height: number };
-
-function sanitizeBox(v: any, fallback: Box): Box {
-  return {
-    x: clampNumber(v?.x, -999, 999, fallback.x),
-    y: clampNumber(v?.y, -999, 999, fallback.y),
-    width: clampNumber(v?.width, 10, 9999, fallback.width),
-    height: clampNumber(v?.height, 10, 9999, fallback.height),
-  };
-}
-
-function sanitizeTemplate(input: any) {
-  // Defaults compatibles V2.6
-  const DEFAULT = {
-    title: "Loyalty Card",
-    textColor: "#ffffff",
-    font: "inter",
-
-    bgType: "color" as "color" | "gradient" | "image",
-    bgColor: "#111827",
-    gradient: { from: "#ff0000", to: "#111827", angle: 45 },
-
-    logoUrl: "",
-    bgImageUrl: "",
-
-    bgImageEnabled: false,
-    bgImageOpacity: 0.85,
-
-    logoBox: { x: 18, y: 18, width: 56, height: 56 },
-    bgImageBox: { x: 0, y: 0, width: 420, height: 220 },
-  };
-
-  const t = (input && typeof input === "object") ? input : {};
-
-  // title
-  const title =
-    typeof t.title === "string" ? t.title.slice(0, 40) : DEFAULT.title;
-
-  // colors
-  const bgColor =
-    isHex6(t.bgColor) ? t.bgColor.toLowerCase() : DEFAULT.bgColor;
-
-  const textColor =
-    isHex6(t.textColor) ? t.textColor.toLowerCase() : DEFAULT.textColor;
-
-  // font (on accepte tes clés du builder)
-  // NB: on garde une whitelist large pour éviter des valeurs “random”
-  const allowedFonts = new Set([
-    "inter",
-    "poppins",
-    "montserrat",
-    "nunito",
-    "roboto",
-    "lora",
-    "playfair",
-    "oswald",
-    // compat anciens
-    "sans",
-    "serif",
-    "mono",
-  ]);
-  const font =
-    typeof t.font === "string" && allowedFonts.has(t.font)
-      ? t.font
-      : DEFAULT.font;
-
-  // bgType
-  const bgType =
-    t.bgType === "color" || t.bgType === "gradient" || t.bgType === "image"
-      ? t.bgType
-      : DEFAULT.bgType;
-
-  // gradient
-  const gradient = {
-    from: isHex6(t?.gradient?.from) ? t.gradient.from.toLowerCase() : DEFAULT.gradient.from,
-    to: isHex6(t?.gradient?.to) ? t.gradient.to.toLowerCase() : DEFAULT.gradient.to,
-    angle: clampNumber(t?.gradient?.angle, 0, 360, DEFAULT.gradient.angle),
-  };
-
-  // urls
-  const logoUrl =
-    typeof t.logoUrl === "string" ? t.logoUrl.slice(0, 500) : DEFAULT.logoUrl;
-
-  const bgImageUrl =
-    typeof t.bgImageUrl === "string"
-      ? t.bgImageUrl.slice(0, 500)
-      : DEFAULT.bgImageUrl;
-
-  // combine base + image
-  // compat: si bgType=image (ancienne logique), on force l’activation
-  const bgImageEnabledRaw =
-    typeof t.bgImageEnabled === "boolean"
-      ? t.bgImageEnabled
-      : (bgType === "image" || !!(bgImageUrl && bgImageUrl.trim()));
-
-  const bgImageEnabled = !!bgImageEnabledRaw;
-
-  const bgImageOpacity =
-    clampNumber(t.bgImageOpacity, 0, 1, DEFAULT.bgImageOpacity);
-
-  // boxes
-  const logoBox = sanitizeBox(t.logoBox, DEFAULT.logoBox);
-  const bgImageBox = sanitizeBox(t.bgImageBox, DEFAULT.bgImageBox);
-
-  // NOTE: on garde aussi bgType=image pour compat,
-  // mais l’affichage “combiné” se fait via bgImageEnabled/bgImageOpacity.
-  return {
-    title,
-    bgColor,
-    textColor,
-    font,
-    logoUrl,
-    bgImageUrl,
-
-    bgType,
-    gradient,
-
-    bgImageEnabled,
-    bgImageOpacity,
-
-    logoBox,
-    bgImageBox,
-  };
+function clampHex(v: any, fallback: string) {
+  const s = typeof v === "string" ? v.trim() : "";
+  return /^#[0-9a-fA-F]{6}$/.test(s) ? s.toLowerCase() : fallback;
 }
 
 export async function GET(
@@ -161,7 +32,14 @@ export async function GET(
       return NextResponse.json({
         storeId: sid,
         name: "",
-        cardTemplate: sanitizeTemplate({}),
+        cardTemplate: {
+          title: "Loyalty Card",
+          bgColor: "#111827",
+          textColor: "#ffffff",
+          font: "inter",
+          logoUrl: "",
+          bgImageUrl: "",
+        },
       });
     }
 
@@ -172,10 +50,7 @@ export async function GET(
       cardTemplate: data.cardTemplate || null,
     });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "failed" }, { status: 500 });
   }
 }
 
@@ -198,13 +73,46 @@ export async function PATCH(
         : null;
 
     if (!cardTemplate) {
-      return NextResponse.json(
-        { error: "cardTemplate missing" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "cardTemplate missing" }, { status: 400 });
     }
 
-    const clean = sanitizeTemplate(cardTemplate);
+    // ✅ On accepte tes fonts + on garde compat (sans/serif/mono)
+    const allowedFonts = new Set([
+      "inter",
+      "poppins",
+      "montserrat",
+      "nunito",
+      "roboto",
+      "lora",
+      "playfair",
+      "oswald",
+      "sans",
+      "serif",
+      "mono",
+    ]);
+
+    const font =
+      typeof cardTemplate.font === "string" && allowedFonts.has(cardTemplate.font)
+        ? cardTemplate.font
+        : "inter";
+
+    const clean = {
+      title:
+        typeof cardTemplate.title === "string"
+          ? cardTemplate.title.slice(0, 40)
+          : "Loyalty Card",
+      bgColor: clampHex(cardTemplate.bgColor, "#111827"),
+      textColor: clampHex(cardTemplate.textColor, "#ffffff"),
+      font,
+      logoUrl:
+        typeof cardTemplate.logoUrl === "string"
+          ? cardTemplate.logoUrl.slice(0, 500)
+          : "",
+      bgImageUrl:
+        typeof cardTemplate.bgImageUrl === "string"
+          ? cardTemplate.bgImageUrl.slice(0, 500)
+          : "",
+    };
 
     const ref = db.collection("stores").doc(sid);
     await ref.set(
@@ -217,9 +125,6 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true, storeId: sid, cardTemplate: clean });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "failed" }, { status: 500 });
   }
 }

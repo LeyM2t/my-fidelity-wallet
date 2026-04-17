@@ -1,26 +1,34 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebaseAdmin";
+import { requireClientUid } from "@/lib/clientSession";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const url = new URL(req.url);
-    const ownerId = url.searchParams.get("ownerId");
+    const clientUid = await requireClientUid();
 
-    if (!ownerId) {
-      return NextResponse.json({ error: "ownerId missing" }, { status: 400 });
-    }
-
-    const snap = await db
+    const snapshot = await db
       .collection("cards")
-      .where("ownerId", "==", ownerId)
+      .where("ownerId", "==", clientUid)
       .get();
 
-    const cards = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const cards = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
     return NextResponse.json({ cards });
-  } catch (e: any) {
+  } catch (error) {
+    console.error("api/cards GET error", error);
+
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+
+    if (message === "UNAUTHORIZED_CLIENT") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
-      { error: String(e?.message ?? e) },
+      { error: message || "Failed to load cards" },
       { status: 500 }
     );
   }
