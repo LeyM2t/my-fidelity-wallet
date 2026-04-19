@@ -189,17 +189,71 @@
   },
 
   "merchantTemplate": {
-    "pageTitle": "Card template builder",
-    "pageDescription": "Customize the card style, colors, images, and layout.",
-    "merchantTemplate": "Merchant template",
-    "back": "Back",
-    "save": "Save",
-    "saving": "Saving...",
-    "refresh": "Refresh",
-    "loading": "Loading...",
-    "saved": "Template saved ✅",
-    "error": "Error"
+  "pageTitle": "Card builder",
+  "pageDescription": "Customize the style, colors, images and layout.",
+  "merchantTemplate": "Merchant template",
+  "back": "Back",
+  "save": "Save",
+  "saving": "Saving...",
+  "refresh": "Refresh",
+  "loading": "Loading...",
+  "saved": "Template saved ✅",
+  "error": "Error",
+
+  "adminKey": "Admin key",
+  "adminKeyPlaceholder": "Enter the merchant admin key",
+  "resetLayout": "Reset layout",
+  "titleLabel": "Card title",
+
+  "presets": "Presets",
+  "background": "Background",
+  "textColor": "Text color",
+  "palette": "Palette",
+  "gradients": "Gradients",
+  "custom": "Custom",
+  "color1": "Color 1",
+  "color2": "Color 2",
+  "angle": "Angle",
+
+  "logoUrl": "Logo URL",
+  "logoUrlPlaceholder": "https://.../logo.png",
+  "backgroundImageUrl": "Background image URL",
+  "backgroundImagePlaceholder": "https://.../image.jpg",
+  "showBackgroundImage": "Show background image",
+  "imageOpacity": "Image opacity",
+  "imagesHelp": "You can move and resize the logo and background image directly in the preview.",
+
+  "preview": "Preview",
+  "previewHelp": "The preview shows the final card rendering. You can move and resize visual elements directly on it.",
+  "previewScore": "Score",
+  "previewTitleExample": "Loyalty card",
+  "loyaltyCard": "Loyalty card",
+  "loyaltyProgram": "Loyalty program",
+  "ownerPreview": "Customer preview",
+  "live": "Live",
+  "editLogo": "Edit logo",
+  "editBackground": "Edit background",
+  "fontDefault": "Default font",
+  "fontFallback": "Font",
+
+  "tabs": {
+    "themes": "Themes",
+    "colors": "Colors",
+    "fonts": "Fonts",
+    "images": "Images"
   },
+
+  "colorMode": {
+    "color": "Solid color",
+    "gradient": "Gradient"
+  },
+
+  "errors": {
+    "load": "Unable to load template.",
+    "save": "Unable to save template.",
+    "network": "Network error."
+  }
+},
 
   "addClient": {
     "title": "Add card",

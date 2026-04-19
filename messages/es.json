@@ -189,17 +189,71 @@
   },
 
   "merchantTemplate": {
-    "pageTitle": "Constructor de tarjetas",
-    "pageDescription": "Personaliza el estilo, colores, imágenes y diseño.",
-    "merchantTemplate": "Plantilla del comerciante",
-    "back": "Volver",
-    "save": "Guardar",
-    "saving": "Guardando...",
-    "refresh": "Actualizar",
-    "loading": "Cargando...",
-    "saved": "Plantilla guardada ✅",
-    "error": "Error"
+  "pageTitle": "Creador de tarjeta",
+  "pageDescription": "Personaliza el estilo, los colores, las imágenes y la disposición.",
+  "merchantTemplate": "Plantilla comerciante",
+  "back": "Volver",
+  "save": "Guardar",
+  "saving": "Guardando...",
+  "refresh": "Actualizar",
+  "loading": "Cargando...",
+  "saved": "Plantilla guardada ✅",
+  "error": "Error",
+
+  "adminKey": "Clave admin",
+  "adminKeyPlaceholder": "Introduce la clave admin del comerciante",
+  "resetLayout": "Restablecer diseño",
+  "titleLabel": "Título de la tarjeta",
+
+  "presets": "Estilos predefinidos",
+  "background": "Fondo",
+  "textColor": "Color del texto",
+  "palette": "Paleta",
+  "gradients": "Degradados",
+  "custom": "Personalizado",
+  "color1": "Color 1",
+  "color2": "Color 2",
+  "angle": "Ángulo",
+
+  "logoUrl": "URL del logo",
+  "logoUrlPlaceholder": "https://.../logo.png",
+  "backgroundImageUrl": "URL de la imagen de fondo",
+  "backgroundImagePlaceholder": "https://.../image.jpg",
+  "showBackgroundImage": "Mostrar imagen de fondo",
+  "imageOpacity": "Opacidad de la imagen",
+  "imagesHelp": "Puedes mover y redimensionar el logo y la imagen de fondo directamente en la vista previa.",
+
+  "preview": "Vista previa",
+  "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar los elementos visuales directamente sobre ella.",
+  "previewScore": "Puntuación",
+  "previewTitleExample": "Tarjeta de fidelidad",
+  "loyaltyCard": "Tarjeta de fidelidad",
+  "loyaltyProgram": "Programa de fidelidad",
+  "ownerPreview": "Vista previa cliente",
+  "live": "En directo",
+  "editLogo": "Editar logo",
+  "editBackground": "Editar fondo",
+  "fontDefault": "Fuente por defecto",
+  "fontFallback": "Fuente",
+
+  "tabs": {
+    "themes": "Estilos",
+    "colors": "Colores",
+    "fonts": "Fuentes",
+    "images": "Imágenes"
   },
+
+  "colorMode": {
+    "color": "Color sólido",
+    "gradient": "Degradado"
+  },
+
+  "errors": {
+    "load": "No se pudo cargar la plantilla.",
+    "save": "No se pudo guardar la plantilla.",
+    "network": "Error de red."
+  }
+},
 
   "addClient": {
     "title": "Añadir tarjeta",

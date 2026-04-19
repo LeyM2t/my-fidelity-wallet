@@ -189,17 +189,71 @@
   },
 
   "merchantTemplate": {
-    "pageTitle": "Créateur de carte",
-    "pageDescription": "Personnalise le style, les couleurs, les images et la mise en page.",
-    "merchantTemplate": "Template commerçant",
-    "back": "Retour",
-    "save": "Sauvegarder",
-    "saving": "Sauvegarde...",
-    "refresh": "Actualiser",
-    "loading": "Chargement...",
-    "saved": "Template sauvegardé ✅",
-    "error": "Erreur"
+  "pageTitle": "Créateur de carte",
+  "pageDescription": "Personnalise le style, les couleurs, les images et la mise en page.",
+  "merchantTemplate": "Template commerçant",
+  "back": "Retour",
+  "save": "Sauvegarder",
+  "saving": "Sauvegarde...",
+  "refresh": "Actualiser",
+  "loading": "Chargement...",
+  "saved": "Template sauvegardé ✅",
+  "error": "Erreur",
+
+  "adminKey": "Clé admin",
+  "adminKeyPlaceholder": "Entre la clé admin du commerçant",
+  "resetLayout": "Réinitialiser la mise en page",
+  "titleLabel": "Titre de la carte",
+
+  "presets": "Styles prédéfinis",
+  "background": "Arrière-plan",
+  "textColor": "Couleur du texte",
+  "palette": "Palette",
+  "gradients": "Dégradés",
+  "custom": "Personnalisé",
+  "color1": "Couleur 1",
+  "color2": "Couleur 2",
+  "angle": "Angle",
+
+  "logoUrl": "URL du logo",
+  "logoUrlPlaceholder": "https://.../logo.png",
+  "backgroundImageUrl": "URL de l’image de fond",
+  "backgroundImagePlaceholder": "https://.../image.jpg",
+  "showBackgroundImage": "Afficher l’image de fond",
+  "imageOpacity": "Opacité de l’image",
+  "imagesHelp": "Tu peux déplacer et redimensionner le logo et l’image de fond directement dans l’aperçu.",
+
+  "preview": "Aperçu",
+  "previewHelp": "L’aperçu montre le rendu final de la carte. Tu peux déplacer et redimensionner les éléments directement dessus.",
+  "previewScore": "Score",
+  "previewTitleExample": "Carte fidélité",
+  "loyaltyCard": "Carte fidélité",
+  "loyaltyProgram": "Programme de fidélité",
+  "ownerPreview": "Aperçu client",
+  "live": "En direct",
+  "editLogo": "Modifier le logo",
+  "editBackground": "Modifier le fond",
+  "fontDefault": "Police par défaut",
+  "fontFallback": "Police",
+
+  "tabs": {
+    "themes": "Styles",
+    "colors": "Couleurs",
+    "fonts": "Polices",
+    "images": "Images"
   },
+
+  "colorMode": {
+    "color": "Couleur unie",
+    "gradient": "Dégradé"
+  },
+
+  "errors": {
+    "load": "Impossible de charger le template.",
+    "save": "Impossible d’enregistrer le template.",
+    "network": "Erreur réseau."
+  }
+},
 
   "addClient": {
     "title": "Ajouter la carte",
