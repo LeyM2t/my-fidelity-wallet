@@ -106,6 +106,14 @@ function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<B
   };
 }
 
+function safeImageSrc(url?: string) {
+  const u = (url || "").trim();
+  if (!u) return "";
+  if (u.startsWith("/")) return u;
+  if (/^https?:\/\/[^\s]+$/i.test(u)) return u;
+  return "";
+}
+
 export default function CardCanvas({ template }: { template: CardTemplate }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const titleRef = useRef<HTMLDivElement | null>(null);
@@ -146,8 +154,11 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
     return template.bgColor || "#111827";
   }, [template.bgGradient, template.bgType, template.gradient, template.bgColor]);
 
+  const safeBgImageUrl = safeImageSrc(template.bgImageUrl);
+  const safeLogoUrl = safeImageSrc(template.logoUrl);
+
   const showBgImage =
-    !!template.bgImageUrl &&
+    !!safeBgImageUrl &&
     (typeof template.bgImageEnabled === "boolean"
       ? template.bgImageEnabled
       : true);
@@ -215,7 +226,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
         >
           {showBgImage ? (
             <img
-              src={template.bgImageUrl}
+              src={safeBgImageUrl}
               alt=""
               aria-hidden="true"
               style={{
@@ -286,7 +297,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
               </div>
             </div>
 
-            {template.logoUrl ? (
+            {safeLogoUrl ? (
               <div
                 style={{
                   position: "absolute",
@@ -306,7 +317,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                 }}
               >
                 <img
-                  src={template.logoUrl}
+                  src={safeLogoUrl}
                   alt=""
                   aria-hidden="true"
                   style={{

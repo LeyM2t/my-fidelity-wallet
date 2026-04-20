@@ -44,6 +44,7 @@ function safeCssUrl(url: string): string {
   const u = (url || "").trim();
   if (!u) return "";
   if (u.startsWith("/")) return u;
+  if (/^https?:\/\/[^\s]+$/i.test(u)) return u;
   return "";
 }
 
@@ -62,6 +63,8 @@ function templateToCss(tpl: CardTemplate | undefined | null) {
 
   return {
     title: (tpl?.title || "").trim(),
+    textColor: (tpl?.textColor || "#ffffff").trim(),
+    font: (tpl?.font || "inter").trim(),
     baseBackground,
     bgImageEnabled: tpl?.bgImageEnabled !== false,
     bgImageOpacity:
@@ -79,6 +82,8 @@ function templateToCardCanvasTemplate(css: ReturnType<typeof templateToCss>) {
 
   return {
     title: css.title,
+    textColor: css.textColor,
+    font: css.font,
     bgColor: isGradient ? undefined : base,
     bgGradient: isGradient ? base : undefined,
     bgImageUrl: css.bgImageEnabled ? css.bgImageUrl : "",

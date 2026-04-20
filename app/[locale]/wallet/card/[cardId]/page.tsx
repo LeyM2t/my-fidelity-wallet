@@ -17,7 +17,44 @@ type FirestoreCard = {
 
 type CardTemplate = {
   title?: string;
+  logoUrl?: string;
+  bgColor?: string;
+  textColor?: string;
+  font?: string;
+  bgType?: "color" | "gradient";
+  gradient?: {
+    from?: string;
+    to?: string;
+    angle?: number;
+  };
 };
+
+function safeImageUrl(url?: string) {
+  const u = (url || "").trim();
+  if (!u) return "";
+  if (u.startsWith("/")) return u;
+  if (/^https?:\/\/[^\s]+$/i.test(u)) return u;
+  return "";
+}
+
+function templateBackground(template: CardTemplate | null) {
+  if (!template) return "#111827";
+
+  if (
+    template.bgType === "gradient" &&
+    template.gradient?.from &&
+    template.gradient?.to
+  ) {
+    const angle =
+      typeof template.gradient.angle === "number"
+        ? template.gradient.angle
+        : 45;
+
+    return `linear-gradient(${angle}deg, ${template.gradient.from}, ${template.gradient.to})`;
+  }
+
+  return template.bgColor || "#111827";
+}
 
 export default function CardPage() {
   const router = useRouter();
@@ -178,6 +215,9 @@ export default function CardPage() {
   if (!card) return null;
 
   const titleToShow = (template?.title || "").trim() || card.storeId;
+  const logoUrl = safeImageUrl(template?.logoUrl);
+  const headerBackground = templateBackground(template);
+  const headerTextColor = (template?.textColor || "#ffffff").trim() || "#ffffff";
 
   return (
     <main
@@ -222,17 +262,58 @@ export default function CardPage() {
             textAlign: "center",
           }}
         >
-          <h1
+          <div
             style={{
-              margin: 0,
+              borderRadius: 22,
+              padding: 20,
               marginBottom: 20,
-              fontSize: 28,
-              lineHeight: 1.1,
-              color: "#111827",
+              background: headerBackground,
+              color: headerTextColor,
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            {titleToShow}
-          </h1>
+            {logoUrl ? (
+              <div
+                style={{
+                  width: 88,
+                  height: 88,
+                  margin: "0 auto 14px",
+                  borderRadius: 18,
+                  overflow: "hidden",
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 8,
+                }}
+              >
+                <img
+                  src={logoUrl}
+                  alt=""
+                  aria-hidden="true"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              </div>
+            ) : null}
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 28,
+                lineHeight: 1.1,
+                color: "inherit",
+              }}
+            >
+              {titleToShow}
+            </h1>
+          </div>
 
           <div
             style={{
