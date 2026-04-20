@@ -4,7 +4,6 @@
     "fr": "Francés",
     "es": "Español"
   },
-
   "clientLogin": {
     "title": {
       "login": "Inicio de sesión cliente",
@@ -27,7 +26,6 @@
       "generic": "Ha ocurrido un error"
     }
   },
-
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Error",
@@ -58,7 +56,6 @@
       "deleteWallet": "¿Eliminar este wallet?"
     }
   },
-
   "scan": {
     "checkingSession": "Verificando la sesión del cliente...",
     "back": "Volver",
@@ -95,7 +92,6 @@
       "cameraError": "Error de cámara / permisos."
     }
   },
-
   "walletDetail": {
     "back": "Volver",
     "refresh": "Actualizar",
@@ -118,7 +114,6 @@
       "unknown": "Error desconocido"
     }
   },
-
   "card": {
     "back": "Volver",
     "loading": "Cargando...",
@@ -138,7 +133,6 @@
       "deleteFailed": "Error al eliminar"
     }
   },
-
   "merchant": {
     "loading": "Cargando...",
     "logoutLoading": "Cerrando sesión...",
@@ -164,7 +158,6 @@
       "logout": "Error al cerrar sesión"
     }
   },
-
   "merchantLogin": {
     "title": "Inicio de sesión comerciante",
     "subtitle": "Inicia sesión para acceder a la página de escaneo",
@@ -177,7 +170,6 @@
       "login": "Error de inicio de sesión"
     }
   },
-
   "merchantQr": {
     "title": "QR del comerciante",
     "merchantId": "Merchant ID (único)",
@@ -192,10 +184,9 @@
     "copyFail": "No se pudo copiar automáticamente. Copia manual: ",
     "note": "Nota: en local, el QR contendrá tu IP/puerto. En producción, será tu dominio."
   },
-
   "merchantTemplate": {
     "pageTitle": "Creador de tarjeta",
-    "pageDescription": "Personaliza el estilo, los colores, las imágenes y la disposición.",
+    "pageDescription": "Personaliza el estilo, los colores, el logo y la disposición.",
     "merchantTemplate": "Plantilla comerciante",
     "back": "Volver",
     "save": "Guardar",
@@ -204,12 +195,10 @@
     "loading": "Cargando...",
     "saved": "Plantilla guardada ✅",
     "error": "Error",
-
     "confirmPassword": "Confirmar contraseña",
     "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta comerciante",
     "resetLayout": "Restablecer diseño",
     "titleLabel": "Título de la tarjeta",
-
     "presets": "Estilos predefinidos",
     "background": "Fondo",
     "textColor": "Color del texto",
@@ -219,17 +208,10 @@
     "color1": "Color 1",
     "color2": "Color 2",
     "angle": "Ángulo",
-
     "logoUrl": "URL del logo",
     "logoUrlPlaceholder": "https://.../logo.png",
-    "backgroundImageUrl": "URL de la imagen de fondo",
-    "backgroundImagePlaceholder": "https://.../image.jpg",
-    "showBackgroundImage": "Mostrar imagen de fondo",
-    "imageOpacity": "Opacidad de la imagen",
-    "imagesHelp": "Puedes mover y redimensionar el logo y la imagen de fondo directamente en la vista previa.",
-
     "preview": "Vista previa",
-    "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar los elementos directamente sobre ella.",
+    "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar el logo directamente sobre ella.",
     "previewScore": "Puntuación",
     "previewTitleExample": "Tarjeta de fidelidad",
     "loyaltyCard": "Tarjeta de fidelidad",
@@ -237,22 +219,41 @@
     "ownerPreview": "Vista previa cliente",
     "live": "En directo",
     "editLogo": "Editar logo",
-    "editBackground": "Editar fondo",
     "fontDefault": "Fuente por defecto",
     "fontFallback": "Fuente",
-
     "tabs": {
       "themes": "Estilos",
       "colors": "Colores",
       "fonts": "Fuentes",
       "images": "Imágenes"
     },
-
     "colorMode": {
       "color": "Color sólido",
       "gradient": "Degradado"
     },
-
+    "cloudinaryButtons": {
+      "browseLogo": "Examinar logo",
+      "removeLogo": "Eliminar logo",
+      "uploadingLogo": "Subiendo logo...",
+      "loadingUploader": "Cargando cargador..."
+    },
+    "cloudinaryHelp": {
+      "logoOnly": "Usa el botón de arriba para subir un logo público con Cloudinary, o pega manualmente la URL del logo."
+    },
+    "cloudinarySuccess": {
+      "logoUploaded": "Logo subido correctamente."
+    },
+    "cloudinaryErrors": {
+      "loadWidgetFailed": "No se pudo cargar el widget de Cloudinary.",
+      "missingStoreId": "Falta storeId en la URL.",
+      "missingEnv": "Faltan variables de entorno de Cloudinary.",
+      "widgetNotReady": "El widget de Cloudinary aún no está listo.",
+      "uploadFailed": "Error al subir el logo.",
+      "missingImageUrl": "Cloudinary no devolvió una URL de imagen."
+    },
+    "cloudinaryAlt": {
+      "logo": "logo"
+    },
     "errors": {
       "load": "No se pudo cargar la plantilla.",
       "save": "No se pudo guardar la plantilla.",
@@ -262,7 +263,6 @@
       "reauthFailed": "Contraseña incorrecta o no se pudo confirmar."
     }
   },
-
   "addClient": {
     "title": "Añadir tarjeta",
     "token": "Token",

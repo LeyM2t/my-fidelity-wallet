@@ -4,7 +4,6 @@
     "fr": "Français",
     "es": "Espagnol"
   },
-
   "clientLogin": {
     "title": {
       "login": "Connexion client",
@@ -27,7 +26,6 @@
       "generic": "Une erreur est survenue"
     }
   },
-
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Erreur",
@@ -58,44 +56,42 @@
       "deleteWallet": "Supprimer ce wallet ?"
     }
   },
-
   "scan": {
-  "checkingSession": "Vérification de la session client...",
-  "back": "Retour",
-  "title": "Scanner le QR du client",
-  "description": "Scannez le QR du client pour ajouter des points ou valider une récompense.",
-  "errorTitle": "Erreur",
-  "startingCamera": "Démarrage caméra...",
-  "cameraUnavailable": "Caméra non disponible",
-  "earn": "+1 tampon",
-  "reward": "Récompense",
-  "quantity": "Quantité de tampons",
-  "scanAnother": "Scanner un autre client",
-  "addStamps": "Ajouter les tampons",
-  "detectedCard": "Carte détectée",
-  "scannerActive": "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client.",
-  "scannerPaused": "Scanner en pause.",
-  "status": {
-    "pending": "Scan en attente...",
-    "invalid": "QR non reconnu",
-    "detected": "Client détecté",
-    "cameraError": "Erreur caméra",
-    "adding": "Ajout du tampon...",
-    "added": "Tampon ajouté",
-    "addError": "Échec de l’ajout",
-    "validating": "Validation de la récompense...",
-    "validated": "Récompense validée",
-    "rewardError": "Erreur récompense"
+    "checkingSession": "Vérification de la session client...",
+    "back": "Retour",
+    "title": "Scanner le QR du client",
+    "description": "Scannez le QR du client pour ajouter des points ou valider une récompense.",
+    "errorTitle": "Erreur",
+    "startingCamera": "Démarrage caméra...",
+    "cameraUnavailable": "Caméra non disponible",
+    "earn": "+1 tampon",
+    "reward": "Récompense",
+    "quantity": "Quantité de tampons",
+    "scanAnother": "Scanner un autre client",
+    "addStamps": "Ajouter les tampons",
+    "detectedCard": "Carte détectée",
+    "scannerActive": "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client.",
+    "scannerPaused": "Scanner en pause.",
+    "status": {
+      "pending": "Scan en attente...",
+      "invalid": "QR non reconnu",
+      "detected": "Client détecté",
+      "cameraError": "Erreur caméra",
+      "adding": "Ajout du tampon...",
+      "added": "Tampon ajouté",
+      "addError": "Échec de l’ajout",
+      "validating": "Validation de la récompense...",
+      "validated": "Récompense validée",
+      "rewardError": "Erreur récompense"
+    },
+    "errors": {
+      "invalidQR": "QR non reconnu. Scanne le QR affiché par le commerçant.",
+      "sessionCheckFailed": "Échec de vérification de session client.",
+      "sessionError": "Erreur de vérification de session.",
+      "cameraUnavailable": "La caméra ne peut pas être utilisée. Utilise HTTPS ou autorise la caméra.",
+      "cameraError": "Erreur caméra / permission."
+    }
   },
-  "errors": {
-    "invalidQR": "QR non reconnu. Scanne le QR affiché par le commerçant.",
-    "sessionCheckFailed": "Échec de vérification de session client.",
-    "sessionError": "Erreur de vérification de session.",
-    "cameraUnavailable": "La caméra ne peut pas être utilisée. Utilise HTTPS ou autorise la caméra.",
-    "cameraError": "Erreur caméra / permission."
-  }
-},
-
   "walletDetail": {
     "back": "Retour",
     "refresh": "Actualiser",
@@ -118,7 +114,6 @@
       "unknown": "Erreur inconnue"
     }
   },
-
   "card": {
     "back": "Retour",
     "loading": "Chargement...",
@@ -138,7 +133,6 @@
       "deleteFailed": "Échec de la suppression"
     }
   },
-
   "merchant": {
     "loading": "Chargement...",
     "logoutLoading": "Déconnexion...",
@@ -164,20 +158,18 @@
       "logout": "Erreur logout"
     }
   },
-
   "merchantLogin": {
-  "title": "Connexion commerçant",
-  "subtitle": "Connectez-vous pour accéder à la page de scan",
-  "email": "Email",
-  "password": "Mot de passe",
-  "loading": "Chargement...",
-  "login": "Se connecter",
-  "errors": {
-    "sessionLogin": "Erreur de session",
-    "login": "Erreur de connexion"
-  }
-},
-
+    "title": "Connexion commerçant",
+    "subtitle": "Connectez-vous pour accéder à la page de scan",
+    "email": "Email",
+    "password": "Mot de passe",
+    "loading": "Chargement...",
+    "login": "Se connecter",
+    "errors": {
+      "sessionLogin": "Erreur de session",
+      "login": "Erreur de connexion"
+    }
+  },
   "merchantQr": {
     "title": "QR code commerçant",
     "merchantId": "Merchant ID (unique)",
@@ -192,77 +184,85 @@
     "copyFail": "Impossible de copier automatiquement. Copie manuelle : ",
     "note": "Note : en local, le QR contiendra ton IP/port. En production, ce sera ton domaine."
   },
-
   "merchantTemplate": {
-  "pageTitle": "Créateur de carte",
-  "pageDescription": "Personnalise le style, les couleurs, les images et la mise en page.",
-  "merchantTemplate": "Template commerçant",
-  "back": "Retour",
-  "save": "Sauvegarder",
-  "saving": "Sauvegarde...",
-  "refresh": "Actualiser",
-  "loading": "Chargement...",
-  "saved": "Template sauvegardé ✅",
-  "error": "Erreur",
-
-  "confirmPassword": "Confirmer le mot de passe",
-  "confirmPasswordPlaceholder": "Retape le mot de passe du compte commerçant",
-  "resetLayout": "Réinitialiser la mise en page",
-  "titleLabel": "Titre de la carte",
-
-  "presets": "Styles prédéfinis",
-  "background": "Arrière-plan",
-  "textColor": "Couleur du texte",
-  "palette": "Palette",
-  "gradients": "Dégradés",
-  "custom": "Personnalisé",
-  "color1": "Couleur 1",
-  "color2": "Couleur 2",
-  "angle": "Angle",
-
-  "logoUrl": "URL du logo",
-  "logoUrlPlaceholder": "https://.../logo.png",
-  "backgroundImageUrl": "URL de l’image de fond",
-  "backgroundImagePlaceholder": "https://.../image.jpg",
-  "showBackgroundImage": "Afficher l’image de fond",
-  "imageOpacity": "Opacité de l’image",
-  "imagesHelp": "Tu peux déplacer et redimensionner le logo et l’image de fond directement dans l’aperçu.",
-
-  "preview": "Aperçu",
-  "previewHelp": "L’aperçu montre le rendu final de la carte. Tu peux déplacer et redimensionner les éléments directement dessus.",
-  "previewScore": "Score",
-  "previewTitleExample": "Carte fidélité",
-  "loyaltyCard": "Carte fidélité",
-  "loyaltyProgram": "Programme de fidélité",
-  "ownerPreview": "Aperçu client",
-  "live": "En direct",
-  "editLogo": "Modifier le logo",
-  "editBackground": "Modifier le fond",
-  "fontDefault": "Police par défaut",
-  "fontFallback": "Police",
-
-  "tabs": {
-    "themes": "Styles",
-    "colors": "Couleurs",
-    "fonts": "Polices",
-    "images": "Images"
+    "pageTitle": "Créateur de carte",
+    "pageDescription": "Personnalise le style, les couleurs, le logo et la mise en page.",
+    "merchantTemplate": "Template commerçant",
+    "back": "Retour",
+    "save": "Sauvegarder",
+    "saving": "Sauvegarde...",
+    "refresh": "Actualiser",
+    "loading": "Chargement...",
+    "saved": "Template sauvegardé ✅",
+    "error": "Erreur",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Retape le mot de passe du compte commerçant",
+    "resetLayout": "Réinitialiser la mise en page",
+    "titleLabel": "Titre de la carte",
+    "presets": "Styles prédéfinis",
+    "background": "Arrière-plan",
+    "textColor": "Couleur du texte",
+    "palette": "Palette",
+    "gradients": "Dégradés",
+    "custom": "Personnalisé",
+    "color1": "Couleur 1",
+    "color2": "Couleur 2",
+    "angle": "Angle",
+    "logoUrl": "URL du logo",
+    "logoUrlPlaceholder": "https://.../logo.png",
+    "preview": "Aperçu",
+    "previewHelp": "L’aperçu montre le rendu final de la carte. Tu peux déplacer et redimensionner le logo directement dessus.",
+    "previewScore": "Score",
+    "previewTitleExample": "Carte fidélité",
+    "loyaltyCard": "Carte fidélité",
+    "loyaltyProgram": "Programme de fidélité",
+    "ownerPreview": "Aperçu client",
+    "live": "En direct",
+    "editLogo": "Modifier le logo",
+    "fontDefault": "Police par défaut",
+    "fontFallback": "Police",
+    "tabs": {
+      "themes": "Styles",
+      "colors": "Couleurs",
+      "fonts": "Polices",
+      "images": "Images"
+    },
+    "colorMode": {
+      "color": "Couleur unie",
+      "gradient": "Dégradé"
+    },
+    "cloudinaryButtons": {
+      "browseLogo": "Parcourir le logo",
+      "removeLogo": "Supprimer le logo",
+      "uploadingLogo": "Téléversement du logo...",
+      "loadingUploader": "Chargement de l’outil..."
+    },
+    "cloudinaryHelp": {
+      "logoOnly": "Utilise le bouton ci-dessus pour téléverser un logo public avec Cloudinary, ou colle manuellement l’URL du logo."
+    },
+    "cloudinarySuccess": {
+      "logoUploaded": "Logo téléversé avec succès."
+    },
+    "cloudinaryErrors": {
+      "loadWidgetFailed": "Impossible de charger le widget Cloudinary.",
+      "missingStoreId": "storeId manquant dans l’URL.",
+      "missingEnv": "Variables d’environnement Cloudinary manquantes.",
+      "widgetNotReady": "Le widget Cloudinary n’est pas encore prêt.",
+      "uploadFailed": "Échec du téléversement du logo.",
+      "missingImageUrl": "Cloudinary n’a pas renvoyé d’URL d’image."
+    },
+    "cloudinaryAlt": {
+      "logo": "logo"
+    },
+    "errors": {
+      "load": "Impossible de charger le template.",
+      "save": "Impossible d’enregistrer le template.",
+      "network": "Erreur réseau.",
+      "passwordRequired": "Entre le mot de passe pour confirmer la modification.",
+      "notAuthenticated": "Compte commerçant non connecté.",
+      "reauthFailed": "Mot de passe incorrect ou confirmation impossible."
+    }
   },
-
-  "colorMode": {
-    "color": "Couleur unie",
-    "gradient": "Dégradé"
-  },
-
-  "errors": {
-    "load": "Impossible de charger le template.",
-    "save": "Impossible d’enregistrer le template.",
-    "network": "Erreur réseau.",
-    "passwordRequired": "Entre le mot de passe pour confirmer la modification.",
-    "notAuthenticated": "Compte commerçant non connecté.",
-    "reauthFailed": "Mot de passe incorrect ou confirmation impossible."
-  }
-},
-
   "addClient": {
     "title": "Ajouter la carte",
     "token": "Token",

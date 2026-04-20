@@ -4,7 +4,6 @@
     "fr": "French",
     "es": "Spanish"
   },
-
   "clientLogin": {
     "title": {
       "login": "Client login",
@@ -27,7 +26,6 @@
       "generic": "An error occurred"
     }
   },
-
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Error",
@@ -58,7 +56,6 @@
       "deleteWallet": "Delete this wallet?"
     }
   },
-
   "scan": {
     "checkingSession": "Checking client session...",
     "back": "Back",
@@ -95,7 +92,6 @@
       "cameraError": "Camera / permission error."
     }
   },
-
   "walletDetail": {
     "back": "Back",
     "refresh": "Refresh",
@@ -118,7 +114,6 @@
       "unknown": "Unknown error"
     }
   },
-
   "card": {
     "back": "Back",
     "loading": "Loading...",
@@ -138,7 +133,6 @@
       "deleteFailed": "Delete failed"
     }
   },
-
   "merchant": {
     "loading": "Loading...",
     "logoutLoading": "Logging out...",
@@ -164,7 +158,6 @@
       "logout": "Logout error"
     }
   },
-
   "merchantLogin": {
     "title": "Merchant login",
     "subtitle": "Log in to access the scan page",
@@ -177,7 +170,6 @@
       "login": "Login error"
     }
   },
-
   "merchantQr": {
     "title": "Merchant QR code",
     "merchantId": "Merchant ID (unique)",
@@ -192,10 +184,9 @@
     "copyFail": "Could not copy automatically. Manual copy: ",
     "note": "Note: locally, the QR will contain your IP/port. In production, it will be your domain."
   },
-
   "merchantTemplate": {
     "pageTitle": "Card builder",
-    "pageDescription": "Customize the style, colors, images and layout.",
+    "pageDescription": "Customize the style, colors, logo and layout.",
     "merchantTemplate": "Merchant template",
     "back": "Back",
     "save": "Save",
@@ -204,12 +195,10 @@
     "loading": "Loading...",
     "saved": "Template saved ✅",
     "error": "Error",
-
     "confirmPassword": "Confirm password",
     "confirmPasswordPlaceholder": "Re-enter the merchant account password",
     "resetLayout": "Reset layout",
     "titleLabel": "Card title",
-
     "presets": "Presets",
     "background": "Background",
     "textColor": "Text color",
@@ -219,17 +208,10 @@
     "color1": "Color 1",
     "color2": "Color 2",
     "angle": "Angle",
-
     "logoUrl": "Logo URL",
     "logoUrlPlaceholder": "https://.../logo.png",
-    "backgroundImageUrl": "Background image URL",
-    "backgroundImagePlaceholder": "https://.../image.jpg",
-    "showBackgroundImage": "Show background image",
-    "imageOpacity": "Image opacity",
-    "imagesHelp": "You can move and resize the logo and background image directly in the preview.",
-
     "preview": "Preview",
-    "previewHelp": "The preview shows the final card rendering. You can move and resize the elements directly on it.",
+    "previewHelp": "The preview shows the final card rendering. You can move and resize the logo directly on it.",
     "previewScore": "Score",
     "previewTitleExample": "Loyalty card",
     "loyaltyCard": "Loyalty card",
@@ -237,22 +219,41 @@
     "ownerPreview": "Customer preview",
     "live": "Live",
     "editLogo": "Edit logo",
-    "editBackground": "Edit background",
     "fontDefault": "Default font",
     "fontFallback": "Font",
-
     "tabs": {
       "themes": "Themes",
       "colors": "Colors",
       "fonts": "Fonts",
       "images": "Images"
     },
-
     "colorMode": {
       "color": "Solid color",
       "gradient": "Gradient"
     },
-
+    "cloudinaryButtons": {
+      "browseLogo": "Browse logo",
+      "removeLogo": "Remove logo",
+      "uploadingLogo": "Uploading logo...",
+      "loadingUploader": "Loading uploader..."
+    },
+    "cloudinaryHelp": {
+      "logoOnly": "Use the button above to upload a public logo with Cloudinary, or paste a logo URL manually."
+    },
+    "cloudinarySuccess": {
+      "logoUploaded": "Logo uploaded successfully."
+    },
+    "cloudinaryErrors": {
+      "loadWidgetFailed": "Failed to load Cloudinary widget.",
+      "missingStoreId": "Missing storeId in URL.",
+      "missingEnv": "Missing Cloudinary environment variables.",
+      "widgetNotReady": "Cloudinary widget not ready yet.",
+      "uploadFailed": "Logo upload failed.",
+      "missingImageUrl": "Cloudinary did not return an image URL."
+    },
+    "cloudinaryAlt": {
+      "logo": "logo"
+    },
     "errors": {
       "load": "Unable to load template.",
       "save": "Unable to save template.",
@@ -262,7 +263,6 @@
       "reauthFailed": "Incorrect password or confirmation failed."
     }
   },
-
   "addClient": {
     "title": "Add card",
     "token": "Token",
