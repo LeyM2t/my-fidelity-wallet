@@ -1,12 +1,10 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
 };
 
 function createFirebaseApp() {
@@ -22,10 +20,6 @@ function createFirebaseApp() {
     throw new Error("Missing NEXT_PUBLIC_FIREBASE_PROJECT_ID");
   }
 
-  if (!firebaseConfig.storageBucket) {
-    throw new Error("Missing NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET");
-  }
-
   if (getApps().length > 0) {
     return getApp();
   }
@@ -35,4 +29,3 @@ function createFirebaseApp() {
 
 export const firebaseApp = createFirebaseApp();
 export const auth = getAuth(firebaseApp);
-export const storage = getStorage(firebaseApp);

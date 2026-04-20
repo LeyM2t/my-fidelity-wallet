@@ -5,12 +5,6 @@ import { getAuth } from "firebase-admin/auth";
 
 type BgType = "color" | "gradient" | "image";
 
-type Gradient = {
-  from: string;
-  to: string;
-  angle: number;
-};
-
 type Box = {
   x: number;
   y: number;
@@ -30,6 +24,10 @@ function clampHex(v: unknown, fallback: string) {
 function clampNumber(v: unknown, min: number, max: number, fallback: number) {
   const n = typeof v === "number" && Number.isFinite(v) ? v : fallback;
   return Math.min(max, Math.max(min, n));
+}
+
+function clampString(v: unknown, maxLength: number, fallback = "") {
+  return typeof v === "string" ? v.trim().slice(0, maxLength) : fallback;
 }
 
 function normalizeBox(b: unknown, fallback: Box): Box {
@@ -122,8 +120,8 @@ export async function GET(
 
     return NextResponse.json({
       storeId: sid,
-      name: data.name || "",
-      cardTemplate: data.cardTemplate || null,
+      name: typeof data.name === "string" ? data.name : "",
+      cardTemplate: data.cardTemplate || getDefaultCardTemplate(),
     });
   } catch (e: any) {
     return NextResponse.json(
@@ -160,8 +158,8 @@ export async function PATCH(
 
     const hasKnownOwner = !!(merchantId || ownerUid || ownerEmail);
 
-    // Sécurité importante :
-    // si le store n'a pas de propriétaire clair, on refuse l'écriture.
+    // Fail-closed:
+    // si le store n'a pas de propriétaire identifiable, on bloque.
     if (!hasKnownOwner) {
       return NextResponse.json(
         { error: "store owner missing" },
@@ -219,10 +217,7 @@ export async function PATCH(
         : "inter";
 
     const clean = {
-      title:
-        typeof cardTemplate.title === "string"
-          ? cardTemplate.title.slice(0, 40)
-          : "Loyalty Card",
+      title: clampString(cardTemplate.title, 40, "Loyalty Card"),
       textColor: clampHex(cardTemplate.textColor, "#ffffff"),
       font,
       bgType,
@@ -232,14 +227,8 @@ export async function PATCH(
         to: clampHex(cardTemplate.gradient?.to, "#111827"),
         angle: clampNumber(cardTemplate.gradient?.angle, 0, 360, 45),
       },
-      logoUrl:
-        typeof cardTemplate.logoUrl === "string"
-          ? cardTemplate.logoUrl.slice(0, 500)
-          : "",
-      bgImageUrl:
-        typeof cardTemplate.bgImageUrl === "string"
-          ? cardTemplate.bgImageUrl.slice(0, 500)
-          : "",
+      logoUrl: clampString(cardTemplate.logoUrl, 500, ""),
+      bgImageUrl: clampString(cardTemplate.bgImageUrl, 500, ""),
       bgImageEnabled: !!cardTemplate.bgImageEnabled,
       bgImageOpacity: clampNumber(cardTemplate.bgImageOpacity, 0, 1, 0.85),
       logoBox: normalizeBox(cardTemplate.logoBox, {

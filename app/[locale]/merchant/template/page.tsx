@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,12 +16,11 @@ import {
 import { Rnd } from "react-rnd";
 import { HexColorPicker } from "react-colorful";
 import { useTranslations } from "next-intl";
-import { auth, storage } from "@/lib/firebaseClient";
+import { auth } from "@/lib/firebaseClient";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
@@ -55,6 +54,19 @@ type CardTemplate = {
   logoBox: Box;
   bgImageBox: Box;
 };
+
+declare global {
+  interface Window {
+    cloudinary?: {
+      createUploadWidget: (
+        options: Record<string, unknown>,
+        callback: (error: unknown, result: any) => void
+      ) => {
+        open: () => void;
+      };
+    };
+  }
+}
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
@@ -183,10 +195,6 @@ function sanitizeTemplateBoxes(template: CardTemplate): CardTemplate {
   };
 }
 
-function sanitizeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
-}
-
 const HANDLE_STYLE: React.CSSProperties = {
   width: 12,
   height: 12,
@@ -263,16 +271,12 @@ export default function MerchantTemplatePage() {
   const t = useTranslations("merchantTemplate");
   const storeId = (searchParams.get("storeId") || "").trim();
 
-  const logoInputRef = useRef<HTMLInputElement | null>(null);
-  const bgInputRef = useRef<HTMLInputElement | null>(null);
-
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingBg, setUploadingBg] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
@@ -284,6 +288,7 @@ export default function MerchantTemplatePage() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [cardScale, setCardScale] = useState(1);
+  const [cloudinaryReady, setCloudinaryReady] = useState(false);
 
   const fontFamily = useMemo(() => getFontFamily(tpl.font), [tpl.font]);
 
@@ -305,6 +310,39 @@ export default function MerchantTemplatePage() {
     checkViewport();
     window.addEventListener("resize", checkViewport);
     return () => window.removeEventListener("resize", checkViewport);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.cloudinary) {
+      setCloudinaryReady(true);
+      return;
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://upload-widget.cloudinary.com/latest/global/all.js"]'
+    ) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setCloudinaryReady(true));
+      if (window.cloudinary) setCloudinaryReady(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://upload-widget.cloudinary.com/latest/global/all.js";
+    script.async = true;
+    script.onload = () => setCloudinaryReady(true);
+    script.onerror = () => {
+      setErr("Failed to load Cloudinary widget.");
+      setCloudinaryReady(false);
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      script.onload = null;
+      script.onerror = null;
+    };
   }, []);
 
   const baseBackground = useMemo(() => {
@@ -330,94 +368,80 @@ export default function MerchantTemplatePage() {
     }));
   }
 
-  async function uploadImage(file: File, kind: "logo" | "background") {
+  function openLogoUpload() {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
     if (!storeId) {
-      throw new Error("Missing storeId in URL.");
+      setErr("Missing storeId in URL.");
+      return;
     }
 
-    const user = auth.currentUser;
-    if (!user) {
-      throw new Error(t("errors.notAuthenticated"));
+    if (!cloudName || !uploadPreset) {
+      setErr("Missing Cloudinary environment variables.");
+      return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Selected file is not an image.");
+    if (!window.cloudinary) {
+      setErr("Cloudinary widget not ready yet.");
+      return;
     }
 
-    const maxBytes = 8 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      throw new Error("Image too large. Maximum size: 8 MB.");
-    }
+    setErr("");
+    setMsg("");
+    setUploadingLogo(true);
 
-    const ext = file.name.includes(".")
-      ? file.name.split(".").pop()?.toLowerCase() || "jpg"
-      : "jpg";
+    const widget = window.cloudinary.createUploadWidget(
+      {
+        cloudName,
+        uploadPreset,
+        sources: ["local"],
+        multiple: false,
+        maxFiles: 1,
+        resourceType: "image",
+        folder: `fidelity-wallet/logos/${storeId}`,
+        clientAllowedFormats: ["png", "jpg", "jpeg", "webp"],
+        maxImageFileSize: 8000000,
+        cropping: false,
+        showAdvancedOptions: false,
+        showCompletedButton: true,
+        singleUploadAutoClose: true,
+      },
+      (error, result) => {
+        if (error) {
+          setUploadingLogo(false);
+          setErr("Logo upload failed.");
+          return;
+        }
 
-    const safeName = sanitizeFileName(file.name || `${kind}.${ext}`);
-    const filePath = `stores/${storeId}/${kind}/${Date.now()}_${safeName}`;
-    const storageRef = ref(storage, filePath);
+        if (result?.event === "success") {
+          const secureUrl =
+            typeof result.info?.secure_url === "string"
+              ? result.info.secure_url
+              : "";
 
-    await uploadBytes(storageRef, file, {
-      contentType: file.type || "image/jpeg",
-      cacheControl: "public,max-age=3600",
-    });
+          if (!secureUrl) {
+            setUploadingLogo(false);
+            setErr("Cloudinary did not return an image URL.");
+            return;
+          }
 
-    return await getDownloadURL(storageRef);
-  }
+          setTpl((prev) => ({
+            ...prev,
+            logoUrl: secureUrl,
+          }));
+          setUploadingLogo(false);
+          setMsg("Logo uploaded successfully.");
+          return;
+        }
 
-  async function handleLogoFileChange(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
+        if (result?.event === "close") {
+          setUploadingLogo(false);
+        }
+      }
+    );
 
-    if (!file) return;
-
-    try {
-      setErr("");
-      setMsg("");
-      setUploadingLogo(true);
-
-      const url = await uploadImage(file, "logo");
-
-      setTpl((prev) => ({
-        ...prev,
-        logoUrl: url,
-      }));
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("errors.network");
-      setErr(message);
-    } finally {
-      setUploadingLogo(false);
-    }
-  }
-
-  async function handleBgFileChange(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-
-    if (!file) return;
-
-    try {
-      setErr("");
-      setMsg("");
-      setUploadingBg(true);
-
-      const url = await uploadImage(file, "background");
-
-      setTpl((prev) => ({
-        ...prev,
-        bgImageUrl: url,
-        bgImageEnabled: true,
-      }));
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("errors.network");
-      setErr(message);
-    } finally {
-      setUploadingBg(false);
-    }
+    widget.open();
   }
 
   async function load() {
@@ -917,22 +941,6 @@ export default function MerchantTemplatePage() {
         <div>
           <SectionTitle>{t("tabs.images")}</SectionTitle>
 
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleLogoFileChange}
-            style={{ display: "none" }}
-          />
-
-          <input
-            ref={bgInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleBgFileChange}
-            style={{ display: "none" }}
-          />
-
           <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("logoUrl")}</div>
           <input
             value={tpl.logoUrl || ""}
@@ -952,8 +960,8 @@ export default function MerchantTemplatePage() {
           >
             <button
               type="button"
-              onClick={() => logoInputRef.current?.click()}
-              disabled={uploadingLogo}
+              onClick={openLogoUpload}
+              disabled={uploadingLogo || !cloudinaryReady}
               style={{
                 padding: "10px 12px",
                 borderRadius: 12,
@@ -961,10 +969,14 @@ export default function MerchantTemplatePage() {
                 background: "#fff",
                 color: "#18181b",
                 fontWeight: 700,
-                cursor: uploadingLogo ? "not-allowed" : "pointer",
+                cursor: uploadingLogo || !cloudinaryReady ? "not-allowed" : "pointer",
               }}
             >
-              {uploadingLogo ? "Uploading logo..." : "Browse logo"}
+              {uploadingLogo
+                ? "Uploading logo..."
+                : cloudinaryReady
+                ? "Browse logo"
+                : "Loading uploader..."}
             </button>
 
             {!!tpl.logoUrl && (
@@ -986,6 +998,10 @@ export default function MerchantTemplatePage() {
             )}
           </div>
 
+          <div style={{ fontSize: 12, color: "#71717a", marginBottom: 14 }}>
+            Use the button above to upload a public logo with Cloudinary, or paste a logo URL manually.
+          </div>
+
           <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("backgroundImageUrl")}</div>
           <input
             value={tpl.bgImageUrl || ""}
@@ -1005,23 +1021,6 @@ export default function MerchantTemplatePage() {
               marginBottom: 12,
             }}
           >
-            <button
-              type="button"
-              onClick={() => bgInputRef.current?.click()}
-              disabled={uploadingBg}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid #d4d4d8",
-                background: "#fff",
-                color: "#18181b",
-                fontWeight: 700,
-                cursor: uploadingBg ? "not-allowed" : "pointer",
-              }}
-            >
-              {uploadingBg ? "Uploading background..." : "Browse background"}
-            </button>
-
             {!!tpl.bgImageUrl && (
               <button
                 type="button"
@@ -1549,7 +1548,7 @@ export default function MerchantTemplatePage() {
 
             <button
               onClick={save}
-              disabled={saving || uploadingLogo || uploadingBg}
+              disabled={saving || uploadingLogo}
               style={{
                 height: 44,
                 borderRadius: 16,
@@ -1559,7 +1558,7 @@ export default function MerchantTemplatePage() {
                 padding: "0 16px",
                 fontSize: 14,
                 fontWeight: 800,
-                cursor: saving || uploadingLogo || uploadingBg ? "default" : "pointer",
+                cursor: saving || uploadingLogo ? "default" : "pointer",
                 boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
                 flex: isMobile ? 1 : undefined,
               }}

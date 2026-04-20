@@ -3,10 +3,10 @@ import { db } from "../../../../lib/firebaseAdmin";
 import { requireMerchantUid } from "../../../../lib/merchantAuth";
 import { slugify } from "../../../../lib/slugify";
 import { generateScanSecret } from "../../../../lib/generateScanSecret";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Vérifier merchant connecté
     const merchantUid = await requireMerchantUid();
 
     if (!merchantUid) {
@@ -16,18 +16,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Lire body
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { name } = body;
 
-    if (!name || typeof name !== "string") {
+    if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
         { error: "Invalid store name" },
         { status: 400 }
       );
     }
 
-    // 3. Vérifier si merchant a déjà un store (mono-store)
+    const cleanName = name.trim().slice(0, 80);
+
     const existingStoreSnap = await db
       .collection("stores")
       .where("merchantId", "==", merchantUid)
@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Générer storeId (slug)
-    let baseSlug = slugify(name);
+    let baseSlug = slugify(cleanName);
+    if (!baseSlug) baseSlug = "store";
+
     let storeId = baseSlug;
     let counter = 1;
 
-    // Vérifier unicité
     while (true) {
       const doc = await db.collection("stores").doc(storeId).get();
       if (!doc.exists) break;
@@ -55,37 +55,52 @@ export async function POST(req: NextRequest) {
       storeId = `${baseSlug}-${counter}`;
     }
 
-    // 5. Générer scanSecret
     const scanSecret = generateScanSecret();
 
-    // 6. Template par défaut
     const cardTemplate = {
-      title: name,
-      bgColor: "#111827",
+      title: cleanName,
       textColor: "#ffffff",
-      font: "Inter",
+      font: "inter",
+      bgType: "color",
+      bgColor: "#111827",
+      gradient: {
+        from: "#ff0000",
+        to: "#111827",
+        angle: 45,
+      },
       logoUrl: "",
-      bgImageUrl: ""
+      bgImageUrl: "",
+      bgImageEnabled: false,
+      bgImageOpacity: 0.85,
+      logoBox: {
+        x: 18,
+        y: 18,
+        width: 56,
+        height: 56,
+      },
+      bgImageBox: {
+        x: 0,
+        y: 0,
+        width: 420,
+        height: 220,
+      },
     };
 
-    // 7. Création store
     await db.collection("stores").doc(storeId).set({
       storeId,
-      name,
+      name: cleanName,
       merchantId: merchantUid,
       scanSecret,
       goal: 10,
       cardTemplate,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
-    // 8. Réponse
     return NextResponse.json({
       success: true,
-      storeId
+      storeId,
     });
-
   } catch (error) {
     console.error("POST /api/stores/create error:", error);
 
