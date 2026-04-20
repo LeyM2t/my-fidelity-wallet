@@ -64,32 +64,37 @@
   "back": "Retour",
   "title": "Scanner le QR du client",
   "description": "Scannez le QR du client pour ajouter des points ou valider une récompense.",
-    "errorTitle": "Erreur",
-    "startingCamera": "Démarrage caméra...",
-    "cameraUnavailable": "Caméra non disponible",
-    "earn": "+1 tampon",
-    "reward": "Récompense",
-    "scanSecret": "Clé scan (optionnel)",
-    "status": {
-      "pending": "Scan en attente...",
-      "invalid": "QR non reconnu",
-      "detected": "Client détecté",
-      "cameraError": "Erreur caméra",
-      "adding": "Ajout du tampon...",
-      "added": "Tampon ajouté",
-      "addError": "Échec de l’ajout",
-      "validating": "Validation de la récompense...",
-      "validated": "Récompense validée",
-      "rewardError": "Erreur récompense"
-    },
-    "errors": {
-      "invalidQR": "QR non reconnu. Scanne le QR affiché par le commerçant.",
-      "sessionCheckFailed": "Échec de vérification de session client.",
-      "sessionError": "Erreur de vérification de session.",
-      "cameraUnavailable": "La caméra ne peut pas être utilisée. Utilise HTTPS ou autorise la caméra.",
-      "cameraError": "Erreur caméra / permission."
-    }
+  "errorTitle": "Erreur",
+  "startingCamera": "Démarrage caméra...",
+  "cameraUnavailable": "Caméra non disponible",
+  "earn": "+1 tampon",
+  "reward": "Récompense",
+  "quantity": "Quantité de tampons",
+  "scanAnother": "Scanner un autre client",
+  "addStamps": "Ajouter les tampons",
+  "detectedCard": "Carte détectée",
+  "scannerActive": "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client.",
+  "scannerPaused": "Scanner en pause.",
+  "status": {
+    "pending": "Scan en attente...",
+    "invalid": "QR non reconnu",
+    "detected": "Client détecté",
+    "cameraError": "Erreur caméra",
+    "adding": "Ajout du tampon...",
+    "added": "Tampon ajouté",
+    "addError": "Échec de l’ajout",
+    "validating": "Validation de la récompense...",
+    "validated": "Récompense validée",
+    "rewardError": "Erreur récompense"
   },
+  "errors": {
+    "invalidQR": "QR non reconnu. Scanne le QR affiché par le commerçant.",
+    "sessionCheckFailed": "Échec de vérification de session client.",
+    "sessionError": "Erreur de vérification de session.",
+    "cameraUnavailable": "La caméra ne peut pas être utilisée. Utilise HTTPS ou autorise la caméra.",
+    "cameraError": "Erreur caméra / permission."
+  }
+},
 
   "walletDetail": {
     "back": "Retour",

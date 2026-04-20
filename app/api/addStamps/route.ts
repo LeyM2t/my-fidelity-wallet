@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
-import { requireMerchantUid } from "@/lib/merchantAuth"; // ✅ AJOUT
+import { requireMerchantUid } from "@/lib/merchantAuth";
 
 type Body = {
   cardId?: string;
   add?: number;
 };
 
-async function authorizeAddStamps(req: Request, storeId: string) {
-  const scanSecretHeader = (req.headers.get("x-scan-secret") || "").trim();
-
+async function authorizeAddStamps(storeId: string) {
   const storeRef = db.collection("stores").doc(storeId);
   const storeSnap = await storeRef.get();
 
@@ -20,7 +18,6 @@ async function authorizeAddStamps(req: Request, storeId: string) {
 
   const storeData = storeSnap.data() as any;
 
-  // 🔐 NOUVEAU : vérifier merchant connecté
   const merchantUid = await requireMerchantUid();
 
   if (!merchantUid) {
@@ -31,24 +28,7 @@ async function authorizeAddStamps(req: Request, storeId: string) {
     return { ok: false as const, status: 403 as const, error: "not your store" };
   }
 
-  // 🔐 EXISTANT : scanSecret
-  const requiredSecret =
-    typeof storeData?.scanSecret === "string" ? storeData.scanSecret.trim() : "";
-
-  const isProd = process.env.NODE_ENV === "production";
-
-  if (!requiredSecret) {
-    if (isProd) {
-      return { ok: false as const, status: 403 as const, error: "scanSecret required" };
-    }
-    return { ok: true as const, mode: "dev-compat-no-secret" as const };
-  }
-
-  if (!scanSecretHeader || scanSecretHeader !== requiredSecret) {
-    return { ok: false as const, status: 403 as const, error: "forbidden" };
-  }
-
-  return { ok: true as const, mode: "secret-ok" as const };
+  return { ok: true as const };
 }
 
 export async function POST(req: Request) {
@@ -58,17 +38,21 @@ export async function POST(req: Request) {
     const cardId = typeof body.cardId === "string" ? body.cardId : "";
     const add = typeof body.add === "number" ? body.add : NaN;
 
-    if (!cardId)
+    if (!cardId) {
       return NextResponse.json({ error: "cardId missing" }, { status: 400 });
+    }
 
-    if (!Number.isFinite(add) || add <= 0)
+    if (!Number.isFinite(add) || add <= 0) {
       return NextResponse.json({ error: "add must be positive" }, { status: 400 });
+    }
 
-    if (!Number.isInteger(add))
+    if (!Number.isInteger(add)) {
       return NextResponse.json({ error: "add must be an integer" }, { status: 400 });
+    }
 
-    if (add > 50)
+    if (add > 50) {
       return NextResponse.json({ error: "add too large" }, { status: 400 });
+    }
 
     const cardsCol = db.collection("cards");
     const cardRef = cardsCol.doc(cardId);
@@ -87,8 +71,7 @@ export async function POST(req: Request) {
         return { ok: false as const, status: 400 as const, error: "card missing storeId" };
       }
 
-      // 🔐 AUTH complète (merchant + secret)
-      const auth = await authorizeAddStamps(req, storeId);
+      const auth = await authorizeAddStamps(storeId);
       if (!auth.ok) {
         return { ok: false as const, status: auth.status, error: auth.error };
       }

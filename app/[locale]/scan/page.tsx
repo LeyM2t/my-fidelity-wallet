@@ -33,20 +33,6 @@ function parseClientPayload(raw: string): ClientPayload | null {
   };
 }
 
-function getScanSecret(storeId: string) {
-  try {
-    return localStorage.getItem(`fw_scanSecret_${storeId}`) || "";
-  } catch {
-    return "";
-  }
-}
-
-function setScanSecret(storeId: string, value: string) {
-  try {
-    localStorage.setItem(`fw_scanSecret_${storeId}`, value);
-  } catch {}
-}
-
 function clampAddCount(value: number) {
   if (!Number.isFinite(value)) return 1;
   return Math.max(1, Math.min(50, Math.floor(value)));
@@ -64,32 +50,42 @@ export default function ScanPage() {
   const [payload, setPayload] = useState<ClientPayload | null>(null);
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
 
-  const [scanSecret, setScanSecretState] = useState("");
   const [status, setStatus] = useState(t("status.pending"));
   const [busy, setBusy] = useState(false);
   const [scannerReady, setScannerReady] = useState(false);
   const [hasDetectedClient, setHasDetectedClient] = useState(false);
   const [addCount, setAddCount] = useState(1);
 
-  function uiText(key: "quantity" | "scanAnother" | "addStamps" | "detectedCard") {
+  function uiText(
+    key: "quantity" | "scanAnother" | "addStamps" | "detectedCard" | "scannerActive" | "scannerPaused"
+  ) {
     const map = {
       fr: {
         quantity: "Quantité de tampons",
         scanAnother: "Scanner un autre client",
         addStamps: "Ajouter les tampons",
         detectedCard: "Carte détectée",
+        scannerActive:
+          "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client.",
+        scannerPaused: "Scanner en pause.",
       },
       en: {
         quantity: "Stamp quantity",
         scanAnother: "Scan another client",
         addStamps: "Add stamps",
         detectedCard: "Detected card",
+        scannerActive:
+          "Scanner active. Once a client is detected, the card stays selected until you choose to scan another client.",
+        scannerPaused: "Scanner paused.",
       },
       es: {
         quantity: "Cantidad de sellos",
         scanAnother: "Escanear otro cliente",
         addStamps: "Añadir sellos",
         detectedCard: "Tarjeta detectada",
+        scannerActive:
+          "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente.",
+        scannerPaused: "Escáner en pausa.",
       },
     } as const;
 
@@ -142,12 +138,8 @@ export default function ScanPage() {
         setPayload(p);
         setCurrentCardId(p.cardId || null);
         setHasDetectedClient(true);
-
-        if (p.storeId) {
-          setScanSecretState(getScanSecret(p.storeId));
-        }
-
         setStatus(t("status.detected"));
+
         await stopScanner();
       },
       {
@@ -169,18 +161,6 @@ export default function ScanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
-  function buildHeaders(): HeadersInit {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (scanSecret.trim()) {
-      headers["x-scan-secret"] = scanSecret.trim();
-    }
-
-    return headers;
-  }
-
   async function doEarn() {
     if (!currentCardId || busy) return;
 
@@ -192,7 +172,9 @@ export default function ScanPage() {
     try {
       const res = await fetch("/api/addStamps", {
         method: "POST",
-        headers: buildHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ cardId: currentCardId, add: safeAdd }),
       });
 
@@ -203,9 +185,7 @@ export default function ScanPage() {
       }
 
       setStatus(
-        safeAdd === 1
-          ? t("status.added")
-          : `${safeAdd} ${uiText("addStamps").toLowerCase()}`
+        safeAdd === 1 ? t("status.added") : `${safeAdd} ${uiText("addStamps").toLowerCase()}`
       );
     } catch (e) {
       const message =
@@ -357,6 +337,11 @@ export default function ScanPage() {
                   {uiText("detectedCard")}
                   {currentCardId ? ` : ${currentCardId}` : ""}
                 </div>
+                {payload?.storeId ? (
+                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                    Store : {payload.storeId}
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -371,6 +356,7 @@ export default function ScanPage() {
             textAlign: "center",
             fontWeight: 700,
             color: "#374151",
+            wordBreak: "break-word",
           }}
         >
           {status}
@@ -388,31 +374,82 @@ export default function ScanPage() {
             <div
               style={{
                 fontSize: 12,
-                marginBottom: 6,
-                color: "#6b7280",
+                marginBottom: 8,
+                color: "#374151",
                 fontWeight: 700,
               }}
             >
               {uiText("quantity")}
             </div>
 
-            <input
-              type="number"
-              min={1}
-              max={50}
-              step={1}
-              value={addCount}
-              onChange={(e) => setAddCount(clampAddCount(Number(e.target.value)))}
+            <div
               style={{
-                width: "100%",
-                height: 44,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                padding: "0 10px",
-                fontSize: 16,
-                boxSizing: "border-box",
+                display: "grid",
+                gridTemplateColumns: "56px 1fr 56px",
+                gap: 10,
+                alignItems: "center",
               }}
-            />
+            >
+              <button
+                type="button"
+                onClick={() => setAddCount((prev) => clampAddCount(prev - 1))}
+                disabled={busy}
+                style={{
+                  height: 48,
+                  borderRadius: 14,
+                  border: "1px solid #d4d4d8",
+                  background: "#fff",
+                  color: "#111827",
+                  fontSize: 24,
+                  fontWeight: 800,
+                  cursor: busy ? "default" : "pointer",
+                }}
+              >
+                −
+              </button>
+
+              <input
+                type="number"
+                min={1}
+                max={50}
+                step={1}
+                value={addCount}
+                onChange={(e) =>
+                  setAddCount(clampAddCount(Number(e.target.value)))
+                }
+                style={{
+                  width: "100%",
+                  height: 48,
+                  borderRadius: 14,
+                  border: "1px solid #d4d4d8",
+                  padding: "0 12px",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: "#111827",
+                  background: "#ffffff",
+                  textAlign: "center",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => setAddCount((prev) => clampAddCount(prev + 1))}
+                disabled={busy}
+                style={{
+                  height: 48,
+                  borderRadius: 14,
+                  border: "1px solid #d4d4d8",
+                  background: "#fff",
+                  color: "#111827",
+                  fontSize: 24,
+                  fontWeight: 800,
+                  cursor: busy ? "default" : "pointer",
+                }}
+              >
+                +
+              </button>
+            </div>
           </section>
         ) : null}
 
@@ -434,7 +471,6 @@ export default function ScanPage() {
               color: "#fff",
               fontWeight: 800,
               cursor: !currentCardId || busy ? "default" : "pointer",
-              opacity: 1,
             }}
           >
             {hasDetectedClient ? uiText("addStamps") : t("earn")}
@@ -452,7 +488,6 @@ export default function ScanPage() {
               color: !currentCardId || busy ? "#6b7280" : "#fff",
               fontWeight: 800,
               cursor: !currentCardId || busy ? "default" : "pointer",
-              opacity: 1,
             }}
           >
             {t("reward")}
@@ -481,38 +516,6 @@ export default function ScanPage() {
           </section>
         ) : null}
 
-        {payload?.storeId && (
-          <section
-            style={{
-              borderRadius: 20,
-              padding: 14,
-              background: "#fff",
-              border: "1px solid #e4e4e7",
-            }}
-          >
-            <div style={{ fontSize: 12, marginBottom: 6 }}>
-              {t("scanSecret")}
-            </div>
-
-            <input
-              value={scanSecret}
-              onChange={(e) => {
-                const v = e.target.value;
-                setScanSecretState(v);
-                setScanSecret(payload.storeId, v);
-              }}
-              style={{
-                width: "100%",
-                height: 44,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                padding: "0 10px",
-                boxSizing: "border-box",
-              }}
-            />
-          </section>
-        )}
-
         <section
           style={{
             borderRadius: 18,
@@ -524,17 +527,7 @@ export default function ScanPage() {
             lineHeight: 1.5,
           }}
         >
-          {scannerReady
-            ? locale === "fr"
-              ? "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client."
-              : locale === "es"
-                ? "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente."
-                : "Scanner active. Once a client is detected, the card stays selected until you choose to scan another client."
-            : locale === "fr"
-              ? "Scanner en pause."
-              : locale === "es"
-                ? "Escáner en pausa."
-                : "Scanner paused."}
+          {scannerReady ? uiText("scannerActive") : uiText("scannerPaused")}
         </section>
       </div>
     </main>
