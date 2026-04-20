@@ -6,9 +6,41 @@ import { useTranslations } from "next-intl";
 import { auth } from "@/lib/firebaseClient";
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+
+function getForgotTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      forgotPassword: "Mot de passe oublié ?",
+      emailRequired: "Entre ton email pour réinitialiser ton mot de passe.",
+      resetSent:
+        "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
+      resetFailed:
+        "Impossible d’envoyer l’email de réinitialisation.",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      forgotPassword: "¿Olvidaste tu contraseña?",
+      emailRequired: "Introduce tu email para restablecer tu contraseña.",
+      resetSent:
+        "Correo de restablecimiento enviado. Revisa tu buzón.",
+      resetFailed:
+        "No se pudo enviar el correo de restablecimiento.",
+    };
+  }
+
+  return {
+    forgotPassword: "Forgot password?",
+    emailRequired: "Enter your email to reset your password.",
+    resetSent: "Password reset email sent. Check your inbox.",
+    resetFailed: "Could not send password reset email.",
+  };
+}
 
 export default function ClientLoginPage() {
   const router = useRouter();
@@ -17,6 +49,8 @@ export default function ClientLoginPage() {
   const t = useTranslations("clientLogin");
 
   const locale = String(params?.locale ?? "en");
+  const forgotTexts = useMemo(() => getForgotTexts(locale), [locale]);
+
   const next = useMemo(
     () => searchParams.get("next") || `/${locale}/wallet`,
     [locale, searchParams]
@@ -26,11 +60,14 @@ export default function ClientLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   async function handleSubmit() {
     setLoading(true);
     setError("");
+    setInfo("");
 
     try {
       const cleanEmail = email.trim();
@@ -67,6 +104,29 @@ export default function ClientLoginPage() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setResetLoading(true);
+    setError("");
+    setInfo("");
+
+    try {
+      const cleanEmail = email.trim();
+
+      if (!cleanEmail) {
+        throw new Error(forgotTexts.emailRequired);
+      }
+
+      await sendPasswordResetEmail(auth, cleanEmail);
+      setInfo(forgotTexts.resetSent);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : forgotTexts.resetFailed;
+      setError(message);
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -150,26 +210,50 @@ export default function ClientLoginPage() {
               }}
             />
 
-            <input
-              type="password"
-              placeholder={t("placeholders.password")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
-              style={{
-                width: "100%",
-                padding: "18px 20px",
-                borderRadius: 18,
-                border: "1px solid #d1d5db",
-                fontSize: 16,
-                color: "#111827",
-                background: "#ffffff",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
+            <div style={{ display: "grid", gap: 10 }}>
+              <input
+                type="password"
+                placeholder={t("placeholders.password")}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                style={{
+                  width: "100%",
+                  padding: "18px 20px",
+                  borderRadius: 18,
+                  border: "1px solid #d1d5db",
+                  fontSize: 16,
+                  color: "#111827",
+                  background: "#ffffff",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              {mode === "login" ? (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  style={{
+                    alignSelf: "flex-end",
+                    border: "none",
+                    background: "transparent",
+                    color: "#2563eb",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: resetLoading ? "default" : "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {resetLoading
+                    ? `⏳ ${forgotTexts.forgotPassword}`
+                    : forgotTexts.forgotPassword}
+                </button>
+              ) : null}
+            </div>
 
             <button
               onClick={handleSubmit}
@@ -195,9 +279,11 @@ export default function ClientLoginPage() {
 
             <button
               type="button"
-              onClick={() =>
-                setMode((prev) => (prev === "login" ? "signup" : "login"))
-              }
+              onClick={() => {
+                setMode((prev) => (prev === "login" ? "signup" : "login"));
+                setError("");
+                setInfo("");
+              }}
               style={{
                 width: "100%",
                 padding: "18px 20px",
@@ -214,6 +300,21 @@ export default function ClientLoginPage() {
                 ? t("buttons.switchToSignup")
                 : t("buttons.switchToLogin")}
             </button>
+
+            {info ? (
+              <div
+                style={{
+                  background: "#dcfce7",
+                  color: "#166534",
+                  padding: "14px 16px",
+                  borderRadius: 14,
+                  fontSize: 14,
+                  lineHeight: 1.4,
+                }}
+              >
+                ✅ {info}
+              </div>
+            ) : null}
 
             {error ? (
               <div
