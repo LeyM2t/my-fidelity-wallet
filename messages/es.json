@@ -200,8 +200,8 @@
   "saved": "Plantilla guardada ✅",
   "error": "Error",
 
-  "adminKey": "Clave admin",
-  "adminKeyPlaceholder": "Introduce la clave admin del comerciante",
+  "confirmPassword": "Confirmar contraseña",
+  "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta comerciante",
   "resetLayout": "Restablecer diseño",
   "titleLabel": "Título de la tarjeta",
 
@@ -224,7 +224,7 @@
   "imagesHelp": "Puedes mover y redimensionar el logo y la imagen de fondo directamente en la vista previa.",
 
   "preview": "Vista previa",
-  "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar los elementos visuales directamente sobre ella.",
+  "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar los elementos directamente sobre ella.",
   "previewScore": "Puntuación",
   "previewTitleExample": "Tarjeta de fidelidad",
   "loyaltyCard": "Tarjeta de fidelidad",
@@ -251,7 +251,10 @@
   "errors": {
     "load": "No se pudo cargar la plantilla.",
     "save": "No se pudo guardar la plantilla.",
-    "network": "Error de red."
+    "network": "Error de red.",
+    "passwordRequired": "Introduce la contraseña para confirmar el cambio.",
+    "notAuthenticated": "La cuenta comerciante no ha iniciado sesión.",
+    "reauthFailed": "Contraseña incorrecta o no se pudo confirmar."
   }
 },
 

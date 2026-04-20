@@ -200,8 +200,8 @@
   "saved": "Template sauvegardé ✅",
   "error": "Erreur",
 
-  "adminKey": "Clé admin",
-  "adminKeyPlaceholder": "Entre la clé admin du commerçant",
+  "confirmPassword": "Confirmer le mot de passe",
+  "confirmPasswordPlaceholder": "Retape le mot de passe du compte commerçant",
   "resetLayout": "Réinitialiser la mise en page",
   "titleLabel": "Titre de la carte",
 
@@ -251,7 +251,10 @@
   "errors": {
     "load": "Impossible de charger le template.",
     "save": "Impossible d’enregistrer le template.",
-    "network": "Erreur réseau."
+    "network": "Erreur réseau.",
+    "passwordRequired": "Entre le mot de passe pour confirmer la modification.",
+    "notAuthenticated": "Compte commerçant non connecté.",
+    "reauthFailed": "Mot de passe incorrect ou confirmation impossible."
   }
 },
 
