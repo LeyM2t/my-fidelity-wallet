@@ -78,6 +78,27 @@ function getDefaultCardTemplate() {
   };
 }
 
+function getStoreOwner(storeData: Record<string, unknown>) {
+  const merchantId =
+    typeof storeData.merchantId === "string" ? storeData.merchantId.trim() : "";
+
+  const ownerUid =
+    typeof storeData.ownerUid === "string"
+      ? storeData.ownerUid.trim()
+      : typeof storeData.merchantUid === "string"
+        ? storeData.merchantUid.trim()
+        : "";
+
+  const ownerEmail =
+    typeof storeData.ownerEmail === "string"
+      ? storeData.ownerEmail.toLowerCase().trim()
+      : typeof storeData.merchantEmail === "string"
+        ? storeData.merchantEmail.toLowerCase().trim()
+        : "";
+
+  return { merchantId, ownerUid, ownerEmail };
+}
+
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ storeId: string }> }
@@ -133,26 +154,20 @@ export async function PATCH(
       return NextResponse.json({ error: "store not found" }, { status: 404 });
     }
 
-    const storeData = snap.data() || {};
+    const storeData = (snap.data() || {}) as Record<string, unknown>;
+    const { merchantId, ownerUid, ownerEmail } = getStoreOwner(storeData);
+    const merchantEmail = merchant.email.toLowerCase().trim();
 
-    const merchantId =
-      typeof storeData.merchantId === "string" ? storeData.merchantId : "";
+    const hasKnownOwner = !!(merchantId || ownerUid || ownerEmail);
 
-    const ownerUid =
-      typeof storeData.ownerUid === "string"
-        ? storeData.ownerUid
-        : typeof storeData.merchantUid === "string"
-          ? storeData.merchantUid
-          : "";
-
-    const ownerEmail =
-      typeof storeData.ownerEmail === "string"
-        ? storeData.ownerEmail.toLowerCase()
-        : typeof storeData.merchantEmail === "string"
-          ? storeData.merchantEmail.toLowerCase()
-          : "";
-
-    const merchantEmail = merchant.email.toLowerCase();
+    // Sécurité importante :
+    // si le store n'a pas de propriétaire clair, on refuse l'écriture.
+    if (!hasKnownOwner) {
+      return NextResponse.json(
+        { error: "store owner missing" },
+        { status: 403 }
+      );
+    }
 
     if (merchantId && merchantId !== merchant.uid) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });

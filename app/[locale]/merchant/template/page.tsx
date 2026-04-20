@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,11 +16,12 @@ import {
 import { Rnd } from "react-rnd";
 import { HexColorPicker } from "react-colorful";
 import { useTranslations } from "next-intl";
-import { auth } from "@/lib/firebaseClient";
+import { auth, storage } from "@/lib/firebaseClient";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
@@ -76,13 +77,13 @@ const FONT_OPTIONS = [
 ] as const;
 
 const DEFAULT: CardTemplate = {
-  title: "Get Your Crêpe",
+  title: "",
   textColor: "#ffffff",
   font: "inter",
   bgType: "color",
   bgColor: "#111827",
   gradient: { from: "#ff0000", to: "#111827", angle: 45 },
-  logoUrl: "/logo.png",
+  logoUrl: "",
   bgImageUrl: "",
   bgImageEnabled: false,
   bgImageOpacity: 0.85,
@@ -182,6 +183,10 @@ function sanitizeTemplateBoxes(template: CardTemplate): CardTemplate {
   };
 }
 
+function sanitizeFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+}
+
 const HANDLE_STYLE: React.CSSProperties = {
   width: 12,
   height: 12,
@@ -258,11 +263,16 @@ export default function MerchantTemplatePage() {
   const t = useTranslations("merchantTemplate");
   const storeId = (searchParams.get("storeId") || "").trim();
 
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const bgInputRef = useRef<HTMLInputElement | null>(null);
+
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
@@ -318,6 +328,96 @@ export default function MerchantTemplatePage() {
       logoBox: DEFAULT.logoBox,
       bgImageBox: DEFAULT.bgImageBox,
     }));
+  }
+
+  async function uploadImage(file: File, kind: "logo" | "background") {
+    if (!storeId) {
+      throw new Error("Missing storeId in URL.");
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error(t("errors.notAuthenticated"));
+    }
+
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Selected file is not an image.");
+    }
+
+    const maxBytes = 8 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error("Image too large. Maximum size: 8 MB.");
+    }
+
+    const ext = file.name.includes(".")
+      ? file.name.split(".").pop()?.toLowerCase() || "jpg"
+      : "jpg";
+
+    const safeName = sanitizeFileName(file.name || `${kind}.${ext}`);
+    const filePath = `stores/${storeId}/${kind}/${Date.now()}_${safeName}`;
+    const storageRef = ref(storage, filePath);
+
+    await uploadBytes(storageRef, file, {
+      contentType: file.type || "image/jpeg",
+      cacheControl: "public,max-age=3600",
+    });
+
+    return await getDownloadURL(storageRef);
+  }
+
+  async function handleLogoFileChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+
+    try {
+      setErr("");
+      setMsg("");
+      setUploadingLogo(true);
+
+      const url = await uploadImage(file, "logo");
+
+      setTpl((prev) => ({
+        ...prev,
+        logoUrl: url,
+      }));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t("errors.network");
+      setErr(message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function handleBgFileChange(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+
+    try {
+      setErr("");
+      setMsg("");
+      setUploadingBg(true);
+
+      const url = await uploadImage(file, "background");
+
+      setTpl((prev) => ({
+        ...prev,
+        bgImageUrl: url,
+        bgImageEnabled: true,
+      }));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : t("errors.network");
+      setErr(message);
+    } finally {
+      setUploadingBg(false);
+    }
   }
 
   async function load() {
@@ -817,6 +917,22 @@ export default function MerchantTemplatePage() {
         <div>
           <SectionTitle>{t("tabs.images")}</SectionTitle>
 
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleLogoFileChange}
+            style={{ display: "none" }}
+          />
+
+          <input
+            ref={bgInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleBgFileChange}
+            style={{ display: "none" }}
+          />
+
           <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("logoUrl")}</div>
           <input
             value={tpl.logoUrl || ""}
@@ -825,7 +941,50 @@ export default function MerchantTemplatePage() {
             style={inputStyle}
           />
 
-          <div style={{ height: 10 }} />
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              marginTop: 8,
+              marginBottom: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploadingLogo}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid #d4d4d8",
+                background: "#fff",
+                color: "#18181b",
+                fontWeight: 700,
+                cursor: uploadingLogo ? "not-allowed" : "pointer",
+              }}
+            >
+              {uploadingLogo ? "Uploading logo..." : "Browse logo"}
+            </button>
+
+            {!!tpl.logoUrl && (
+              <button
+                type="button"
+                onClick={() => setTpl((prev) => ({ ...prev, logoUrl: "" }))}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid #d4d4d8",
+                  background: "#fff",
+                  color: "#18181b",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Remove logo
+              </button>
+            )}
+          </div>
 
           <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("backgroundImageUrl")}</div>
           <input
@@ -837,7 +996,56 @@ export default function MerchantTemplatePage() {
             style={inputStyle}
           />
 
-          <div style={{ height: 10 }} />
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              marginTop: 8,
+              marginBottom: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => bgInputRef.current?.click()}
+              disabled={uploadingBg}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid #d4d4d8",
+                background: "#fff",
+                color: "#18181b",
+                fontWeight: 700,
+                cursor: uploadingBg ? "not-allowed" : "pointer",
+              }}
+            >
+              {uploadingBg ? "Uploading background..." : "Browse background"}
+            </button>
+
+            {!!tpl.bgImageUrl && (
+              <button
+                type="button"
+                onClick={() =>
+                  setTpl((prev) => ({
+                    ...prev,
+                    bgImageUrl: "",
+                    bgImageEnabled: false,
+                  }))
+                }
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid #d4d4d8",
+                  background: "#fff",
+                  color: "#18181b",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Remove background
+              </button>
+            )}
+          </div>
 
           <label
             style={{
@@ -1341,7 +1549,7 @@ export default function MerchantTemplatePage() {
 
             <button
               onClick={save}
-              disabled={saving}
+              disabled={saving || uploadingLogo || uploadingBg}
               style={{
                 height: 44,
                 borderRadius: 16,
@@ -1351,7 +1559,7 @@ export default function MerchantTemplatePage() {
                 padding: "0 16px",
                 fontSize: 14,
                 fontWeight: 800,
-                cursor: saving ? "default" : "pointer",
+                cursor: saving || uploadingLogo || uploadingBg ? "default" : "pointer",
                 boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
                 flex: isMobile ? 1 : undefined,
               }}

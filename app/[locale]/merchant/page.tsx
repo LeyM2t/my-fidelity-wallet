@@ -8,6 +8,7 @@ import { auth } from "@/lib/firebaseClient";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
+  signOut,
 } from "firebase/auth";
 
 type MerchantStore = {
@@ -171,6 +172,9 @@ export default function MerchantPage() {
   async function logout() {
     try {
       setLogoutLoading(true);
+      setStoreError("");
+
+      await signOut(auth).catch(() => null);
 
       const res = await fetch("/api/auth/sessionLogout", {
         method: "POST",
@@ -236,10 +240,7 @@ export default function MerchantPage() {
       router.replace(`/${locale}/merchant/login`);
       router.refresh();
     } catch (e: any) {
-      const message =
-        e?.message ||
-        deleteTexts.deleteAuthFailed;
-
+      const message = e?.message || deleteTexts.deleteAuthFailed;
       setDeleteError(message);
     } finally {
       setDeleteLoading(false);
