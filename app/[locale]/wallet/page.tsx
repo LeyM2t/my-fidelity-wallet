@@ -5,6 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient";
 import { useTranslations } from "next-intl";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
 
 type FirestoreCard = {
   id: string;
@@ -55,11 +59,65 @@ function saveLocalWallets(wallets: LocalWallet[]) {
   window.localStorage.setItem(LOCAL_WALLETS_KEY, JSON.stringify(wallets));
 }
 
+function clearLocalWallets() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LOCAL_WALLETS_KEY);
+}
+
+function getDeleteTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      sectionTitle: "Zone dangereuse",
+      sectionDescription:
+        "Supprime définitivement ton compte client, tes cartes et tes wallets locaux.",
+      passwordPlaceholder: "Confirme ton mot de passe",
+      button: "Supprimer mon compte",
+      loading: "Suppression...",
+      confirmFirst: "Entre ton mot de passe pour confirmer la suppression.",
+      notAuthenticated: "Compte client non connecté.",
+      deleteApiFailed: "Impossible de supprimer les données du compte.",
+      deleteAuthFailed: "Impossible de supprimer le compte client.",
+      successRedirect: "Compte supprimé. Redirection...",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      sectionTitle: "Zona peligrosa",
+      sectionDescription:
+        "Elimina definitivamente tu cuenta de cliente, tus tarjetas y tus wallets locales.",
+      passwordPlaceholder: "Confirma tu contraseña",
+      button: "Eliminar mi cuenta",
+      loading: "Eliminando...",
+      confirmFirst: "Introduce tu contraseña para confirmar la eliminación.",
+      notAuthenticated: "Cuenta de cliente no conectada.",
+      deleteApiFailed: "No se pudieron eliminar los datos de la cuenta.",
+      deleteAuthFailed: "No se pudo eliminar la cuenta de cliente.",
+      successRedirect: "Cuenta eliminada. Redirigiendo...",
+    };
+  }
+
+  return {
+    sectionTitle: "Danger zone",
+    sectionDescription:
+      "Permanently delete your client account, your cards, and your local wallets.",
+    passwordPlaceholder: "Confirm your password",
+    button: "Delete my account",
+    loading: "Deleting...",
+    confirmFirst: "Enter your password to confirm deletion.",
+    notAuthenticated: "Client account is not signed in.",
+    deleteApiFailed: "Could not delete account data.",
+    deleteAuthFailed: "Could not delete client account.",
+    successRedirect: "Account deleted. Redirecting...",
+  };
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("wallet");
+  const deleteTexts = useMemo(() => getDeleteTexts(locale), [locale]);
 
   const [cards, setCards] = useState<FirestoreCard[]>([]);
   const [customWallets, setCustomWallets] = useState<LocalWallet[]>([]);
@@ -67,6 +125,11 @@ export default function WalletPage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [creatingWallet, setCreatingWallet] = useState(false);
   const [error, setError] = useState("");
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteInfo, setDeleteInfo] = useState("");
 
   function formatWalletSubtitle(cardCount: number) {
     if (cardCount <= 0) return t("cards.zero");
@@ -177,6 +240,62 @@ export default function WalletPage() {
     }
   }
 
+  async function handleDeleteAccount() {
+    try {
+      setDeleteError("");
+      setDeleteInfo("");
+
+      const cleanPassword = deletePassword.trim();
+
+      if (!cleanPassword) {
+        setDeleteError(deleteTexts.confirmFirst);
+        return;
+      }
+
+      const user = auth.currentUser;
+      const email = user?.email || "";
+
+      if (!user || !email) {
+        setDeleteError(deleteTexts.notAuthenticated);
+        return;
+      }
+
+      setDeleteLoading(true);
+
+      const credential = EmailAuthProvider.credential(email, cleanPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      const deleteRes = await fetch("/api/client/delete", {
+        method: "POST",
+      });
+
+      const deleteData = await deleteRes.json().catch(() => ({}));
+
+      if (!deleteRes.ok) {
+        throw new Error(deleteData?.error || deleteTexts.deleteApiFailed);
+      }
+
+      await user.delete();
+
+      await fetch("/api/auth/client/sessionLogout", {
+        method: "POST",
+      }).catch(() => null);
+
+      clearLocalWallets();
+      setCustomWallets([]);
+      setDeletePassword("");
+      setDeleteInfo(deleteTexts.successRedirect);
+
+      router.replace(`/${locale}/client/login`);
+      router.refresh();
+    } catch (e: any) {
+      const message = e?.message || deleteTexts.deleteAuthFailed;
+      setDeleteError(message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   function handleCreateWallet() {
     setCreatingWallet(true);
     setError("");
@@ -235,6 +354,99 @@ export default function WalletPage() {
 
     return [...base, ...customs];
   }, [cards.length, customWallets, t]);
+
+  const deletePanel = (
+    <section
+      style={{
+        border: "1px solid #fecaca",
+        background: "#fff1f2",
+        color: "#881337",
+        padding: 18,
+        borderRadius: 22,
+      }}
+    >
+      <div style={{ fontWeight: 800, marginBottom: 8 }}>
+        {deleteTexts.sectionTitle}
+      </div>
+
+      <div
+        style={{
+          fontSize: 14,
+          lineHeight: 1.45,
+          marginBottom: 12,
+        }}
+      >
+        {deleteTexts.sectionDescription}
+      </div>
+
+      <input
+        type="password"
+        value={deletePassword}
+        onChange={(e) => setDeletePassword(e.target.value)}
+        placeholder={deleteTexts.passwordPlaceholder}
+        autoComplete="current-password"
+        style={{
+          width: "100%",
+          padding: 12,
+          marginBottom: 12,
+          borderRadius: 12,
+          border: "1px solid #fda4af",
+          fontSize: 14,
+          color: "#111827",
+          background: "#ffffff",
+          boxSizing: "border-box",
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={handleDeleteAccount}
+        disabled={deleteLoading}
+        style={{
+          width: "100%",
+          padding: 12,
+          borderRadius: 12,
+          border: "none",
+          background: "#b91c1c",
+          color: "#ffffff",
+          fontWeight: 800,
+          cursor: deleteLoading ? "not-allowed" : "pointer",
+        }}
+      >
+        {deleteLoading ? `⏳ ${deleteTexts.loading}` : deleteTexts.button}
+      </button>
+
+      {deleteInfo ? (
+        <div
+          style={{
+            marginTop: 12,
+            background: "#dcfce7",
+            color: "#166534",
+            padding: 10,
+            borderRadius: 10,
+            fontSize: 13,
+          }}
+        >
+          ✅ {deleteInfo}
+        </div>
+      ) : null}
+
+      {deleteError ? (
+        <div
+          style={{
+            marginTop: 12,
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: 10,
+            borderRadius: 10,
+            fontSize: 13,
+          }}
+        >
+          ❌ {deleteError}
+        </div>
+      ) : null}
+    </section>
+  );
 
   return (
     <main
@@ -382,23 +594,23 @@ export default function WalletPage() {
         </section>
 
         {error ? (
-  <section
-    style={{
-      border: "1px solid #fecaca",
-      background: "#fff1f2",
-      color: "#881337",
-      padding: 14,
-      borderRadius: 18,
-    }}
-  >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-      {t("error")}
-    </div>
-    <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-      {error}
-    </div>
-  </section>
-) : null}
+          <section
+            style={{
+              border: "1px solid #fecaca",
+              background: "#fff1f2",
+              color: "#881337",
+              padding: 14,
+              borderRadius: 18,
+            }}
+          >
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>
+              {t("error")}
+            </div>
+            <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+              {error}
+            </div>
+          </section>
+        ) : null}
 
         <section
           style={{
@@ -561,6 +773,8 @@ export default function WalletPage() {
             </div>
           </section>
         ) : null}
+
+        {deletePanel}
       </div>
     </main>
   );
