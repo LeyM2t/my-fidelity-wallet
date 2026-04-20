@@ -47,6 +47,11 @@ function setScanSecret(storeId: string, value: string) {
   } catch {}
 }
 
+function clampAddCount(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(50, Math.floor(value)));
+}
+
 export default function ScanPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
@@ -62,6 +67,60 @@ export default function ScanPage() {
   const [scanSecret, setScanSecretState] = useState("");
   const [status, setStatus] = useState(t("status.pending"));
   const [busy, setBusy] = useState(false);
+  const [scannerReady, setScannerReady] = useState(false);
+  const [hasDetectedClient, setHasDetectedClient] = useState(false);
+  const [addCount, setAddCount] = useState(1);
+
+  function uiText(key: "quantity" | "scanAnother" | "addStamps" | "detectedCard") {
+    const map = {
+      fr: {
+        quantity: "Quantité de tampons",
+        scanAnother: "Scanner un autre client",
+        addStamps: "Ajouter les tampons",
+        detectedCard: "Carte détectée",
+      },
+      en: {
+        quantity: "Stamp quantity",
+        scanAnother: "Scan another client",
+        addStamps: "Add stamps",
+        detectedCard: "Detected card",
+      },
+      es: {
+        quantity: "Cantidad de sellos",
+        scanAnother: "Escanear otro cliente",
+        addStamps: "Añadir sellos",
+        detectedCard: "Tarjeta detectada",
+      },
+    } as const;
+
+    const lang =
+      locale === "fr" || locale === "es" || locale === "en" ? locale : "en";
+
+    return map[lang][key];
+  }
+
+  async function startScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    try {
+      await scanner.start();
+      setScannerReady(true);
+    } catch {
+      setScannerReady(false);
+      setStatus(t("status.cameraError"));
+    }
+  }
+
+  async function stopScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    try {
+      await scanner.stop();
+    } catch {}
+    setScannerReady(false);
+  }
 
   useEffect(() => {
     const video = videoRef.current;
@@ -69,9 +128,9 @@ export default function ScanPage() {
 
     const scanner = new QrScanner(
       video,
-      (result) => {
+      async (result) => {
         const txt = typeof result === "string" ? result : result?.data;
-        if (!txt) return;
+        if (!txt || busy || hasDetectedClient) return;
 
         const p = parseClientPayload(txt);
 
@@ -82,12 +141,14 @@ export default function ScanPage() {
 
         setPayload(p);
         setCurrentCardId(p.cardId || null);
+        setHasDetectedClient(true);
 
         if (p.storeId) {
           setScanSecretState(getScanSecret(p.storeId));
         }
 
         setStatus(t("status.detected"));
+        await stopScanner();
       },
       {
         highlightScanRegion: true,
@@ -96,15 +157,16 @@ export default function ScanPage() {
     );
 
     scannerRef.current = scanner;
-
-    scanner.start().catch(() => {
-      setStatus(t("status.cameraError"));
-    });
+    startScanner();
 
     return () => {
-      scanner.stop();
+      try {
+        scanner.stop();
+      } catch {}
       scanner.destroy();
+      scannerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
   function buildHeaders(): HeadersInit {
@@ -120,7 +182,9 @@ export default function ScanPage() {
   }
 
   async function doEarn() {
-    if (!currentCardId) return;
+    if (!currentCardId || busy) return;
+
+    const safeAdd = clampAddCount(addCount);
 
     setBusy(true);
     setStatus(t("status.adding"));
@@ -129,23 +193,31 @@ export default function ScanPage() {
       const res = await fetch("/api/addStamps", {
         method: "POST",
         headers: buildHeaders(),
-        body: JSON.stringify({ cardId: currentCardId, add: 1 }),
+        body: JSON.stringify({ cardId: currentCardId, add: safeAdd }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        throw new Error();
+        throw new Error(data?.error || t("status.addError"));
       }
 
-      setStatus(t("status.added"));
-    } catch {
-      setStatus(t("status.addError"));
+      setStatus(
+        safeAdd === 1
+          ? t("status.added")
+          : `${safeAdd} ${uiText("addStamps").toLowerCase()}`
+      );
+    } catch (e) {
+      const message =
+        e instanceof Error && e.message ? e.message : t("status.addError");
+      setStatus(message);
     } finally {
       setBusy(false);
     }
   }
 
   async function doConsume() {
-    if (!currentCardId) return;
+    if (!currentCardId || busy) return;
 
     setBusy(true);
     setStatus(t("status.validating"));
@@ -159,16 +231,29 @@ export default function ScanPage() {
         body: JSON.stringify({ cardId: currentCardId }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        throw new Error();
+        throw new Error(data?.error || t("status.rewardError"));
       }
 
       setStatus(t("status.validated"));
-    } catch {
-      setStatus(t("status.rewardError"));
+    } catch (e) {
+      const message =
+        e instanceof Error && e.message ? e.message : t("status.rewardError");
+      setStatus(message);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function resetScan() {
+    setPayload(null);
+    setCurrentCardId(null);
+    setHasDetectedClient(false);
+    setAddCount(1);
+    setStatus(t("status.pending"));
+    await startScanner();
   }
 
   return (
@@ -249,6 +334,32 @@ export default function ScanPage() {
               boxShadow: "0 0 0 9999px rgba(0,0,0,0.3)",
             }}
           />
+
+          {hasDetectedClient ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(0,0,0,0.35)",
+                color: "#fff",
+                fontWeight: 800,
+                textAlign: "center",
+                padding: 20,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 18, marginBottom: 8 }}>
+                  {t("status.detected")}
+                </div>
+                <div style={{ fontSize: 13, opacity: 0.9 }}>
+                  {uiText("detectedCard")}
+                  {currentCardId ? ` : ${currentCardId}` : ""}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section
@@ -264,6 +375,46 @@ export default function ScanPage() {
         >
           {status}
         </section>
+
+        {hasDetectedClient ? (
+          <section
+            style={{
+              borderRadius: 20,
+              padding: 14,
+              background: "#fff",
+              border: "1px solid #e4e4e7",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                marginBottom: 6,
+                color: "#6b7280",
+                fontWeight: 700,
+              }}
+            >
+              {uiText("quantity")}
+            </div>
+
+            <input
+              type="number"
+              min={1}
+              max={50}
+              step={1}
+              value={addCount}
+              onChange={(e) => setAddCount(clampAddCount(Number(e.target.value)))}
+              style={{
+                width: "100%",
+                height: 44,
+                borderRadius: 12,
+                border: "1px solid #ddd",
+                padding: "0 10px",
+                fontSize: 16,
+                boxSizing: "border-box",
+              }}
+            />
+          </section>
+        ) : null}
 
         <section
           style={{
@@ -286,7 +437,7 @@ export default function ScanPage() {
               opacity: 1,
             }}
           >
-            {t("earn")}
+            {hasDetectedClient ? uiText("addStamps") : t("earn")}
           </button>
 
           <button
@@ -307,6 +458,28 @@ export default function ScanPage() {
             {t("reward")}
           </button>
         </section>
+
+        {hasDetectedClient ? (
+          <section style={{ display: "flex" }}>
+            <button
+              type="button"
+              onClick={resetScan}
+              disabled={busy}
+              style={{
+                width: "100%",
+                height: 48,
+                borderRadius: 18,
+                border: "1px solid #d4d4d8",
+                background: "#fff",
+                color: "#18181b",
+                fontWeight: 800,
+                cursor: busy ? "default" : "pointer",
+              }}
+            >
+              {uiText("scanAnother")}
+            </button>
+          </section>
+        ) : null}
 
         {payload?.storeId && (
           <section
@@ -334,10 +507,35 @@ export default function ScanPage() {
                 borderRadius: 12,
                 border: "1px solid #ddd",
                 padding: "0 10px",
+                boxSizing: "border-box",
               }}
             />
           </section>
         )}
+
+        <section
+          style={{
+            borderRadius: 18,
+            padding: 12,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            color: "#6b7280",
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          {scannerReady
+            ? locale === "fr"
+              ? "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client."
+              : locale === "es"
+                ? "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente."
+                : "Scanner active. Once a client is detected, the card stays selected until you choose to scan another client."
+            : locale === "fr"
+              ? "Scanner en pause."
+              : locale === "es"
+                ? "Escáner en pausa."
+                : "Scanner paused."}
+        </section>
       </div>
     </main>
   );
