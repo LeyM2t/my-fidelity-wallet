@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Inter,
@@ -22,7 +22,6 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 
-const STORE_ID = "get-your-crepe";
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
 
@@ -254,8 +253,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function MerchantTemplatePage() {
   const params = useParams<{ locale: string }>();
+  const searchParams = useSearchParams();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantTemplate");
+  const storeId = (searchParams.get("storeId") || "").trim();
 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
@@ -325,7 +326,15 @@ export default function MerchantTemplatePage() {
     setMsg("");
 
     try {
-      const res = await fetch(`/api/stores/${STORE_ID}`, { cache: "no-store" });
+      if (!storeId) {
+        setErr("Missing storeId in URL.");
+        setTpl(DEFAULT);
+        return;
+      }
+
+      const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -387,6 +396,11 @@ export default function MerchantTemplatePage() {
     setMsg("");
 
     try {
+      if (!storeId) {
+        setErr("Missing storeId in URL.");
+        return;
+      }
+
       if (!confirmPassword.trim()) {
         setErr(t("errors.passwordRequired"));
         return;
@@ -424,7 +438,7 @@ export default function MerchantTemplatePage() {
         bgImageBox: normalizeBox(tpl.bgImageBox, DEFAULT.bgImageBox),
       });
 
-      const res = await fetch(`/api/stores/${STORE_ID}`, {
+      const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -444,8 +458,7 @@ export default function MerchantTemplatePage() {
       setMsg(t("saved"));
       setConfirmPassword("");
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : t("errors.reauthFailed");
+      const message = e instanceof Error ? e.message : t("errors.reauthFailed");
       setErr(message);
     } finally {
       setSaving(false);
@@ -454,7 +467,7 @@ export default function MerchantTemplatePage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [storeId]);
 
   const controlsPanel = (
     <div style={panelStyle}>
@@ -954,7 +967,7 @@ export default function MerchantTemplatePage() {
           </label>
 
           <div style={{ color: "#71717a", fontSize: 12 }}>
-            {loading ? t("loading") : t("live")} • {STORE_ID}
+            {loading ? t("loading") : t("live")} • {storeId || "no-store"}
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function MerchantLoginPage() {
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantLogin");
 
-  const [nextPath, setNextPath] = useState(`/${locale}/scan`);
+  const [nextPath, setNextPath] = useState(`/${locale}/merchant`);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function MerchantLoginPage() {
     const n = sp.get("next");
 
     if (!n) {
-      setNextPath(`/${locale}/scan`);
+      setNextPath(`/${locale}/merchant`);
       return;
     }
 
@@ -42,7 +42,7 @@ export default function MerchantLoginPage() {
       return;
     }
 
-    setNextPath(`/${locale}/scan`);
+    setNextPath(`/${locale}/merchant`);
   }, [locale]);
 
   async function onSubmit(e: React.FormEvent) {

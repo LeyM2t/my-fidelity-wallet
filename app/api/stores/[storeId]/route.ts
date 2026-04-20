@@ -61,6 +61,23 @@ async function getVerifiedMerchant(req: Request) {
   }
 }
 
+function getDefaultCardTemplate() {
+  return {
+    title: "Loyalty Card",
+    textColor: "#ffffff",
+    font: "inter",
+    bgType: "color" as BgType,
+    bgColor: "#111827",
+    gradient: { from: "#ff0000", to: "#111827", angle: 45 },
+    logoUrl: "",
+    bgImageUrl: "",
+    bgImageEnabled: false,
+    bgImageOpacity: 0.85,
+    logoBox: { x: 18, y: 18, width: 56, height: 56 },
+    bgImageBox: { x: 0, y: 0, width: 420, height: 220 },
+  };
+}
+
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ storeId: string }> }
@@ -76,31 +93,22 @@ export async function GET(
       return NextResponse.json({
         storeId: sid,
         name: "",
-        cardTemplate: {
-          title: "Loyalty Card",
-          textColor: "#ffffff",
-          font: "inter",
-          bgType: "color",
-          bgColor: "#111827",
-          gradient: { from: "#ff0000", to: "#111827", angle: 45 },
-          logoUrl: "",
-          bgImageUrl: "",
-          bgImageEnabled: false,
-          bgImageOpacity: 0.85,
-          logoBox: { x: 18, y: 18, width: 56, height: 56 },
-          bgImageBox: { x: 0, y: 0, width: 420, height: 220 },
-        },
+        cardTemplate: getDefaultCardTemplate(),
       });
     }
 
     const data = snap.data() || {};
+
     return NextResponse.json({
       storeId: sid,
       name: data.name || "",
       cardTemplate: data.cardTemplate || null,
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message || "failed" },
+      { status: 500 }
+    );
   }
 }
 
@@ -110,6 +118,7 @@ export async function PATCH(
 ) {
   try {
     const merchant = await getVerifiedMerchant(req);
+
     if (!merchant) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
@@ -119,7 +128,15 @@ export async function PATCH(
 
     const ref = db.collection("stores").doc(sid);
     const snap = await ref.get();
-    const storeData = snap.exists ? snap.data() || {} : {};
+
+    if (!snap.exists) {
+      return NextResponse.json({ error: "store not found" }, { status: 404 });
+    }
+
+    const storeData = snap.data() || {};
+
+    const merchantId =
+      typeof storeData.merchantId === "string" ? storeData.merchantId : "";
 
     const ownerUid =
       typeof storeData.ownerUid === "string"
@@ -137,6 +154,10 @@ export async function PATCH(
 
     const merchantEmail = merchant.email.toLowerCase();
 
+    if (merchantId && merchantId !== merchant.uid) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
     if (ownerUid && ownerUid !== merchant.uid) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
@@ -152,7 +173,10 @@ export async function PATCH(
         : null;
 
     if (!cardTemplate) {
-      return NextResponse.json({ error: "cardTemplate missing" }, { status: 400 });
+      return NextResponse.json(
+        { error: "cardTemplate missing" },
+        { status: 400 }
+      );
     }
 
     const allowedFonts = new Set([
@@ -225,8 +249,15 @@ export async function PATCH(
       { merge: true }
     );
 
-    return NextResponse.json({ ok: true, storeId: sid, cardTemplate: clean });
+    return NextResponse.json({
+      ok: true,
+      storeId: sid,
+      cardTemplate: clean,
+    });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message || "failed" },
+      { status: 500 }
+    );
   }
 }
