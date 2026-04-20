@@ -78,31 +78,39 @@ export default function ClientLoginPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
-        background: "#f9fafb",
+        background: "#f3f4f6",
         fontFamily:
           'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div style={{ marginBottom: 16 }}>
+      <div style={{ width: "100%", maxWidth: 540 }}>
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "flex-start",
+          }}
+        >
           <LanguageSwitcher />
         </div>
 
         <div
           style={{
             width: "100%",
-            background: "#fff",
-            padding: 24,
-            borderRadius: 20,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+            background: "#ffffff",
+            padding: 36,
+            borderRadius: 28,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
           }}
         >
           <h1
             style={{
-              fontSize: 24,
-              fontWeight: 700,
-              marginBottom: 6,
-              textAlign: "center",
+              fontSize: 30,
+              lineHeight: 1.15,
+              fontWeight: 800,
+              margin: 0,
+              marginBottom: 14,
+              color: "#111827",
             }}
           >
             {mode === "login" ? t("title.login") : t("title.signup")}
@@ -110,10 +118,11 @@ export default function ClientLoginPage() {
 
           <p
             style={{
-              textAlign: "center",
-              fontSize: 13,
-              opacity: 0.7,
-              marginBottom: 20,
+              margin: 0,
+              marginBottom: 28,
+              fontSize: 15,
+              lineHeight: 1.5,
+              color: "#64748b",
             }}
           >
             {mode === "login"
@@ -121,17 +130,23 @@ export default function ClientLoginPage() {
               : t("buttons.switchToLogin")}
           </p>
 
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 16 }}>
             <input
               type="email"
               placeholder={t("placeholders.email")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                fontSize: 14,
+                width: "100%",
+                padding: "18px 20px",
+                borderRadius: 18,
+                border: "1px solid #d1d5db",
+                fontSize: 16,
+                color: "#111827",
+                background: "#ffffff",
+                outline: "none",
+                boxSizing: "border-box",
               }}
             />
 
@@ -140,11 +155,19 @@ export default function ClientLoginPage() {
               placeholder={t("placeholders.password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete={
+                mode === "login" ? "current-password" : "new-password"
+              }
               style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                fontSize: 14,
+                width: "100%",
+                padding: "18px 20px",
+                borderRadius: 18,
+                border: "1px solid #d1d5db",
+                fontSize: 16,
+                color: "#111827",
+                background: "#ffffff",
+                outline: "none",
+                boxSizing: "border-box",
               }}
             />
 
@@ -152,12 +175,14 @@ export default function ClientLoginPage() {
               onClick={handleSubmit}
               disabled={loading}
               style={{
-                padding: 12,
-                borderRadius: 12,
+                width: "100%",
+                padding: "18px 20px",
+                borderRadius: 18,
                 border: "none",
-                background: "#111",
-                color: "#fff",
-                fontWeight: 700,
+                background: "#05070d",
+                color: "#ffffff",
+                fontSize: 16,
+                fontWeight: 800,
                 cursor: loading ? "default" : "pointer",
               }}
             >
@@ -174,12 +199,14 @@ export default function ClientLoginPage() {
                 setMode((prev) => (prev === "login" ? "signup" : "login"))
               }
               style={{
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
-                fontWeight: 600,
+                width: "100%",
+                padding: "18px 20px",
+                borderRadius: 18,
+                border: "1px solid #d1d5db",
+                background: "#ffffff",
+                color: "#111827",
+                fontSize: 16,
+                fontWeight: 700,
                 cursor: "pointer",
               }}
             >
@@ -193,9 +220,10 @@ export default function ClientLoginPage() {
                 style={{
                   background: "#fee2e2",
                   color: "#991b1b",
-                  padding: 10,
-                  borderRadius: 10,
-                  fontSize: 13,
+                  padding: "14px 16px",
+                  borderRadius: 14,
+                  fontSize: 14,
+                  lineHeight: 1.4,
                 }}
               >
                 ❌ {error}

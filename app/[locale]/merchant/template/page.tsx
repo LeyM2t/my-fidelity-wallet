@@ -16,6 +16,11 @@ import {
 import { Rnd } from "react-rnd";
 import { HexColorPicker } from "react-colorful";
 import { useTranslations } from "next-intl";
+import { auth } from "@/lib/firebaseClient";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
 
 const STORE_ID = "get-your-crepe";
 const CARD_WIDTH = 420;
@@ -205,6 +210,7 @@ const inputStyle: React.CSSProperties = {
   background: "#fff",
   color: "#18181b",
   outline: "none",
+  boxSizing: "border-box",
 };
 
 const cardShellStyle: React.CSSProperties = {
@@ -225,6 +231,7 @@ function TabButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         padding: "8px 12px",
@@ -250,7 +257,7 @@ export default function MerchantTemplatePage() {
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantTemplate");
 
-  const [adminKey, setAdminKey] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
 
   const [loading, setLoading] = useState(true);
@@ -380,6 +387,24 @@ export default function MerchantTemplatePage() {
     setMsg("");
 
     try {
+      if (!confirmPassword.trim()) {
+        setErr(t("errors.passwordRequired"));
+        return;
+      }
+
+      const user = auth.currentUser;
+      const email = user?.email || "";
+
+      if (!user || !email) {
+        setErr(t("errors.notAuthenticated"));
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(email, confirmPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      const idToken = await user.getIdToken(true);
+
       const payload: CardTemplate = sanitizeTemplateBoxes({
         title: (tpl.title || "").slice(0, 40),
         textColor: clampHex(tpl.textColor) || DEFAULT.textColor,
@@ -403,7 +428,7 @@ export default function MerchantTemplatePage() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-merchant-admin-key": adminKey,
+          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({ cardTemplate: payload }),
       });
@@ -417,13 +442,16 @@ export default function MerchantTemplatePage() {
 
       setTpl(payload);
       setMsg(t("saved"));
+      setConfirmPassword("");
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : t("errors.network");
+      const message =
+        e instanceof Error ? e.message : t("errors.reauthFailed");
       setErr(message);
     } finally {
       setSaving(false);
     }
   }
+
   useEffect(() => {
     load();
   }, []);
@@ -439,7 +467,7 @@ export default function MerchantTemplatePage() {
           flexWrap: "wrap",
         }}
       >
-        <SectionTitle>{t("adminKey")}</SectionTitle>
+        <SectionTitle>{t("confirmPassword")}</SectionTitle>
         <button
           onClick={resetLayout}
           type="button"
@@ -460,10 +488,12 @@ export default function MerchantTemplatePage() {
       </div>
 
       <input
-        value={adminKey}
-        onChange={(e) => setAdminKey(e.target.value)}
-        placeholder={t("adminKeyPlaceholder")}
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        placeholder={t("confirmPasswordPlaceholder")}
         style={inputStyle}
+        autoComplete="current-password"
       />
 
       <div style={{ height: 16 }} />
@@ -516,6 +546,7 @@ export default function MerchantTemplatePage() {
             {THEME_PRESETS.map((p) => (
               <button
                 key={p.name}
+                type="button"
                 onClick={() =>
                   setTpl((prev) => ({
                     ...prev,
@@ -566,7 +597,8 @@ export default function MerchantTemplatePage() {
                   <span style={{ fontSize: 12, opacity: 0.9 }}>{p.name}</span>
                 </div>
                 <div style={{ fontFamily: getFontFamily(p.font), fontWeight: 900, fontSize: 14 }}>
-                  {FONT_OPTIONS.find((f) => f.key === p.font)?.label.split(" ")[0] || t("fontFallback")}
+                  {FONT_OPTIONS.find((f) => f.key === p.font)?.label.split(" ")[0] ||
+                    t("fontFallback")}
                 </div>
               </button>
             ))}
@@ -636,6 +668,7 @@ export default function MerchantTemplatePage() {
                 {SWATCHES.map((c) => (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => setTpl({ ...tpl, bgType: "color", bgColor: c })}
                     style={{
                       height: 32,
@@ -664,6 +697,7 @@ export default function MerchantTemplatePage() {
                 {GRADIENT_PRESETS.map((g, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() =>
                       setTpl((prev) => ({
                         ...prev,
@@ -838,6 +872,7 @@ export default function MerchantTemplatePage() {
               return (
                 <button
                   key={f.key}
+                  type="button"
                   onClick={() => setTpl({ ...tpl, font: f.key })}
                   style={{
                     textAlign: "left",
@@ -1071,7 +1106,8 @@ export default function MerchantTemplatePage() {
                   marginTop: 4 * cardScale,
                 }}
               >
-                {t("loyaltyProgram")} • {FONT_OPTIONS.find((f) => f.key === tpl.font)?.label || t("fontDefault")}
+                {t("loyaltyProgram")} •{" "}
+                {FONT_OPTIONS.find((f) => f.key === tpl.font)?.label || t("fontDefault")}
               </div>
             </div>
 
@@ -1250,26 +1286,26 @@ export default function MerchantTemplatePage() {
             }}
           >
             <Link
-  href={`/${locale}/merchant`}
-  style={{
-    height: 44,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    border: "none",
-    background: "#18181b",
-    color: "#fff",
-    padding: "0 16px",
-    fontSize: 14,
-    fontWeight: 700,
-    textDecoration: "none",
-    minWidth: isMobile ? 0 : undefined,
-    flex: isMobile ? 1 : undefined,
-  }}
->
-  ← {t("back")}
-</Link>
+              href={`/${locale}/merchant`}
+              style={{
+                height: 44,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 16,
+                border: "none",
+                background: "#18181b",
+                color: "#fff",
+                padding: "0 16px",
+                fontSize: 14,
+                fontWeight: 700,
+                textDecoration: "none",
+                minWidth: isMobile ? 0 : undefined,
+                flex: isMobile ? 1 : undefined,
+              }}
+            >
+              ← {t("back")}
+            </Link>
 
             <button
               onClick={load}
