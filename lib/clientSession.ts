@@ -1,3 +1,5 @@
+// lib/clientSession.ts
+
 import "@/lib/firebaseAdmin";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
@@ -13,19 +15,35 @@ function isProd() {
   return process.env.NODE_ENV === "production";
 }
 
-async function getUserRole(uid: string): Promise<AppUserRole | null> {
+function normalizeRoles(value: unknown): AppUserRole[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (role): role is AppUserRole => role === "client" || role === "merchant"
+  );
+}
+
+async function getUserRoles(uid: string): Promise<AppUserRole[]> {
   const snap = await db.collection("users").doc(uid).get();
 
-  if (!snap.exists) return null;
+  if (!snap.exists) return [];
 
-  const data = snap.data() as { role?: AppUserRole } | undefined;
-  const role = data?.role;
+  const data = snap.data() as
+    | {
+        roles?: unknown;
+        role?: AppUserRole;
+      }
+    | undefined;
 
-  if (role !== "client" && role !== "merchant") {
-    return null;
-  }
+  const rolesFromArray = normalizeRoles(data?.roles);
+  const legacyRole =
+    data?.role === "client" || data?.role === "merchant" ? data.role : null;
 
-  return role;
+  return Array.from(
+    new Set<AppUserRole>([
+      ...rolesFromArray,
+      ...(legacyRole ? [legacyRole] : []),
+    ])
+  );
 }
 
 export async function createClientSessionCookie(idToken: string) {
@@ -73,8 +91,8 @@ export async function verifyClientSessionCookie(
     const decoded = await auth.verifySessionCookie(sessionCookie, checkRevoked);
     const uid = decoded.uid;
 
-    const role = await getUserRole(uid);
-    if (role !== "client") {
+    const roles = await getUserRoles(uid);
+    if (!roles.includes("client")) {
       return null;
     }
 

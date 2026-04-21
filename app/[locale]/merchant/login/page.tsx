@@ -1,8 +1,11 @@
+// app/[locale]/merchant/login/page.tsx
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
@@ -11,89 +14,12 @@ import { auth } from "@/lib/firebaseClient";
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-function getForgotTexts(locale: string) {
-  if (locale === "fr") {
-    return {
-      forgotPassword: "Mot de passe oublié ?",
-      emailRequired: "Entre ton email pour réinitialiser ton mot de passe.",
-      resetSent:
-        "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
-      resetFailed:
-        "Impossible d’envoyer l’email de réinitialisation.",
-    };
-  }
-
-  if (locale === "es") {
-    return {
-      forgotPassword: "¿Olvidaste tu contraseña?",
-      emailRequired: "Introduce tu email para restablecer tu contraseña.",
-      resetSent: "Correo de restablecimiento enviado. Revisa tu buzón.",
-      resetFailed: "No se pudo enviar el correo de restablecimiento.",
-    };
-  }
-
-  return {
-    forgotPassword: "Forgot password?",
-    emailRequired: "Enter your email to reset your password.",
-    resetSent: "Password reset email sent. Check your inbox.",
-    resetFailed: "Could not send password reset email.",
-  };
-}
-
-function getMerchantModeTexts(locale: string) {
-  if (locale === "fr") {
-    return {
-      titleLogin: "Connexion merchant",
-      titleSignup: "Créer un compte merchant",
-      subtitleLogin: "Connecte-toi à ton espace commerçant.",
-      subtitleSignup: "Crée ton compte pour gérer ton commerce.",
-      signup: "Créer mon compte",
-      switchToSignup: "Créer un compte merchant",
-      switchToLogin: "J’ai déjà un compte merchant",
-      roleMismatch:
-        "Ce compte appartient à l’espace client. Connecte-toi depuis la page client.",
-    };
-  }
-
-  if (locale === "es") {
-    return {
-      titleLogin: "Inicio de sesión merchant",
-      titleSignup: "Crear una cuenta merchant",
-      subtitleLogin: "Inicia sesión en tu espacio de comerciante.",
-      subtitleSignup: "Crea tu cuenta para gestionar tu negocio.",
-      signup: "Crear mi cuenta",
-      switchToSignup: "Crear una cuenta merchant",
-      switchToLogin: "Ya tengo una cuenta merchant",
-      roleMismatch:
-        "Esta cuenta pertenece al espacio cliente. Inicia sesión desde la página client.",
-    };
-  }
-
-  return {
-    titleLogin: "Merchant login",
-    titleSignup: "Create a merchant account",
-    subtitleLogin: "Sign in to your merchant area.",
-    subtitleSignup: "Create your account to manage your business.",
-    signup: "Create my account",
-    switchToSignup: "Create a merchant account",
-    switchToLogin: "I already have a merchant account",
-    roleMismatch:
-      "This account belongs to the client area. Please sign in from the client page.",
-  };
-}
-
-function mapMerchantErrorMessage(
-  rawMessage: string,
-  fallback: string,
-  locale: string
-) {
-  const texts = getMerchantModeTexts(locale);
-
-  if (rawMessage === "ROLE_MISMATCH") {
-    return texts.roleMismatch;
-  }
-
-  return rawMessage || fallback;
+function isEmailAlreadyInUseError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes("auth/email-already-in-use") ||
+    error.message.includes("email-already-in-use")
+  );
 }
 
 export default function MerchantLoginPage() {
@@ -101,8 +27,6 @@ export default function MerchantLoginPage() {
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantLogin");
-  const forgotTexts = useMemo(() => getForgotTexts(locale), [locale]);
-  const modeTexts = useMemo(() => getMerchantModeTexts(locale), [locale]);
 
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [nextPath, setNextPath] = useState(`/${locale}/merchant`);
@@ -139,6 +63,27 @@ export default function MerchantLoginPage() {
     setNextPath(`/${locale}/merchant`);
   }, [locale]);
 
+  async function resolveUserCredential(cleanEmail: string, cleanPassword: string) {
+    if (mode === "login") {
+      return signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+    }
+
+    try {
+      return await createUserWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+    } catch (err) {
+      if (!isEmailAlreadyInUseError(err)) {
+        throw err;
+      }
+
+      const methods = await fetchSignInMethodsForEmail(auth, cleanEmail);
+      if (!methods.includes("password")) {
+        throw err;
+      }
+
+      return signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -147,16 +92,13 @@ export default function MerchantLoginPage() {
 
     try {
       const cleanEmail = email.trim();
+      const cleanPassword = password.trim();
 
-      if (!cleanEmail || !password) {
-        throw new Error(t("errors.login"));
+      if (!cleanEmail || !cleanPassword) {
+        throw new Error(t("errors.requiredFields"));
       }
 
-      const cred =
-        mode === "login"
-          ? await signInWithEmailAndPassword(auth, cleanEmail, password)
-          : await createUserWithEmailAndPassword(auth, cleanEmail, password);
-
+      const cred = await resolveUserCredential(cleanEmail, cleanPassword);
       const idToken = await cred.user.getIdToken();
 
       const res = await fetch("/api/auth/sessionLogin", {
@@ -173,8 +115,7 @@ export default function MerchantLoginPage() {
       router.replace(nextPath);
       router.refresh();
     } catch (e: any) {
-      const rawMessage = e?.message || t("errors.login");
-      setErr(mapMerchantErrorMessage(rawMessage, t("errors.login"), locale));
+      setErr(e?.message || t("errors.login"));
     } finally {
       setLoading(false);
     }
@@ -189,13 +130,13 @@ export default function MerchantLoginPage() {
       const cleanEmail = email.trim();
 
       if (!cleanEmail) {
-        throw new Error(forgotTexts.emailRequired);
+        throw new Error(t("forgotPassword.emailRequired"));
       }
 
       await sendPasswordResetEmail(auth, cleanEmail);
-      setInfo(forgotTexts.resetSent);
+      setInfo(t("forgotPassword.resetSent"));
     } catch (e: any) {
-      setErr(e?.message || forgotTexts.resetFailed);
+      setErr(e?.message || t("forgotPassword.resetFailed"));
     } finally {
       setResetLoading(false);
     }
@@ -235,7 +176,7 @@ export default function MerchantLoginPage() {
               color: "#111",
             }}
           >
-            {mode === "login" ? modeTexts.titleLogin : modeTexts.titleSignup}
+            {mode === "login" ? t("title.login") : t("title.signup")}
           </h1>
 
           <p
@@ -246,9 +187,7 @@ export default function MerchantLoginPage() {
               marginBottom: 20,
             }}
           >
-            {mode === "login"
-              ? modeTexts.subtitleLogin
-              : modeTexts.subtitleSignup}
+            {mode === "login" ? t("subtitle.login") : t("subtitle.signup")}
           </p>
 
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
@@ -256,7 +195,7 @@ export default function MerchantLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder={t("email")}
+              placeholder={t("placeholders.email")}
               required
               autoComplete="email"
               style={{
@@ -274,7 +213,7 @@ export default function MerchantLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
-                placeholder={t("password")}
+                placeholder={t("placeholders.password")}
                 required
                 autoComplete={
                   mode === "login" ? "current-password" : "new-password"
@@ -306,8 +245,8 @@ export default function MerchantLoginPage() {
                   }}
                 >
                   {resetLoading
-                    ? `⏳ ${forgotTexts.forgotPassword}`
-                    : forgotTexts.forgotPassword}
+                    ? `⏳ ${t("forgotPassword.button")}`
+                    : t("forgotPassword.button")}
                 </button>
               ) : null}
             </div>
@@ -327,10 +266,10 @@ export default function MerchantLoginPage() {
               }}
             >
               {loading
-                ? `⏳ ${t("loading")}`
+                ? `⏳ ${t("buttons.loading")}`
                 : mode === "login"
-                  ? t("login")
-                  : modeTexts.signup}
+                  ? t("buttons.login")
+                  : t("buttons.signup")}
             </button>
 
             <button
@@ -351,8 +290,24 @@ export default function MerchantLoginPage() {
               }}
             >
               {mode === "login"
-                ? modeTexts.switchToSignup
-                : modeTexts.switchToLogin}
+                ? t("buttons.switchToSignup")
+                : t("buttons.switchToLogin")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push(`/${locale}/client/login`)}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t("buttons.switchToClient")}
             </button>
 
             {info && (

@@ -128,7 +128,9 @@ export default function MerchantPage() {
     try {
       setStoreError("");
 
-      if (!name.trim()) {
+      const cleanName = name.trim();
+
+      if (!cleanName) {
         setStoreError(t("errors.nameRequired"));
         return;
       }
@@ -138,7 +140,7 @@ export default function MerchantPage() {
       const res = await fetch("/api/stores/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: cleanName }),
       });
 
       const data = await res.json().catch(() => null);
@@ -413,30 +415,282 @@ export default function MerchantPage() {
 
   if (!store) {
     return (
-      <main style={{ maxWidth: 420, margin: "60px auto", padding: 20 }}>
-        <button onClick={logout} disabled={logoutLoading}>
-          {logoutLoading ? t("logoutLoading") : t("logout")}
-        </button>
+      <main
+        style={{
+          minHeight: "100vh",
+          background:
+            "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
+          padding: 20,
+          fontFamily:
+            'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 920,
+            margin: "0 auto",
+            display: "grid",
+            gap: 18,
+          }}
+        >
+          <section
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: 0.6,
+                  textTransform: "uppercase",
+                  color: "#71717a",
+                  marginBottom: 6,
+                }}
+              >
+                FIDELITY WALLET
+              </div>
 
-        <h1 style={{ marginTop: 20 }}>{t("createTitle")}</h1>
-        <p>{t("createDescription")}</p>
+              <h1
+                style={{
+                  fontSize: 32,
+                  lineHeight: 1.05,
+                  margin: 0,
+                  color: "#18181b",
+                }}
+              >
+                {t("createTitle")}
+              </h1>
 
-        {storeError && (
-          <div style={{ color: "red", marginBottom: 10 }}>{storeError}</div>
-        )}
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "#52525b",
+                  fontSize: 15,
+                }}
+              >
+                {t("createDescription")}
+              </p>
+            </div>
 
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("placeholder")}
-          style={{ width: "100%", padding: 10, marginBottom: 10 }}
-        />
+            <button
+              onClick={logout}
+              disabled={logoutLoading}
+              style={{
+                height: 44,
+                borderRadius: 16,
+                border: "1px solid #a1a1aa",
+                background: "#ffffff",
+                color: "#18181b",
+                padding: "0 16px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: logoutLoading ? "default" : "pointer",
+              }}
+            >
+              {logoutLoading ? t("logoutLoading") : t("logout")}
+            </button>
+          </section>
 
-        <button onClick={createStore} disabled={creatingStore}>
-          {creatingStore ? t("creating") : t("createButton")}
-        </button>
+          {storeError ? (
+            <section
+              style={{
+                border: "1px solid #fecaca",
+                background: "#fff1f2",
+                color: "#881337",
+                padding: 14,
+                borderRadius: 18,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                {t("errors.createStore")}
+              </div>
+              <div style={{ whiteSpace: "pre-wrap" }}>{storeError}</div>
+            </section>
+          ) : null}
 
-        {deletePanel}
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
+              gap: 18,
+            }}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: 28,
+                padding: 28,
+                boxShadow: "0 18px 40px rgba(24,24,27,0.08)",
+                border: "1px solid #e5e7eb",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                  color: "#71717a",
+                  marginBottom: 10,
+                }}
+              >
+                Merchant
+              </div>
+
+              <h2
+                style={{
+                  margin: 0,
+                  marginBottom: 10,
+                  fontSize: 28,
+                  lineHeight: 1.1,
+                  color: "#111827",
+                }}
+              >
+                {t("createTitle")}
+              </h2>
+
+              <p
+                style={{
+                  margin: 0,
+                  marginBottom: 24,
+                  color: "#6b7280",
+                  fontSize: 15,
+                  lineHeight: 1.55,
+                }}
+              >
+                {t("createDescription")}
+              </p>
+
+              <div style={{ display: "grid", gap: 14 }}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("placeholder")}
+                  type="text"
+                  name="storeName"
+                  autoComplete="organization"
+                  enterKeyHint="done"
+                  style={{
+                    width: "100%",
+                    padding: "18px 20px",
+                    borderRadius: 18,
+                    border: "1px solid #d1d5db",
+                    fontSize: 16,
+                    color: "#111827",
+                    background: "#ffffff",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <button
+                  onClick={createStore}
+                  disabled={creatingStore}
+                  style={{
+                    width: "100%",
+                    padding: "18px 20px",
+                    borderRadius: 18,
+                    border: "none",
+                    background: "#111827",
+                    color: "#ffffff",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    cursor: creatingStore ? "default" : "pointer",
+                    boxShadow: "0 10px 24px rgba(17,24,39,0.18)",
+                  }}
+                >
+                  {creatingStore ? `⏳ ${t("creating")}` : t("createButton")}
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background:
+                  "linear-gradient(135deg, #3f3f46 0%, #18181b 100%)",
+                borderRadius: 28,
+                padding: 24,
+                color: "#ffffff",
+                boxShadow: "0 18px 40px rgba(24,24,27,0.18)",
+                overflow: "hidden",
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(circle at top left, rgba(255,255,255,0.14), transparent 36%)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              <div style={{ position: "relative" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.82,
+                    letterSpacing: 1.2,
+                    textTransform: "uppercase",
+                    marginBottom: 12,
+                  }}
+                >
+                  Merchant setup
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 28,
+                    lineHeight: 1.05,
+                    fontWeight: 800,
+                    marginBottom: 10,
+                  }}
+                >
+                  {name.trim() || t("placeholder")}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 14,
+                    opacity: 0.88,
+                    lineHeight: 1.5,
+                    marginBottom: 18,
+                  }}
+                >
+                  {t("qrDescription")}
+                </div>
+
+                <div
+                  style={{
+                    minHeight: 180,
+                    borderRadius: 22,
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 20,
+                    textAlign: "center",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: "rgba(255,255,255,0.86)",
+                  }}
+                >
+                  {t("createDescription")}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {deletePanel}
+        </div>
       </main>
     );
   }

@@ -1,3 +1,5 @@
+// app/api/auth/sessionLogin/route.ts
+
 import "@/lib/firebaseAdmin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -19,6 +21,13 @@ class HttpError extends Error {
   }
 }
 
+function normalizeRoles(value: unknown): AppUserRole[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (role): role is AppUserRole => role === "client" || role === "merchant"
+  );
+}
+
 async function ensureUserRole(
   uid: string,
   email: string | null,
@@ -32,7 +41,7 @@ async function ensureUserRole(
     await userRef.set({
       uid,
       email,
-      role: expectedRole,
+      roles: [expectedRole],
       createdAt: now,
       updatedAt: now,
     });
@@ -41,18 +50,32 @@ async function ensureUserRole(
 
   const data = userSnap.data() as
     | {
+        roles?: unknown;
         role?: AppUserRole;
       }
     | undefined;
 
-  if (data?.role !== expectedRole) {
-    throw new HttpError("ROLE_MISMATCH", 403);
-  }
+  const rolesFromArray = normalizeRoles(data?.roles);
+  const legacyRole =
+    data?.role === "client" || data?.role === "merchant" ? data.role : null;
 
-  await userRef.update({
-    email,
-    updatedAt: now,
-  });
+  const nextRoles = Array.from(
+    new Set<AppUserRole>([
+      ...rolesFromArray,
+      ...(legacyRole ? [legacyRole] : []),
+      expectedRole,
+    ])
+  );
+
+  await userRef.set(
+    {
+      uid,
+      email,
+      roles: nextRoles,
+      updatedAt: now,
+    },
+    { merge: true }
+  );
 }
 
 async function ensureMerchantProfile(uid: string, email: string | null) {

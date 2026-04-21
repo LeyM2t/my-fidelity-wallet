@@ -5,35 +5,34 @@
     "es": "Español"
   },
   "clientLogin": {
-  "title": {
-    "login": "Inicio de sesión cliente",
-    "signup": "Crear cuenta de cliente"
+    "title": {
+      "login": "Inicio de sesión cliente",
+      "signup": "Crear cuenta de cliente"
+    },
+    "placeholders": {
+      "email": "Correo electrónico",
+      "password": "Contraseña"
+    },
+    "buttons": {
+      "loading": "Cargando...",
+      "login": "Iniciar sesión",
+      "signup": "Crear mi cuenta",
+      "switchToSignup": "Crear una cuenta",
+      "switchToLogin": "Ya tengo una cuenta",
+      "switchToMerchant": "Soy comerciante"
+    },
+    "forgotPassword": {
+      "button": "¿Olvidaste tu contraseña?",
+      "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
+      "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
+      "resetFailed": "No se pudo enviar el correo de restablecimiento."
+    },
+    "errors": {
+      "requiredFields": "El correo y la contraseña son obligatorios",
+      "sessionCreationFailed": "No se pudo crear la sesión",
+      "generic": "Ocurrió un error"
+    }
   },
-  "placeholders": {
-    "email": "Correo electrónico",
-    "password": "Contraseña"
-  },
-  "buttons": {
-    "loading": "Cargando...",
-    "login": "Iniciar sesión",
-    "signup": "Crear mi cuenta",
-    "switchToSignup": "Crear una cuenta",
-    "switchToLogin": "Ya tengo una cuenta",
-    "switchToMerchant": "Soy comerciante"
-  },
-  "forgotPassword": {
-    "button": "¿Olvidaste tu contraseña?",
-    "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
-    "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
-    "resetFailed": "No se pudo enviar el correo de restablecimiento."
-  },
-  "errors": {
-    "requiredFields": "El correo y la contraseña son obligatorios",
-    "sessionCreationFailed": "No se pudo crear la sesión",
-    "generic": "Ocurrió un error",
-    "roleMismatch": "Esta cuenta pertenece al espacio merchant. Inicia sesión desde la página merchant."
-  }
-},
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Error",
@@ -142,6 +141,9 @@
     }
   },
   "merchant": {
+    "brand": "FIDELITY WALLET",
+    "setupLabel": "Comerciante",
+    "setupPreviewLabel": "Configuración merchant",
     "loading": "Cargando...",
     "logoutLoading": "Cerrando sesión...",
     "logout": "Cerrar sesión",
@@ -167,39 +169,38 @@
     }
   },
   "merchantLogin": {
-  "title": {
-    "login": "Inicio de sesión merchant",
-    "signup": "Crear una cuenta merchant"
+    "title": {
+      "login": "Inicio de sesión merchant",
+      "signup": "Crear una cuenta merchant"
+    },
+    "subtitle": {
+      "login": "Inicia sesión para acceder a tu espacio de comerciante",
+      "signup": "Crea tu cuenta para gestionar tu negocio"
+    },
+    "placeholders": {
+      "email": "Correo electrónico",
+      "password": "Contraseña"
+    },
+    "buttons": {
+      "loading": "Cargando...",
+      "login": "Iniciar sesión",
+      "signup": "Crear mi cuenta",
+      "switchToSignup": "Crear una cuenta merchant",
+      "switchToLogin": "Ya tengo una cuenta merchant",
+      "switchToClient": "Soy cliente"
+    },
+    "forgotPassword": {
+      "button": "¿Olvidaste tu contraseña?",
+      "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
+      "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
+      "resetFailed": "No se pudo enviar el correo de restablecimiento."
+    },
+    "errors": {
+      "requiredFields": "El correo y la contraseña son obligatorios",
+      "sessionLogin": "Error de sesión",
+      "login": "Error de inicio de sesión"
+    }
   },
-  "subtitle": {
-    "login": "Inicia sesión para acceder a tu espacio de comerciante",
-    "signup": "Crea tu cuenta para gestionar tu negocio"
-  },
-  "placeholders": {
-    "email": "Correo electrónico",
-    "password": "Contraseña"
-  },
-  "buttons": {
-    "loading": "Cargando...",
-    "login": "Iniciar sesión",
-    "signup": "Crear mi cuenta",
-    "switchToSignup": "Crear una cuenta merchant",
-    "switchToLogin": "Ya tengo una cuenta merchant",
-    "switchToClient": "Soy cliente"
-  },
-  "forgotPassword": {
-    "button": "¿Olvidaste tu contraseña?",
-    "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
-    "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
-    "resetFailed": "No se pudo enviar el correo de restablecimiento."
-  },
-  "errors": {
-    "requiredFields": "El correo y la contraseña son obligatorios",
-    "sessionLogin": "Error de sesión",
-    "login": "Error de inicio de sesión",
-    "roleMismatch": "Esta cuenta pertenece al espacio cliente. Inicia sesión desde la página client."
-  }
-},
   "merchantQr": {
     "title": "QR del comerciante",
     "merchantId": "Merchant ID (único)",

@@ -5,35 +5,34 @@
     "es": "Espagnol"
   },
   "clientLogin": {
-  "title": {
-    "login": "Connexion client",
-    "signup": "Créer un compte client"
+    "title": {
+      "login": "Connexion client",
+      "signup": "Créer un compte client"
+    },
+    "placeholders": {
+      "email": "Email",
+      "password": "Mot de passe"
+    },
+    "buttons": {
+      "loading": "Chargement...",
+      "login": "Se connecter",
+      "signup": "Créer mon compte",
+      "switchToSignup": "Créer un compte",
+      "switchToLogin": "J’ai déjà un compte",
+      "switchToMerchant": "Je suis commerçant"
+    },
+    "forgotPassword": {
+      "button": "Mot de passe oublié ?",
+      "emailRequired": "Entre ton email pour réinitialiser ton mot de passe.",
+      "resetSent": "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
+      "resetFailed": "Impossible d’envoyer l’email de réinitialisation."
+    },
+    "errors": {
+      "requiredFields": "Email et mot de passe obligatoires",
+      "sessionCreationFailed": "Impossible de créer la session",
+      "generic": "Une erreur est survenue"
+    }
   },
-  "placeholders": {
-    "email": "Email",
-    "password": "Mot de passe"
-  },
-  "buttons": {
-    "loading": "Chargement...",
-    "login": "Se connecter",
-    "signup": "Créer mon compte",
-    "switchToSignup": "Créer un compte",
-    "switchToLogin": "J’ai déjà un compte",
-    "switchToMerchant": "Je suis commerçant"
-  },
-  "forgotPassword": {
-    "button": "Mot de passe oublié ?",
-    "emailRequired": "Entre ton email pour réinitialiser ton mot de passe.",
-    "resetSent": "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
-    "resetFailed": "Impossible d’envoyer l’email de réinitialisation."
-  },
-  "errors": {
-    "requiredFields": "Email et mot de passe obligatoires",
-    "sessionCreationFailed": "Impossible de créer la session",
-    "generic": "Une erreur est survenue",
-    "roleMismatch": "Ce compte appartient à l’espace commerçant. Connecte-toi depuis la page merchant."
-  }
-},
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Erreur",
@@ -142,6 +141,9 @@
     }
   },
   "merchant": {
+    "brand": "FIDELITY WALLET",
+    "setupLabel": "Commerçant",
+    "setupPreviewLabel": "Configuration commerçant",
     "loading": "Chargement...",
     "logoutLoading": "Déconnexion...",
     "logout": "Se déconnecter",
@@ -167,39 +169,52 @@
     }
   },
   "merchantLogin": {
-  "title": {
-    "login": "Connexion merchant",
-    "signup": "Créer un compte merchant"
+    "title": {
+      "login": "Connexion merchant",
+      "signup": "Créer un compte merchant"
+    },
+    "subtitle": {
+      "login": "Connecte-toi pour accéder à ton espace commerçant",
+      "signup": "Crée ton compte pour gérer ton commerce"
+    },
+    "placeholders": {
+      "email": "Email",
+      "password": "Mot de passe"
+    },
+    "buttons": {
+      "loading": "Chargement...",
+      "login": "Se connecter",
+      "signup": "Créer mon compte",
+      "switchToSignup": "Créer un compte merchant",
+      "switchToLogin": "J’ai déjà un compte merchant",
+      "switchToClient": "Je suis client"
+    },
+    "forgotPassword": {
+      "button": "Mot de passe oublié ?",
+      "emailRequired": "Entre ton email pour réinitialiser ton mot de passe.",
+      "resetSent": "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
+      "resetFailed": "Impossible d’envoyer l’email de réinitialisation."
+    },
+    "errors": {
+      "requiredFields": "Email et mot de passe obligatoires",
+      "sessionLogin": "Erreur de session",
+      "login": "Erreur de connexion"
+    }
   },
-  "subtitle": {
-    "login": "Connecte-toi pour accéder à ton espace commerçant",
-    "signup": "Crée ton compte pour gérer ton commerce"
+  "merchantQr": {
+    "title": "QR du commerçant",
+    "merchantId": "Merchant ID (unique)",
+    "merchantIdHelp": "Conseil : lettres/chiffres/tiret bas. Exemple : GETYOURCREPE",
+    "merchantName": "Nom affiché sur la carte",
+    "goal": "Objectif (tampons)",
+    "defaultName": "Commerce",
+    "copy": "Copier le lien",
+    "open": "Ouvrir (test)",
+    "loadingQR": "Chargement QR…",
+    "copySuccess": "Lien copié ✅",
+    "copyFail": "Impossible de copier automatiquement. Copie manuelle : ",
+    "note": "Note : en local, le QR contiendra ton IP/port. En production, ce sera ton domaine."
   },
-  "placeholders": {
-    "email": "Email",
-    "password": "Mot de passe"
-  },
-  "buttons": {
-    "loading": "Chargement...",
-    "login": "Se connecter",
-    "signup": "Créer mon compte",
-    "switchToSignup": "Créer un compte merchant",
-    "switchToLogin": "J’ai déjà un compte merchant",
-    "switchToClient": "Je suis client"
-  },
-  "forgotPassword": {
-    "button": "Mot de passe oublié ?",
-    "emailRequired": "Entre ton email pour réinitialiser ton mot de passe.",
-    "resetSent": "Email de réinitialisation envoyé. Vérifie ta boîte mail.",
-    "resetFailed": "Impossible d’envoyer l’email de réinitialisation."
-  },
-  "errors": {
-    "requiredFields": "Email et mot de passe obligatoires",
-    "sessionLogin": "Erreur de session",
-    "login": "Erreur de connexion",
-    "roleMismatch": "Ce compte appartient à l’espace client. Connecte-toi depuis la page client."
-  }
-},
   "merchantTemplate": {
     "pageTitle": "Créateur de carte",
     "pageDescription": "Personnalise le style, les couleurs, le logo et la mise en page.",

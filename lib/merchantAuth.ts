@@ -1,3 +1,5 @@
+// lib/merchantAuth.ts
+
 import "@/lib/firebaseAdmin";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
@@ -5,19 +7,35 @@ import { db } from "@/lib/firebaseAdmin";
 
 type AppUserRole = "client" | "merchant";
 
-async function getUserRole(uid: string): Promise<AppUserRole | null> {
+function normalizeRoles(value: unknown): AppUserRole[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (role): role is AppUserRole => role === "client" || role === "merchant"
+  );
+}
+
+async function getUserRoles(uid: string): Promise<AppUserRole[]> {
   const snap = await db.collection("users").doc(uid).get();
 
-  if (!snap.exists) return null;
+  if (!snap.exists) return [];
 
-  const data = snap.data() as { role?: AppUserRole } | undefined;
-  const role = data?.role;
+  const data = snap.data() as
+    | {
+        roles?: unknown;
+        role?: AppUserRole;
+      }
+    | undefined;
 
-  if (role !== "client" && role !== "merchant") {
-    return null;
-  }
+  const rolesFromArray = normalizeRoles(data?.roles);
+  const legacyRole =
+    data?.role === "client" || data?.role === "merchant" ? data.role : null;
 
-  return role;
+  return Array.from(
+    new Set<AppUserRole>([
+      ...rolesFromArray,
+      ...(legacyRole ? [legacyRole] : []),
+    ])
+  );
 }
 
 export async function requireMerchantUid(): Promise<string | null> {
@@ -30,8 +48,8 @@ export async function requireMerchantUid(): Promise<string | null> {
     const decoded = await getAuth().verifySessionCookie(session, true);
     const uid = decoded.uid;
 
-    const role = await getUserRole(uid);
-    if (role !== "merchant") {
+    const roles = await getUserRoles(uid);
+    if (!roles.includes("merchant")) {
       return null;
     }
 
