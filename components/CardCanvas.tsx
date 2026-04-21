@@ -286,9 +286,10 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                 style={{
                   fontSize: `${titlePx}px`,
                   fontWeight: 800,
-                  lineHeight: 1.05,
+                  lineHeight: 1.12,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
+                  paddingBottom: `calc(4px * var(--s))`,
                   textShadow: showBgImage ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
                 }}
                 title={template.title || ""}
