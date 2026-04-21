@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,6 +25,11 @@ import TemplateEditorCard from "@/components/TemplateEditorCard";
 
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
+
+const LOGO_SAFE_MARGIN = 8;
+const LOGO_MIN_SIZE = 36;
+const LOGO_MAX_WIDTH = 220;
+const LOGO_MAX_HEIGHT = 180;
 
 type BgType = "color" | "gradient" | "image";
 
@@ -167,18 +172,65 @@ function normalizeBox(b: unknown, fallback: Box): Box {
   const box = b as Partial<Box> | undefined;
 
   return {
-    x: clampNumber(box?.x, -999, 999, fallback.x),
-    y: clampNumber(box?.y, -999, 999, fallback.y),
+    x: clampNumber(box?.x, -9999, 9999, fallback.x),
+    y: clampNumber(box?.y, -9999, 9999, fallback.y),
     width: clampNumber(box?.width, 10, 9999, fallback.width),
     height: clampNumber(box?.height, 10, 9999, fallback.height),
+  };
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampBoxInsideCard(
+  box: Box,
+  cardWidth: number,
+  cardHeight: number,
+  margin = 0
+): Box {
+  const maxWidth = Math.max(10, cardWidth - margin * 2);
+  const maxHeight = Math.max(10, cardHeight - margin * 2);
+
+  const width = clamp(box.width, 10, maxWidth);
+  const height = clamp(box.height, 10, maxHeight);
+
+  const x = clamp(box.x, margin, cardWidth - margin - width);
+  const y = clamp(box.y, margin, cardHeight - margin - height);
+
+  return { x, y, width, height };
+}
+
+function clampLogoBox(box: Box): Box {
+  const width = clamp(box.width, LOGO_MIN_SIZE, LOGO_MAX_WIDTH);
+  const height = clamp(box.height, LOGO_MIN_SIZE, LOGO_MAX_HEIGHT);
+
+  return clampBoxInsideCard(
+    {
+      ...box,
+      width,
+      height,
+    },
+    CARD_WIDTH,
+    CARD_HEIGHT,
+    LOGO_SAFE_MARGIN
+  );
+}
+
+function clampBgBox(box: Box): Box {
+  return {
+    x: clamp(box.x, -CARD_WIDTH * 2, CARD_WIDTH * 2),
+    y: clamp(box.y, -CARD_HEIGHT * 2, CARD_HEIGHT * 2),
+    width: clamp(box.width, 40, CARD_WIDTH * 3),
+    height: clamp(box.height, 40, CARD_HEIGHT * 3),
   };
 }
 
 function sanitizeTemplateBoxes(template: CardTemplate): CardTemplate {
   return {
     ...template,
-    logoBox: normalizeBox(template.logoBox, DEFAULT.logoBox),
-    bgImageBox: normalizeBox(template.bgImageBox, DEFAULT.bgImageBox),
+    logoBox: clampLogoBox(normalizeBox(template.logoBox, DEFAULT.logoBox)),
+    bgImageBox: clampBgBox(normalizeBox(template.bgImageBox, DEFAULT.bgImageBox)),
   };
 }
 
@@ -248,6 +300,8 @@ export default function MerchantTemplatePage() {
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantTemplate");
   const storeId = (searchParams.get("storeId") || "").trim();
+
+  const loadRequestIdRef = useRef(0);
 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
@@ -407,10 +461,12 @@ export default function MerchantTemplatePage() {
             return;
           }
 
-          setTpl((prev) => ({
-            ...prev,
-            logoUrl: secureUrl,
-          }));
+          setTpl((prev) =>
+            sanitizeTemplateBoxes({
+              ...prev,
+              logoUrl: secureUrl,
+            })
+          );
           setUploadingLogo(false);
           setMsg("Logo uploaded successfully.");
           return;
@@ -426,6 +482,8 @@ export default function MerchantTemplatePage() {
   }
 
   async function load() {
+    const requestId = ++loadRequestIdRef.current;
+
     setLoading(true);
     setErr("");
     setMsg("");
@@ -441,6 +499,8 @@ export default function MerchantTemplatePage() {
         cache: "no-store",
       });
       const data = await res.json();
+
+      if (requestId !== loadRequestIdRef.current) return;
 
       if (!res.ok) {
         setErr(data?.error || t("errors.load"));
@@ -495,11 +555,14 @@ export default function MerchantTemplatePage() {
 
       setTpl(sanitizeTemplateBoxes(merged));
     } catch (e: unknown) {
+      if (requestId !== loadRequestIdRef.current) return;
       const message = e instanceof Error ? e.message : t("errors.network");
       setErr(message);
       setTpl(DEFAULT);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 
@@ -1176,6 +1239,7 @@ export default function MerchantTemplatePage() {
               <input
                 type="checkbox"
                 checked={editLogo}
+                disabled={loading}
                 onChange={(e) => setEditLogo(e.target.checked)}
               />
               {t("editLogo")}
@@ -1193,6 +1257,7 @@ export default function MerchantTemplatePage() {
               <input
                 type="checkbox"
                 checked={editBg}
+                disabled={loading}
                 onChange={(e) => setEditBg(e.target.checked)}
               />
               {t("editBackground")}
@@ -1212,8 +1277,8 @@ export default function MerchantTemplatePage() {
             showBgImg={showBgImg}
             fontOptions={FONT_OPTIONS}
             cardBaseStyle={cardBaseStyle}
-            editLogo={editLogo}
-            editBg={editBg}
+            editLogo={!loading && editLogo}
+            editBg={!loading && editBg}
             previewScore={t("previewScore")}
             loyaltyCardText={t("loyaltyCard")}
             loyaltyProgramText={t("loyaltyProgram")}
@@ -1222,6 +1287,7 @@ export default function MerchantTemplatePage() {
             editBackgroundLabel={t("editBackground")}
             fontDefaultLabel={t("fontDefault")}
             onChange={(updater) => {
+              if (loading) return;
               setTpl((prev) => sanitizeTemplateBoxes(updater(prev)));
             }}
           />
