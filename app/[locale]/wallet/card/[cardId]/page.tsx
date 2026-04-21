@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { useTranslations } from "next-intl";
 import CardCanvas from "@/components/CardCanvas";
+import WalletMoveModal from "@/components/WalletMoveModal";
 import {
+  DEFAULT_CUSTOM_WALLET_COLOR,
   DEFAULT_WALLET_ID,
   loadLocalWallets,
   moveCardToWallet,
@@ -132,11 +134,13 @@ function getMoveTexts(locale: string) {
     return {
       moveButton: "Déplacer la carte",
       moveBackButton: "Remettre dans le wallet principal",
-      promptTitle: "ID du wallet de destination",
       moved: "Carte déplacée.",
       moveError: "Impossible de déplacer la carte.",
       noWallets: "Aucun wallet personnalisé disponible.",
-      chooseWalletHelp: "Wallets disponibles",
+      modalTitle: "Déplacer la carte",
+      modalSubtitle: "Choisis le wallet de destination.",
+      modalConfirm: "Déplacer",
+      modalCancel: "Annuler",
     };
   }
 
@@ -144,22 +148,26 @@ function getMoveTexts(locale: string) {
     return {
       moveButton: "Mover la tarjeta",
       moveBackButton: "Volver al wallet principal",
-      promptTitle: "ID del wallet de destino",
       moved: "Tarjeta movida.",
       moveError: "No se pudo mover la tarjeta.",
       noWallets: "No hay wallets personalizados disponibles.",
-      chooseWalletHelp: "Wallets disponibles",
+      modalTitle: "Mover la tarjeta",
+      modalSubtitle: "Elige el wallet de destino.",
+      modalConfirm: "Mover",
+      modalCancel: "Cancelar",
     };
   }
 
   return {
     moveButton: "Move card",
     moveBackButton: "Move back to main wallet",
-    promptTitle: "Destination wallet ID",
     moved: "Card moved.",
     moveError: "Could not move the card.",
     noWallets: "No custom wallets available.",
-    chooseWalletHelp: "Available wallets",
+    modalTitle: "Move card",
+    modalSubtitle: "Choose the destination wallet.",
+    modalConfirm: "Move",
+    modalCancel: "Cancel",
   };
 }
 
@@ -177,6 +185,7 @@ export default function CardPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
@@ -317,7 +326,7 @@ export default function CardPage() {
     router.replace(`/${locale}/wallet`);
   }
 
-  function handleMoveToWallet() {
+  function handleOpenMoveModal() {
     if (!card || moving) return;
 
     if (customWallets.length === 0) {
@@ -327,32 +336,20 @@ export default function CardPage() {
 
     setError("");
     setInfo("");
+    setMoveModalOpen(true);
+  }
+
+  function handleConfirmMove(targetWalletId: string) {
+    if (!card) return;
+
     setMoving(true);
+    setError("");
+    setInfo("");
 
     try {
-      const choices = customWallets
-        .map((wallet) => `${wallet.id} — ${wallet.name}`)
-        .join("\n");
-
-      const targetId = window.prompt(
-        `${moveTexts.promptTitle}\n\n${moveTexts.chooseWalletHelp}:\n${choices}`,
-        customWallets[0]?.id || ""
-      );
-
-      if (targetId === null) {
-        setMoving(false);
-        return;
-      }
-
-      const trimmed = targetId.trim();
-      const exists = customWallets.some((wallet) => wallet.id === trimmed);
-
-      if (!trimmed || !exists) {
-        throw new Error(moveTexts.moveError);
-      }
-
-      moveCardToWallet(card.id, trimmed);
+      moveCardToWallet(card.id, targetWalletId);
       setInfo(moveTexts.moved);
+      setMoveModalOpen(false);
     } catch (e) {
       const message =
         e instanceof Error && e.message ? e.message : moveTexts.moveError;
@@ -393,6 +390,16 @@ export default function CardPage() {
     if (!card) return null;
     return templateToCardCanvasTemplate(template, card.storeId);
   }, [template, card]);
+
+  const moveWalletOptions = useMemo(
+    () =>
+      customWallets.map((wallet) => ({
+        id: wallet.id,
+        name: wallet.name,
+        color: wallet.color || DEFAULT_CUSTOM_WALLET_COLOR,
+      })),
+    [customWallets]
+  );
 
   if (loading) {
     return (
@@ -451,181 +458,195 @@ export default function CardPage() {
   if (!card || !canvasTemplate) return null;
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f9fafb",
-        padding: 20,
-        fontFamily:
-          'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
+    <>
+      <main
         style={{
-          maxWidth: 520,
-          margin: "0 auto",
-          display: "grid",
-          gap: 18,
+          minHeight: "100vh",
+          background: "#f9fafb",
+          padding: 20,
+          fontFamily:
+            'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
-        <button
-          onClick={handleBackToWallet}
-          style={{
-            justifySelf: "start",
-            padding: "8px 12px",
-            borderRadius: 10,
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            color: "#111827",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          ← {t("back")}
-        </button>
-
-        {error ? (
-          <div
-            style={{
-              background: "#fee2e2",
-              color: "#991b1b",
-              padding: "14px 16px",
-              borderRadius: 14,
-              fontSize: 14,
-              lineHeight: 1.4,
-              textAlign: "center",
-            }}
-          >
-            ❌ {error}
-          </div>
-        ) : null}
-
-        {info ? (
-          <div
-            style={{
-              background: "#dcfce7",
-              color: "#166534",
-              padding: "14px 16px",
-              borderRadius: 14,
-              fontSize: 14,
-              lineHeight: 1.4,
-              textAlign: "center",
-            }}
-          >
-            ✅ {info}
-          </div>
-        ) : null}
-
         <div
           style={{
-            background: "#fff",
-            borderRadius: 24,
-            padding: 24,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-            textAlign: "center",
+            maxWidth: 520,
+            margin: "0 auto",
+            display: "grid",
+            gap: 18,
           }}
         >
-          <div style={{ marginBottom: 20 }}>
-            <CardCanvas
-              template={{
-                ...canvasTemplate,
-                scoreText: `${card.stamps}/${card.goal}`,
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: 14,
-            }}
-          >
-            <QRCodeCanvas value={qrPayload} size={320} />
-          </div>
-
-          <p
-            style={{
-              margin: 0,
-              marginBottom: 18,
-              fontSize: 14,
-              color: "#6b7280",
-            }}
-          >
-            {t("showQR")}
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gap: 10,
-              marginBottom: 14,
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleMoveToWallet}
-              disabled={moving || customWallets.length === 0}
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                background: "#ffffff",
-                color: "#111827",
-                fontSize: 15,
-                fontWeight: 800,
-                cursor:
-                  moving || customWallets.length === 0
-                    ? "default"
-                    : "pointer",
-                opacity: moving || customWallets.length === 0 ? 0.5 : 1,
-              }}
-            >
-              {moveTexts.moveButton}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleMoveBackToMain}
-              disabled={moving}
-              style={{
-                width: "100%",
-                padding: "14px 16px",
-                borderRadius: 14,
-                border: "1px solid #d1d5db",
-                background: "#ffffff",
-                color: "#111827",
-                fontSize: 15,
-                fontWeight: 800,
-                cursor: moving ? "default" : "pointer",
-                opacity: moving ? 0.5 : 1,
-              }}
-            >
-              {moveTexts.moveBackButton}
-            </button>
-          </div>
-
           <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
+            onClick={handleBackToWallet}
             style={{
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "none",
-              background: "#b91c1c",
-              color: "#ffffff",
-              fontSize: 15,
-              fontWeight: 800,
-              cursor: deleting ? "default" : "pointer",
+              justifySelf: "start",
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              color: "#111827",
+              fontWeight: 600,
+              cursor: "pointer",
             }}
           >
-            {deleting ? `⏳ ${t("deleting")}` : t("delete")}
+            ← {t("back")}
           </button>
+
+          {error ? (
+            <div
+              style={{
+                background: "#fee2e2",
+                color: "#991b1b",
+                padding: "14px 16px",
+                borderRadius: 14,
+                fontSize: 14,
+                lineHeight: 1.4,
+                textAlign: "center",
+              }}
+            >
+              ❌ {error}
+            </div>
+          ) : null}
+
+          {info ? (
+            <div
+              style={{
+                background: "#dcfce7",
+                color: "#166534",
+                padding: "14px 16px",
+                borderRadius: 14,
+                fontSize: 14,
+                lineHeight: 1.4,
+                textAlign: "center",
+              }}
+            >
+              ✅ {info}
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 24,
+              padding: 24,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ marginBottom: 20 }}>
+              <CardCanvas
+                template={{
+                  ...canvasTemplate,
+                  scoreText: `${card.stamps}/${card.goal}`,
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: 14,
+              }}
+            >
+              <QRCodeCanvas value={qrPayload} size={320} />
+            </div>
+
+            <p
+              style={{
+                margin: 0,
+                marginBottom: 18,
+                fontSize: 14,
+                color: "#6b7280",
+              }}
+            >
+              {t("showQR")}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 14,
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleOpenMoveModal}
+                disabled={moving || customWallets.length === 0}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  borderRadius: 14,
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  color: "#111827",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor:
+                    moving || customWallets.length === 0
+                      ? "default"
+                      : "pointer",
+                  opacity: moving || customWallets.length === 0 ? 0.5 : 1,
+                }}
+              >
+                {moveTexts.moveButton}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleMoveBackToMain}
+                disabled={moving}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  borderRadius: 14,
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  color: "#111827",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor: moving ? "default" : "pointer",
+                  opacity: moving ? 0.5 : 1,
+                }}
+              >
+                {moveTexts.moveBackButton}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: 14,
+                border: "none",
+                background: "#b91c1c",
+                color: "#ffffff",
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: deleting ? "default" : "pointer",
+              }}
+            >
+              {deleting ? `⏳ ${t("deleting")}` : t("delete")}
+            </button>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <WalletMoveModal
+        open={moveModalOpen}
+        title={moveTexts.modalTitle}
+        subtitle={moveTexts.modalSubtitle}
+        confirmLabel={moveTexts.modalConfirm}
+        cancelLabel={moveTexts.modalCancel}
+        wallets={moveWalletOptions}
+        loading={moving}
+        onClose={() => setMoveModalOpen(false)}
+        onConfirm={handleConfirmMove}
+      />
+    </>
   );
 }

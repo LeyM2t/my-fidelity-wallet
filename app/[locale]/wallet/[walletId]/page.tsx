@@ -10,13 +10,13 @@ import {
 } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CardCanvas from "@/components/CardCanvas";
+import WalletMoveModal from "@/components/WalletMoveModal";
 import { useTranslations } from "next-intl";
 import {
   DEFAULT_CUSTOM_WALLET_COLOR,
   DEFAULT_MAIN_WALLET_COLOR,
   DEFAULT_WALLET_ID,
   getCardsForWallet,
-  getWalletColorChoices,
   getWalletDisplayColor,
   getWalletDisplayName,
   loadLocalWallets,
@@ -149,7 +149,8 @@ function templateToCardCanvasTemplate(css: ReturnType<typeof templateToCss>) {
 }
 
 function buildWalletBackground(color: string, isDefault: boolean) {
-  const base = color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
+  const base =
+    color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
 
   return isDefault
     ? `linear-gradient(135deg, ${base} 0%, #18181b 100%)`
@@ -161,10 +162,13 @@ function getMoveTexts(locale: string) {
     return {
       moveButton: "Déplacer la carte",
       moveBackButton: "Remettre dans le wallet principal",
-      movePrompt: "ID du wallet de destination",
       movedInfo: "Carte déplacée.",
       noActiveCard: "Aucune carte active.",
-      targetMissing: "Wallet cible introuvable.",
+      noWallets: "Aucun wallet personnalisé disponible.",
+      modalTitle: "Déplacer la carte",
+      modalSubtitle: "Choisis le wallet de destination.",
+      modalConfirm: "Déplacer",
+      modalCancel: "Annuler",
     };
   }
 
@@ -172,20 +176,26 @@ function getMoveTexts(locale: string) {
     return {
       moveButton: "Mover la tarjeta",
       moveBackButton: "Volver al wallet principal",
-      movePrompt: "ID del wallet de destino",
       movedInfo: "Tarjeta movida.",
       noActiveCard: "No hay tarjeta activa.",
-      targetMissing: "Wallet de destino no encontrado.",
+      noWallets: "No hay wallets personalizados disponibles.",
+      modalTitle: "Mover la tarjeta",
+      modalSubtitle: "Elige el wallet de destino.",
+      modalConfirm: "Mover",
+      modalCancel: "Cancelar",
     };
   }
 
   return {
     moveButton: "Move card",
     moveBackButton: "Move back to main wallet",
-    movePrompt: "Destination wallet ID",
     movedInfo: "Card moved.",
     noActiveCard: "No active card.",
-    targetMissing: "Destination wallet not found.",
+    noWallets: "No custom wallets available.",
+    modalTitle: "Move card",
+    modalSubtitle: "Choose the destination wallet.",
+    modalConfirm: "Move",
+    modalCancel: "Cancel",
   };
 }
 
@@ -208,6 +218,7 @@ export default function WalletDetailPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [isCompact, setIsCompact] = useState(false);
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef(0);
@@ -370,6 +381,16 @@ export default function WalletDetailPage() {
     return getCardsForWallet(cards, walletId);
   }, [cards, walletId]);
 
+  const moveWalletOptions = useMemo(
+    () =>
+      customWallets.map((wallet) => ({
+        id: wallet.id,
+        name: wallet.name,
+        color: wallet.color || DEFAULT_CUSTOM_WALLET_COLOR,
+      })),
+    [customWallets]
+  );
+
   useEffect(() => {
     setActiveIndex(0);
   }, [walletId, visibleCards.length]);
@@ -420,28 +441,25 @@ export default function WalletDetailPage() {
     touchDeltaXRef.current = 0;
   }, [goNext, goPrev]);
 
-  function handleMoveActiveCard() {
+  function handleOpenMoveModal() {
     if (!activeCard) {
       setError(moveTexts.noActiveCard);
       return;
     }
 
-    const choices = customWallets
-      .map((wallet) => `${wallet.id} — ${wallet.name}`)
-      .join("\n");
+    if (customWallets.length === 0) {
+      setError(moveTexts.noWallets);
+      return;
+    }
 
-    const targetId = window.prompt(
-      `${moveTexts.movePrompt}\n\n${choices || "-"}`,
-      customWallets[0]?.id || ""
-    );
+    setError("");
+    setInfo("");
+    setMoveModalOpen(true);
+  }
 
-    if (targetId === null) return;
-
-    const trimmed = targetId.trim();
-    const exists = customWallets.some((wallet) => wallet.id === trimmed);
-
-    if (!trimmed || !exists) {
-      setError(moveTexts.targetMissing);
+  function handleConfirmMove(targetWalletId: string) {
+    if (!activeCard) {
+      setError(moveTexts.noActiveCard);
       return;
     }
 
@@ -449,10 +467,16 @@ export default function WalletDetailPage() {
     setError("");
     setInfo("");
 
-    moveCardToWallet(activeCard.id, trimmed);
-    setInfo(moveTexts.movedInfo);
-    refreshWallets();
-    fetchCards().finally(() => setMoving(false));
+    try {
+      moveCardToWallet(activeCard.id, targetWalletId);
+      setInfo(moveTexts.movedInfo);
+      setMoveModalOpen(false);
+      refreshWallets();
+      fetchCards().finally(() => setMoving(false));
+    } catch (e: any) {
+      setError(e?.message ?? moveTexts.noWallets);
+      setMoving(false);
+    }
   }
 
   function handleMoveBackToMain() {
@@ -472,390 +496,393 @@ export default function WalletDetailPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
-        padding: 20,
-        fontFamily:
-          'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
+    <>
+      <main
         style={{
-          maxWidth: 900,
-          margin: "0 auto",
-          display: "grid",
-          gap: 18,
+          minHeight: "100vh",
+          background:
+            "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
+          padding: 20,
+          fontFamily:
+            'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
-        <section
+        <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
+            maxWidth: 900,
+            margin: "0 auto",
+            display: "grid",
+            gap: 18,
           }}
         >
-          <button
-            onClick={() => router.push(`/${locale}/wallet`)}
-            style={{
-              height: 42,
-              borderRadius: 14,
-              border: "none",
-              background: "#18181b",
-              color: "#ffffff",
-              padding: "0 14px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            ← {t("back")}
-          </button>
-
-          <button
-            onClick={fetchCards}
-            disabled={loading}
-            style={{
-              height: 42,
-              borderRadius: 14,
-              border: "1px solid #d4d4d8",
-              background: "#f4f4f5",
-              color: "#18181b",
-              padding: "0 14px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: loading ? "default" : "pointer",
-            }}
-          >
-            {loading ? t("refreshing") : t("refresh")}
-          </button>
-        </section>
-
-        <section
-          style={{
-            borderRadius: 28,
-            padding: 22,
-            background: buildWalletBackground(walletColor, walletId === DEFAULT_WALLET_ID),
-            color: "#fff",
-            boxShadow: "0 18px 40px rgba(24,24,27,0.28)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              opacity: 0.82,
-              letterSpacing: 1.2,
-              textTransform: "uppercase",
-              marginBottom: 10,
-            }}
-          >
-            {t("headerLabel")}
-          </div>
-
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 30,
-              lineHeight: 1,
-              fontWeight: 800,
-              marginBottom: 10,
-            }}
-          >
-            {walletName}
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              opacity: 0.88,
-            }}
-          >
-            {visibleCards.length === 1
-              ? t("realCards_one")
-              : t("realCards_other", { count: visibleCards.length })}
-          </p>
-        </section>
-
-        {error ? (
           <section
             style={{
-              border: "1px solid #fecaca",
-              background: "#fff1f2",
-              color: "#881337",
-              padding: 14,
-              borderRadius: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
             }}
           >
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>
-              {t("errorTitle")}
-            </div>
-            <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-              {error}
-            </div>
-          </section>
-        ) : null}
-
-        {info ? (
-          <section
-            style={{
-              border: "1px solid #bbf7d0",
-              background: "#f0fdf4",
-              color: "#166534",
-              padding: 14,
-              borderRadius: 18,
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>{info}</div>
-          </section>
-        ) : null}
-
-        {!loading && visibleCards.length === 0 ? (
-          <section
-            style={{
-              borderRadius: 24,
-              border: "1px dashed #d4d4d8",
-              background: "#fff",
-              padding: 28,
-              textAlign: "center",
-            }}
-          >
-            <div
+            <button
+              onClick={() => router.push(`/${locale}/wallet`)}
               style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#18181b",
-                marginBottom: 8,
-              }}
-            >
-              {t("empty.title")}
-            </div>
-
-            <div
-              style={{
-                color: "#71717a",
+                height: 42,
+                borderRadius: 14,
+                border: "none",
+                background: "#18181b",
+                color: "#ffffff",
+                padding: "0 14px",
                 fontSize: 14,
-                lineHeight: 1.5,
+                fontWeight: 700,
+                cursor: "pointer",
               }}
             >
-              {t("empty.description")}
-            </div>
+              ← {t("back")}
+            </button>
+
+            <button
+              onClick={fetchCards}
+              disabled={loading}
+              style={{
+                height: 42,
+                borderRadius: 14,
+                border: "1px solid #d4d4d8",
+                background: "#f4f4f5",
+                color: "#18181b",
+                padding: "0 14px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: loading ? "default" : "pointer",
+              }}
+            >
+              {loading ? t("refreshing") : t("refresh")}
+            </button>
           </section>
-        ) : (
-          <>
-            <section
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
+
+          <section
+            style={{
+              borderRadius: 28,
+              padding: 22,
+              background: buildWalletBackground(
+                walletColor,
+                walletId === DEFAULT_WALLET_ID
+              ),
+              color: "#fff",
+              boxShadow: "0 18px 40px rgba(24,24,27,0.28)",
+            }}
+          >
+            <div
               style={{
-                position: "relative",
-                height: isCompact ? 360 : 430,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                touchAction: "pan-y",
-                userSelect: "none",
+                fontSize: 12,
+                opacity: 0.82,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                marginBottom: 10,
               }}
             >
-              {visibleCards.map((card, index) => {
-                const offset = index - activeIndex;
+              {t("headerLabel")}
+            </div>
 
-                if (Math.abs(offset) > MAX_VISIBLE_DISTANCE) {
-                  return null;
-                }
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 30,
+                lineHeight: 1,
+                fontWeight: 800,
+                marginBottom: 10,
+              }}
+            >
+              {walletName}
+            </h1>
 
-                const tpl = templatesByStore[card.storeId];
-                const css = templateToCss(tpl);
-                const canvasTpl = templateToCardCanvasTemplate(css);
-                const titleToShow = canvasTpl.title || card.storeId;
-                const isActive = offset === 0;
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                opacity: 0.88,
+              }}
+            >
+              {visibleCards.length === 1
+                ? t("realCards_one")
+                : t("realCards_other", { count: visibleCards.length })}
+            </p>
+          </section>
 
-                const absOffset = Math.abs(offset);
-                const translateX = offset * (isCompact ? 78 : 108);
-                const translateY = absOffset * (isCompact ? 22 : 18);
-                const scale = isActive
-                  ? 1
-                  : absOffset === 1
-                    ? 0.92
-                    : absOffset === 2
-                      ? 0.86
-                      : 0.8;
-                const opacity = isActive
-                  ? 1
-                  : absOffset === 1
-                    ? 0.72
-                    : absOffset === 2
-                      ? 0.44
-                      : 0.22;
-
-                return (
-                  <div
-                    key={card.id}
-                    onClick={() => {
-                      if (isActive) {
-                        router.push(
-                          `/${locale}/wallet/card/${encodeURIComponent(card.id)}`
-                        );
-                      } else {
-                        setActiveIndex(index);
-                      }
-                    }}
-                    style={{
-                      position: "absolute",
-                      width: isCompact ? "min(88vw, 320px)" : "min(100%, 360px)",
-                      cursor: "pointer",
-                      transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
-                      opacity,
-                      zIndex: 100 - absOffset,
-                      transition:
-                        "transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease",
-                      boxShadow: isActive
-                        ? "0 22px 42px rgba(0,0,0,0.22)"
-                        : "0 10px 22px rgba(0,0,0,0.10)",
-                      borderRadius: 24,
-                      overflow: "hidden",
-                      pointerEvents: opacity < 0.08 ? "none" : "auto",
-                      filter:
-                        !isActive && absOffset >= 2
-                          ? "saturate(0.9)"
-                          : "none",
-                    }}
-                  >
-                    <CardCanvas
-                      template={{
-                        ...canvasTpl,
-                        title: titleToShow,
-                        scoreText: `${card.stamps}/${card.goal}`,
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        padding: "12px 14px",
-                        background: "rgba(255,255,255,0.96)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "#18181b",
-                            marginBottom: 2,
-                          }}
-                        >
-                          {titleToShow}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "#71717a",
-                          }}
-                        >
-                          {card.stamps}/{card.goal}
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color:
-                            card.status === "reward" ? "#166534" : "#18181b",
-                          background:
-                            card.status === "reward" ? "#dcfce7" : "#f4f4f5",
-                          borderRadius: 999,
-                          padding: "8px 10px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {card.status === "reward"
-                          ? t("rewardReady")
-                          : t("active")}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          {error ? (
+            <section
+              style={{
+                border: "1px solid #fecaca",
+                background: "#fff1f2",
+                color: "#881337",
+                padding: 14,
+                borderRadius: 18,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                {t("errorTitle")}
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                {error}
+              </div>
             </section>
+          ) : null}
 
+          {info ? (
             <section
               style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 12,
-                flexWrap: "wrap",
-                alignItems: "center",
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#166534",
+                padding: 14,
+                borderRadius: 18,
               }}
             >
-              <button
-                onClick={goPrev}
-                disabled={activeIndex <= 0}
+              <div style={{ fontWeight: 800 }}>{info}</div>
+            </section>
+          ) : null}
+
+          {!loading && visibleCards.length === 0 ? (
+            <section
+              style={{
+                borderRadius: 24,
+                border: "1px dashed #d4d4d8",
+                background: "#fff",
+                padding: 28,
+                textAlign: "center",
+              }}
+            >
+              <div
                 style={{
-                  height: 46,
-                  minWidth: 64,
-                  borderRadius: 16,
-                  border: "1px solid #d4d4d8",
-                  background: "#ffffff",
+                  fontSize: 20,
+                  fontWeight: 800,
                   color: "#18181b",
-                  padding: "0 16px",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  cursor: activeIndex <= 0 ? "default" : "pointer",
-                  opacity: activeIndex <= 0 ? 0.5 : 1,
+                  marginBottom: 8,
                 }}
               >
-                ←
-              </button>
+                {t("empty.title")}
+              </div>
 
               <div
                 style={{
-                  minWidth: 90,
-                  textAlign: "center",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#52525b",
+                  color: "#71717a",
+                  fontSize: 14,
+                  lineHeight: 1.5,
                 }}
               >
-                {visibleCards.length > 0
-                  ? `${activeIndex + 1} / ${visibleCards.length}`
-                  : "0 / 0"}
+                {t("empty.description")}
               </div>
-
-              <button
-                onClick={goNext}
-                disabled={activeIndex >= visibleCards.length - 1}
+            </section>
+          ) : (
+            <>
+              <section
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 style={{
-                  height: 46,
-                  minWidth: 64,
-                  borderRadius: 16,
-                  border: "1px solid #d4d4d8",
-                  background: "#ffffff",
-                  color: "#18181b",
-                  padding: "0 16px",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  cursor:
-                    activeIndex >= visibleCards.length - 1
-                      ? "default"
-                      : "pointer",
-                  opacity: activeIndex >= visibleCards.length - 1 ? 0.5 : 1,
+                  position: "relative",
+                  height: isCompact ? 360 : 430,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  touchAction: "pan-y",
+                  userSelect: "none",
                 }}
               >
-                →
-              </button>
-            </section>
+                {visibleCards.map((card, index) => {
+                  const offset = index - activeIndex;
 
-            {activeCard ? (
-              <>
+                  if (Math.abs(offset) > MAX_VISIBLE_DISTANCE) {
+                    return null;
+                  }
+
+                  const tpl = templatesByStore[card.storeId];
+                  const css = templateToCss(tpl);
+                  const canvasTpl = templateToCardCanvasTemplate(css);
+                  const titleToShow = canvasTpl.title || card.storeId;
+                  const isActive = offset === 0;
+
+                  const absOffset = Math.abs(offset);
+                  const translateX = offset * (isCompact ? 78 : 108);
+                  const translateY = absOffset * (isCompact ? 22 : 18);
+                  const scale = isActive
+                    ? 1
+                    : absOffset === 1
+                      ? 0.92
+                      : absOffset === 2
+                        ? 0.86
+                        : 0.8;
+                  const opacity = isActive
+                    ? 1
+                    : absOffset === 1
+                      ? 0.72
+                      : absOffset === 2
+                        ? 0.44
+                        : 0.22;
+
+                  return (
+                    <div
+                      key={card.id}
+                      onClick={() => {
+                        if (isActive) {
+                          router.push(
+                            `/${locale}/wallet/card/${encodeURIComponent(card.id)}`
+                          );
+                        } else {
+                          setActiveIndex(index);
+                        }
+                      }}
+                      style={{
+                        position: "absolute",
+                        width: isCompact ? "min(88vw, 320px)" : "min(100%, 360px)",
+                        cursor: "pointer",
+                        transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
+                        opacity,
+                        zIndex: 100 - absOffset,
+                        transition:
+                          "transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease",
+                        boxShadow: isActive
+                          ? "0 22px 42px rgba(0,0,0,0.22)"
+                          : "0 10px 22px rgba(0,0,0,0.10)",
+                        borderRadius: 24,
+                        overflow: "hidden",
+                        pointerEvents: opacity < 0.08 ? "none" : "auto",
+                        filter:
+                          !isActive && absOffset >= 2
+                            ? "saturate(0.9)"
+                            : "none",
+                      }}
+                    >
+                      <CardCanvas
+                        template={{
+                          ...canvasTpl,
+                          title: titleToShow,
+                          scoreText: `${card.stamps}/${card.goal}`,
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          padding: "12px 14px",
+                          background: "rgba(255,255,255,0.96)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 700,
+                              color: "#18181b",
+                              marginBottom: 2,
+                            }}
+                          >
+                            {titleToShow}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "#71717a",
+                            }}
+                          >
+                            {card.stamps}/{card.goal}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color:
+                              card.status === "reward" ? "#166534" : "#18181b",
+                            background:
+                              card.status === "reward" ? "#dcfce7" : "#f4f4f5",
+                            borderRadius: 999,
+                            padding: "8px 10px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {card.status === "reward"
+                            ? t("rewardReady")
+                            : t("active")}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+
+              <section
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  onClick={goPrev}
+                  disabled={activeIndex <= 0}
+                  style={{
+                    height: 46,
+                    minWidth: 64,
+                    borderRadius: 16,
+                    border: "1px solid #d4d4d8",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    padding: "0 16px",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    cursor: activeIndex <= 0 ? "default" : "pointer",
+                    opacity: activeIndex <= 0 ? 0.5 : 1,
+                  }}
+                >
+                  ←
+                </button>
+
+                <div
+                  style={{
+                    minWidth: 90,
+                    textAlign: "center",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#52525b",
+                  }}
+                >
+                  {visibleCards.length > 0
+                    ? `${activeIndex + 1} / ${visibleCards.length}`
+                    : "0 / 0"}
+                </div>
+
+                <button
+                  onClick={goNext}
+                  disabled={activeIndex >= visibleCards.length - 1}
+                  style={{
+                    height: 46,
+                    minWidth: 64,
+                    borderRadius: 16,
+                    border: "1px solid #d4d4d8",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    padding: "0 16px",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    cursor:
+                      activeIndex >= visibleCards.length - 1
+                        ? "default"
+                        : "pointer",
+                    opacity: activeIndex >= visibleCards.length - 1 ? 0.5 : 1,
+                  }}
+                >
+                  →
+                </button>
+              </section>
+
+              {activeCard ? (
                 <section style={{ display: "grid", gap: 10 }}>
                   <button
                     onClick={() =>
@@ -880,7 +907,7 @@ export default function WalletDetailPage() {
                   </button>
 
                   <button
-                    onClick={handleMoveActiveCard}
+                    onClick={handleOpenMoveModal}
                     disabled={moving || customWallets.length === 0}
                     style={{
                       width: "100%",
@@ -922,11 +949,23 @@ export default function WalletDetailPage() {
                     </button>
                   ) : null}
                 </section>
-              </>
-            ) : null}
-          </>
-        )}
-      </div>
-    </main>
+              ) : null}
+            </>
+          )}
+        </div>
+      </main>
+
+      <WalletMoveModal
+        open={moveModalOpen}
+        title={moveTexts.modalTitle}
+        subtitle={moveTexts.modalSubtitle}
+        confirmLabel={moveTexts.modalConfirm}
+        cancelLabel={moveTexts.modalCancel}
+        wallets={moveWalletOptions}
+        loading={moving}
+        onClose={() => setMoveModalOpen(false)}
+        onConfirm={handleConfirmMove}
+      />
+    </>
   );
 }

@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebaseClient";
-import { useTranslations } from "next-intl";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
+import { useTranslations } from "next-intl";
+import { auth } from "@/lib/firebaseClient";
+import WalletModal from "@/components/WalletModal";
 import {
   DEFAULT_CUSTOM_WALLET_COLOR,
   DEFAULT_MAIN_WALLET_COLOR,
+  DEFAULT_MAIN_WALLET_NAME,
   DEFAULT_WALLET_ID,
   addLocalWallet,
   clearAllWalletLocalData,
@@ -42,6 +44,8 @@ type MainWalletState = {
   name: string;
   color: string;
 };
+
+type WalletModalMode = "create" | "edit-main" | "edit-custom" | null;
 
 function getDeleteTexts(locale: string) {
   if (locale === "fr") {
@@ -94,50 +98,69 @@ function getDeleteTexts(locale: string) {
 function getWalletEditorTexts(locale: string) {
   if (locale === "fr") {
     return {
-      createNamePrompt: "Nom du wallet",
-      createColorPrompt:
-        "Couleur du wallet (hex, exemple #1d4ed8). Laisse vide pour la couleur par défaut.",
-      editNamePrompt: "Nouveau nom du wallet",
-      editColorPrompt:
-        "Nouvelle couleur du wallet (hex, exemple #7c3aed). Laisse vide pour garder la couleur actuelle.",
-      mainEditButton: "Modifier",
-      customEditButton: "Modifier",
-      confirmDeleteWallet: "Supprimer ce wallet ?",
+      editButton: "Modifier",
+      deleteButton: "Supprimer",
+      modalCreateTitle: "Créer un wallet",
+      modalEditMainTitle: "Modifier le wallet principal",
+      modalEditCustomTitle: "Modifier le wallet",
+      modalNameLabel: "Nom du wallet",
+      modalColorLabel: "Couleur du wallet",
+      modalConfirmCreate: "Créer",
+      modalConfirmSave: "Enregistrer",
+      modalCancel: "Annuler",
+      deleteModalTitle: "Supprimer ce wallet ?",
+      deleteModalDescription:
+        "Ce wallet personnalisé sera supprimé. Les cartes reviendront dans le wallet principal.",
+      deleteModalConfirm: "Supprimer",
+      deleteModalCancel: "Annuler",
       invalidName: "Nom de wallet invalide.",
     };
   }
 
   if (locale === "es") {
     return {
-      createNamePrompt: "Nombre del wallet",
-      createColorPrompt:
-        "Color del wallet (hex, ejemplo #1d4ed8). Déjalo vacío para usar el color por defecto.",
-      editNamePrompt: "Nuevo nombre del wallet",
-      editColorPrompt:
-        "Nuevo color del wallet (hex, ejemplo #7c3aed). Déjalo vacío para mantener el color actual.",
-      mainEditButton: "Editar",
-      customEditButton: "Editar",
-      confirmDeleteWallet: "¿Eliminar este wallet?",
+      editButton: "Editar",
+      deleteButton: "Eliminar",
+      modalCreateTitle: "Crear un wallet",
+      modalEditMainTitle: "Editar el wallet principal",
+      modalEditCustomTitle: "Editar el wallet",
+      modalNameLabel: "Nombre del wallet",
+      modalColorLabel: "Color del wallet",
+      modalConfirmCreate: "Crear",
+      modalConfirmSave: "Guardar",
+      modalCancel: "Cancelar",
+      deleteModalTitle: "¿Eliminar este wallet?",
+      deleteModalDescription:
+        "Este wallet personalizado será eliminado. Las tarjetas volverán al wallet principal.",
+      deleteModalConfirm: "Eliminar",
+      deleteModalCancel: "Cancelar",
       invalidName: "Nombre de wallet no válido.",
     };
   }
 
   return {
-    createNamePrompt: "Wallet name",
-    createColorPrompt:
-      "Wallet color (hex, example #1d4ed8). Leave empty for the default color.",
-    editNamePrompt: "New wallet name",
-    editColorPrompt:
-      "New wallet color (hex, example #7c3aed). Leave empty to keep the current color.",
-    mainEditButton: "Edit",
-    customEditButton: "Edit",
-    confirmDeleteWallet: "Delete this wallet?",
+    editButton: "Edit",
+    deleteButton: "Delete",
+    modalCreateTitle: "Create a wallet",
+    modalEditMainTitle: "Edit main wallet",
+    modalEditCustomTitle: "Edit wallet",
+    modalNameLabel: "Wallet name",
+    modalColorLabel: "Wallet color",
+    modalConfirmCreate: "Create",
+    modalConfirmSave: "Save",
+    modalCancel: "Cancel",
+    deleteModalTitle: "Delete this wallet?",
+    deleteModalDescription:
+      "This custom wallet will be deleted. Its cards will go back to the main wallet.",
+    deleteModalConfirm: "Delete",
+    deleteModalCancel: "Cancel",
     invalidName: "Invalid wallet name.",
   };
 }
 
 function buildWalletBackground(color: string, isDefault: boolean) {
-  const base = color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
+  const base =
+    color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
 
   return isDefault
     ? `linear-gradient(135deg, ${base} 0%, #18181b 100%)`
@@ -149,6 +172,7 @@ export default function WalletPage() {
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("wallet");
+
   const deleteTexts = useMemo(() => getDeleteTexts(locale), [locale]);
   const walletEditorTexts = useMemo(() => getWalletEditorTexts(locale), [locale]);
   const colorChoices = useMemo(() => getWalletColorChoices(), []);
@@ -170,12 +194,23 @@ export default function WalletPage() {
   const [deleteError, setDeleteError] = useState("");
   const [deleteInfo, setDeleteInfo] = useState("");
 
+  const [walletModalMode, setWalletModalMode] = useState<WalletModalMode>(null);
+  const [selectedWallet, setSelectedWallet] = useState<LocalWallet | null>(null);
+  const [walletModalLoading, setWalletModalLoading] = useState(false);
+
+  const [walletToDelete, setWalletToDelete] = useState<LocalWallet | null>(null);
+
   const refreshWalletLocalState = useCallback(() => {
     setCustomWallets(loadLocalWallets());
 
     const mainCfg = loadMainWalletConfig();
+    const localizedMainName =
+      !mainCfg.name || mainCfg.name === DEFAULT_MAIN_WALLET_NAME
+        ? t("main")
+        : mainCfg.name;
+
     setMainWallet({
-      name: mainCfg.name || t("main"),
+      name: localizedMainName,
       color: mainCfg.color || DEFAULT_MAIN_WALLET_COLOR,
     });
   }, [t]);
@@ -368,109 +403,97 @@ export default function WalletPage() {
     }
   }
 
-  function promptForColor(
-    currentColor: string,
-    fallbackColor: string
-  ): string {
-    const suggested = currentColor || fallbackColor;
-    const entered = window.prompt(
-      `${walletEditorTexts.editColorPrompt}\n\n${colorChoices.join("  ")}`,
-      suggested
-    );
-
-    return (entered || "").trim() || suggested;
+  function openCreateWalletModal() {
+    setError("");
+    setSelectedWallet(null);
+    setWalletModalMode("create");
   }
 
-  function handleCreateWallet() {
-    setCreatingWallet(true);
+  function openEditMainWalletModal() {
     setError("");
+    setSelectedWallet(null);
+    setWalletModalMode("edit-main");
+  }
+
+  function openEditCustomWalletModal(wallet: LocalWallet) {
+    setError("");
+    setSelectedWallet(wallet);
+    setWalletModalMode("edit-custom");
+  }
+
+  async function handleWalletModalConfirm(payload: {
+    name: string;
+    color: string;
+  }) {
+    const trimmedName = payload.name.trim();
+
+    if (!trimmedName) {
+      setError(walletEditorTexts.invalidName);
+      return;
+    }
 
     try {
-      const name = window.prompt(walletEditorTexts.createNamePrompt, "");
-      const trimmed = (name || "").trim();
+      setWalletModalLoading(true);
+      setError("");
 
-      if (!trimmed) {
-        setCreatingWallet(false);
+      if (walletModalMode === "create") {
+        setCreatingWallet(true);
+
+        const nextWallet = addLocalWallet({
+          name: trimmedName,
+          color: payload.color || DEFAULT_CUSTOM_WALLET_COLOR,
+        });
+
+        refreshWalletLocalState();
+        setWalletModalMode(null);
+        router.push(`/${locale}/wallet/${encodeURIComponent(nextWallet.id)}`);
         return;
       }
 
-      const colorInput = window.prompt(
-        `${walletEditorTexts.createColorPrompt}\n\n${colorChoices.join("  ")}`,
-        DEFAULT_CUSTOM_WALLET_COLOR
-      );
+      if (walletModalMode === "edit-main") {
+        const saved = saveMainWalletConfig({
+          name: trimmedName,
+          color: payload.color || DEFAULT_MAIN_WALLET_COLOR,
+        });
 
-      const nextWallet = addLocalWallet({
-        name: trimmed,
-        color: (colorInput || "").trim() || DEFAULT_CUSTOM_WALLET_COLOR,
-      });
+        setMainWallet({
+          name:
+            !saved.name || saved.name === DEFAULT_MAIN_WALLET_NAME
+              ? t("main")
+              : saved.name,
+          color: saved.color || DEFAULT_MAIN_WALLET_COLOR,
+        });
+        setWalletModalMode(null);
+        return;
+      }
 
-      refreshWalletLocalState();
-      router.push(`/${locale}/wallet/${encodeURIComponent(nextWallet.id)}`);
+      if (walletModalMode === "edit-custom" && selectedWallet) {
+        const next = updateLocalWallet(selectedWallet.id, {
+          name: trimmedName,
+          color: payload.color || DEFAULT_CUSTOM_WALLET_COLOR,
+        });
+
+        setCustomWallets(next);
+        setWalletModalMode(null);
+      }
     } catch (e: any) {
       setError(e?.message ?? walletEditorTexts.invalidName);
     } finally {
+      setWalletModalLoading(false);
       setCreatingWallet(false);
     }
   }
 
-  function handleEditMainWallet() {
-    const nextName = window.prompt(
-      walletEditorTexts.editNamePrompt,
-      mainWallet.name
-    );
-    if (nextName === null) return;
-
-    const trimmedName = nextName.trim();
-    if (!trimmedName) {
-      setError(walletEditorTexts.invalidName);
-      return;
-    }
-
-    const nextColor = promptForColor(
-      mainWallet.color,
-      DEFAULT_MAIN_WALLET_COLOR
-    );
-
-    const saved = saveMainWalletConfig({
-      name: trimmedName,
-      color: nextColor,
-    });
-
-    setMainWallet(saved);
+  function requestDeleteCustomWallet(wallet: LocalWallet) {
+    setWalletToDelete(wallet);
   }
 
-  function handleEditCustomWallet(wallet: LocalWallet) {
-    const nextName = window.prompt(
-      walletEditorTexts.editNamePrompt,
-      wallet.name
-    );
-    if (nextName === null) return;
+  function confirmDeleteCustomWallet() {
+    if (!walletToDelete) return;
 
-    const trimmedName = nextName.trim();
-    if (!trimmedName) {
-      setError(walletEditorTexts.invalidName);
-      return;
-    }
-
-    const nextColor = promptForColor(
-      wallet.color,
-      DEFAULT_CUSTOM_WALLET_COLOR
-    );
-
-    const next = updateLocalWallet(wallet.id, {
-      name: trimmedName,
-      color: nextColor,
-    });
-
+    const next = deleteLocalWallet(walletToDelete.id);
     setCustomWallets(next);
-  }
-
-  function handleDeleteCustomWallet(walletId: string) {
-    const confirmed = window.confirm(walletEditorTexts.confirmDeleteWallet);
-    if (!confirmed) return;
-
-    const next = deleteLocalWallet(walletId);
-    setCustomWallets(next);
+    setWalletToDelete(null);
   }
 
   const walletEntries = useMemo(() => {
@@ -500,6 +523,32 @@ export default function WalletPage() {
 
     return [...base, ...customs];
   }, [cards, customWallets, mainWallet, t]);
+
+  const currentModalName =
+    walletModalMode === "create"
+      ? ""
+      : walletModalMode === "edit-main"
+        ? mainWallet.name
+        : selectedWallet?.name || "";
+
+  const currentModalColor =
+    walletModalMode === "create"
+      ? DEFAULT_CUSTOM_WALLET_COLOR
+      : walletModalMode === "edit-main"
+        ? mainWallet.color
+        : selectedWallet?.color || DEFAULT_CUSTOM_WALLET_COLOR;
+
+  const currentModalTitle =
+    walletModalMode === "create"
+      ? walletEditorTexts.modalCreateTitle
+      : walletModalMode === "edit-main"
+        ? walletEditorTexts.modalEditMainTitle
+        : walletEditorTexts.modalEditCustomTitle;
+
+  const currentModalConfirm =
+    walletModalMode === "create"
+      ? walletEditorTexts.modalConfirmCreate
+      : walletEditorTexts.modalConfirmSave;
 
   const deletePanel = (
     <section
@@ -595,364 +644,495 @@ export default function WalletPage() {
   );
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
-        padding: 20,
-        fontFamily:
-          'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
+    <>
+      <main
         style={{
-          maxWidth: 920,
-          margin: "0 auto",
-          display: "grid",
-          gap: 18,
+          minHeight: "100vh",
+          background:
+            "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
+          padding: 20,
+          fontFamily:
+            'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
-        <section
+        <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
+            maxWidth: 920,
+            margin: "0 auto",
+            display: "grid",
+            gap: 18,
           }}
         >
-          <div>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                textTransform: "uppercase",
-                color: "#71717a",
-                marginBottom: 6,
-              }}
-            >
-              {t("brand")}
-            </div>
-
-            <h1
-              style={{
-                fontSize: 32,
-                lineHeight: 1.05,
-                margin: 0,
-                color: "#18181b",
-              }}
-            >
-              {t("title")}
-            </h1>
-
-            <p
-              style={{
-                margin: "8px 0 0",
-                color: "#52525b",
-                fontSize: 15,
-              }}
-            >
-              {t("subtitle")}
-            </p>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            style={{
-              height: 44,
-              borderRadius: 16,
-              border: "1px solid #a1a1aa",
-              background: "#ffffff",
-              color: "#18181b",
-              padding: "0 16px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: loggingOut ? "default" : "pointer",
-            }}
-          >
-            {loggingOut ? t("logoutLoading") : t("logout")}
-          </button>
-        </section>
-
-        <section
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            onClick={() => router.push(`/${locale}/wallet/scan`)}
-            style={{
-              height: 48,
-              borderRadius: 18,
-              border: "none",
-              background: "#18181b",
-              color: "#fff",
-              padding: "0 18px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
-            }}
-          >
-            {t("scan")}
-          </button>
-
-          <button
-            onClick={fetchCards}
-            disabled={loading}
-            style={{
-              height: 48,
-              borderRadius: 18,
-              border: "1px solid #d4d4d8",
-              background: "#f4f4f5",
-              color: "#18181b",
-              padding: "0 18px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: loading ? "default" : "pointer",
-            }}
-          >
-            {loading ? t("refreshing") : t("refresh")}
-          </button>
-
-          <button
-            onClick={handleCreateWallet}
-            disabled={creatingWallet}
-            style={{
-              height: 48,
-              borderRadius: 18,
-              border: "1px dashed #a1a1aa",
-              background: "#fff",
-              color: "#18181b",
-              padding: "0 18px",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: creatingWallet ? "default" : "pointer",
-            }}
-          >
-            {creatingWallet ? t("creating", { defaultValue: "..." }) : t("create")}
-          </button>
-        </section>
-
-        {error ? (
           <section
             style={{
-              border: "1px solid #fecaca",
-              background: "#fff1f2",
-              color: "#881337",
-              padding: 14,
-              borderRadius: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
             }}
           >
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>
-              {t("error")}
-            </div>
-            <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-              {error}
-            </div>
-          </section>
-        ) : null}
-
-        <section
-          style={{
-            display: "grid",
-            gap: 14,
-          }}
-        >
-          {walletEntries.map((wallet) => {
-            const isCustom = !wallet.isDefault;
-
-            return (
+            <div>
               <div
-                key={wallet.id}
-                onClick={() =>
-                  router.push(`/${locale}/wallet/${encodeURIComponent(wallet.id)}`)
-                }
                 style={{
-                  position: "relative",
-                  borderRadius: 28,
-                  padding: 22,
-                  cursor: "pointer",
-                  background: buildWalletBackground(wallet.color, wallet.isDefault),
-                  boxShadow: wallet.isDefault
-                    ? "0 18px 40px rgba(24,24,27,0.28)"
-                    : "0 14px 32px rgba(133,77,14,0.22)",
-                  color: "#fff",
-                  overflow: "hidden",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: 0.6,
+                  textTransform: "uppercase",
+                  color: "#71717a",
+                  marginBottom: 6,
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 35%)",
-                    pointerEvents: "none",
-                  }}
-                />
+                {t("brand")}
+              </div>
 
+              <h1
+                style={{
+                  fontSize: 32,
+                  lineHeight: 1.05,
+                  margin: 0,
+                  color: "#18181b",
+                }}
+              >
+                {t("title")}
+              </h1>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "#52525b",
+                  fontSize: 15,
+                }}
+              >
+                {t("subtitle")}
+              </p>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              style={{
+                height: 44,
+                borderRadius: 16,
+                border: "1px solid #a1a1aa",
+                background: "#ffffff",
+                color: "#18181b",
+                padding: "0 16px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: loggingOut ? "default" : "pointer",
+              }}
+            >
+              {loggingOut ? t("logoutLoading") : t("logout")}
+            </button>
+          </section>
+
+          <section
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              onClick={() => router.push(`/${locale}/wallet/scan`)}
+              style={{
+                height: 48,
+                borderRadius: 18,
+                border: "none",
+                background: "#18181b",
+                color: "#fff",
+                padding: "0 18px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
+              }}
+            >
+              {t("scan")}
+            </button>
+
+            <button
+              onClick={fetchCards}
+              disabled={loading}
+              style={{
+                height: 48,
+                borderRadius: 18,
+                border: "1px solid #d4d4d8",
+                background: "#f4f4f5",
+                color: "#18181b",
+                padding: "0 18px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: loading ? "default" : "pointer",
+              }}
+            >
+              {loading ? t("refreshing") : t("refresh")}
+            </button>
+
+            <button
+              onClick={openCreateWalletModal}
+              disabled={creatingWallet || walletModalLoading}
+              style={{
+                height: 48,
+                borderRadius: 18,
+                border: "1px dashed #a1a1aa",
+                background: "#fff",
+                color: "#18181b",
+                padding: "0 18px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor:
+                  creatingWallet || walletModalLoading ? "default" : "pointer",
+              }}
+            >
+              {creatingWallet ? t("creating") : t("create")}
+            </button>
+          </section>
+
+          {error ? (
+            <section
+              style={{
+                border: "1px solid #fecaca",
+                background: "#fff1f2",
+                color: "#881337",
+                padding: 14,
+                borderRadius: 18,
+              }}
+            >
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                {t("error")}
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                {error}
+              </div>
+            </section>
+          ) : null}
+
+          <section
+            style={{
+              display: "grid",
+              gap: 14,
+            }}
+          >
+            {walletEntries.map((wallet) => {
+              const isCustom = !wallet.isDefault;
+
+              return (
                 <div
+                  key={wallet.id}
+                  onClick={() =>
+                    router.push(`/${locale}/wallet/${encodeURIComponent(wallet.id)}`)
+                  }
                   style={{
                     position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 14,
+                    borderRadius: 28,
+                    padding: 22,
+                    cursor: "pointer",
+                    background: buildWalletBackground(wallet.color, wallet.isDefault),
+                    boxShadow: wallet.isDefault
+                      ? "0 18px 40px rgba(24,24,27,0.28)"
+                      : "0 14px 32px rgba(133,77,14,0.22)",
+                    color: "#fff",
+                    overflow: "hidden",
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        opacity: 0.82,
-                        letterSpacing: 1.2,
-                        textTransform: "uppercase",
-                        marginBottom: 10,
-                      }}
-                    >
-                      {wallet.isDefault ? t("main") : t("custom")}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 28,
-                        lineHeight: 1,
-                        fontWeight: 800,
-                        marginBottom: 8,
-                        textShadow: "0 1px 0 rgba(255,255,255,0.1)",
-                      }}
-                    >
-                      {wallet.name}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 14,
-                        opacity: 0.88,
-                      }}
-                    >
-                      {wallet.subtitle}
-                    </div>
-                  </div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 35%)",
+                      pointerEvents: "none",
+                    }}
+                  />
 
                   <div
                     style={{
-                      minWidth: 76,
-                      height: 76,
-                      borderRadius: 20,
-                      background: "rgba(255,255,255,0.14)",
+                      position: "relative",
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                      fontWeight: 800,
-                      backdropFilter: "blur(4px)",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 14,
                     }}
                   >
-                    {wallet.cardCount}
-                  </div>
-                </div>
+                    <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.82,
+                          letterSpacing: 1.2,
+                          textTransform: "uppercase",
+                          marginBottom: 10,
+                        }}
+                      >
+                        {wallet.isDefault ? t("main") : t("custom")}
+                      </div>
 
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 14,
-                    right: isCustom ? 102 : 14,
-                    display: "flex",
-                    gap: 8,
-                  }}
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+                      <div
+                        style={{
+                          fontSize: 28,
+                          lineHeight: 1,
+                          fontWeight: 800,
+                          marginBottom: 8,
+                          textShadow: "0 1px 0 rgba(255,255,255,0.1)",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {wallet.name}
+                      </div>
 
-                      if (wallet.isDefault) {
-                        handleEditMainWallet();
-                      } else {
-                        const found = customWallets.find((w) => w.id === wallet.id);
-                        if (found) handleEditCustomWallet(found);
-                      }
-                    }}
-                    style={{
-                      height: 34,
-                      borderRadius: 12,
-                      border: "1px solid rgba(255,255,255,0.24)",
-                      background: "rgba(255,255,255,0.08)",
-                      color: "#fff",
-                      padding: "0 10px",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {walletEditorTexts.mainEditButton}
-                  </button>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          opacity: 0.88,
+                          marginBottom: 14,
+                        }}
+                      >
+                        {wallet.subtitle}
+                      </div>
 
-                  {isCustom ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCustomWallet(wallet.id);
-                      }}
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+
+                            if (wallet.isDefault) {
+                              openEditMainWalletModal();
+                            } else {
+                              const found = customWallets.find(
+                                (w) => w.id === wallet.id
+                              );
+                              if (found) openEditCustomWalletModal(found);
+                            }
+                          }}
+                          style={{
+                            height: 36,
+                            borderRadius: 12,
+                            border: "1px solid rgba(255,255,255,0.24)",
+                            background: "rgba(255,255,255,0.08)",
+                            color: "#fff",
+                            padding: "0 12px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {walletEditorTexts.editButton}
+                        </button>
+
+                        {isCustom ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const found = customWallets.find(
+                                (w) => w.id === wallet.id
+                              );
+                              if (found) requestDeleteCustomWallet(found);
+                            }}
+                            style={{
+                              height: 36,
+                              borderRadius: 12,
+                              border: "1px solid rgba(255,255,255,0.24)",
+                              background: "rgba(255,255,255,0.08)",
+                              color: "#fff",
+                              padding: "0 12px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {walletEditorTexts.deleteButton}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div
                       style={{
-                        height: 34,
-                        borderRadius: 12,
-                        border: "1px solid rgba(255,255,255,0.24)",
-                        background: "rgba(255,255,255,0.08)",
-                        color: "#fff",
-                        padding: "0 10px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
+                        minWidth: 76,
+                        width: 76,
+                        height: 76,
+                        borderRadius: 20,
+                        background: "rgba(255,255,255,0.14)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 18,
+                        fontWeight: 800,
+                        backdropFilter: "blur(4px)",
+                        flexShrink: 0,
                       }}
                     >
-                      {t("buttons.delete")}
-                    </button>
-                  ) : null}
+                      {wallet.cardCount}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </section>
+              );
+            })}
+          </section>
 
-        {!loading && walletEntries.length === 0 ? (
-          <section
+          {!loading && walletEntries.length === 0 ? (
+            <section
+              style={{
+                borderRadius: 22,
+                border: "1px dashed #d4d4d8",
+                padding: 24,
+                background: "#fafafa",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "#18181b",
+                  marginBottom: 8,
+                }}
+              >
+                {t("noWallet")}
+              </div>
+              <div
+                style={{
+                  color: "#71717a",
+                  fontSize: 14,
+                }}
+              >
+                {t("noWalletDesc")}
+              </div>
+            </section>
+          ) : null}
+
+          {deletePanel}
+        </div>
+      </main>
+
+      <WalletModal
+        open={walletModalMode !== null}
+        title={currentModalTitle}
+        nameLabel={walletEditorTexts.modalNameLabel}
+        colorLabel={walletEditorTexts.modalColorLabel}
+        confirmLabel={currentModalConfirm}
+        cancelLabel={walletEditorTexts.modalCancel}
+        initialName={currentModalName}
+        initialColor={currentModalColor}
+        colors={colorChoices}
+        loading={walletModalLoading}
+        onClose={() => {
+          setWalletModalMode(null);
+          setSelectedWallet(null);
+        }}
+        onConfirm={handleWalletModalConfirm}
+      />
+
+      {walletToDelete ? (
+        <div
+          onClick={() => setWalletToDelete(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2000,
+            background: "rgba(24,24,27,0.56)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              borderRadius: 22,
-              border: "1px dashed #d4d4d8",
-              padding: 24,
-              background: "#fafafa",
-              textAlign: "center",
+              width: "100%",
+              maxWidth: 460,
+              borderRadius: 28,
+              background: "#ffffff",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.25)",
+              overflow: "hidden",
             }}
           >
             <div
               style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: "#18181b",
-                marginBottom: 8,
+                padding: 22,
+                borderBottom: "1px solid #e4e4e7",
               }}
             >
-              {t("noWallet")}
+              <div
+                style={{
+                  fontSize: 22,
+                  lineHeight: 1.1,
+                  fontWeight: 900,
+                  color: "#18181b",
+                  marginBottom: 8,
+                }}
+              >
+                {walletEditorTexts.deleteModalTitle}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.45,
+                  color: "#52525b",
+                }}
+              >
+                {walletEditorTexts.deleteModalDescription}
+              </div>
             </div>
+
             <div
               style={{
-                color: "#71717a",
-                fontSize: 14,
+                padding: 22,
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end",
+                flexWrap: "wrap",
               }}
             >
-              {t("noWalletDesc")}
-            </div>
-          </section>
-        ) : null}
+              <button
+                type="button"
+                onClick={() => setWalletToDelete(null)}
+                style={{
+                  height: 46,
+                  borderRadius: 16,
+                  border: "1px solid #d4d4d8",
+                  background: "#ffffff",
+                  color: "#18181b",
+                  padding: "0 16px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {walletEditorTexts.deleteModalCancel}
+              </button>
 
-        {deletePanel}
-      </div>
-    </main>
+              <button
+                type="button"
+                onClick={confirmDeleteCustomWallet}
+                style={{
+                  height: 46,
+                  borderRadius: 16,
+                  border: "none",
+                  background: "#b91c1c",
+                  color: "#ffffff",
+                  padding: "0 16px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {walletEditorTexts.deleteModalConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

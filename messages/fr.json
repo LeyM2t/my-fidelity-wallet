@@ -215,7 +215,7 @@
     "defaultName": "Commerce",
     "copy": "Copier le lien",
     "open": "Ouvrir (test)",
-    "loadingQR": "Chargement QR…",
+    "loadingQR": "Chargement QR...",
     "copySuccess": "Lien copié ✅",
     "copyFail": "Impossible de copier automatiquement. Copie manuelle : ",
     "note": "Note : en local, le QR contiendra ton IP/port. En production, ce sera ton domaine."
@@ -312,7 +312,7 @@
     "status": "Statut",
     "checkingSession": "Vérification de la session...",
     "addingCard": "Ajout de la carte...",
-    "success": "Carte prête ✅ Ouverture…",
+    "success": "Carte prête ✅ Ouverture...",
     "errors": {
       "missingToken": "Token manquant (ex: /add?token=XXXX)",
       "sessionCheck": "Échec de vérification de session client",
