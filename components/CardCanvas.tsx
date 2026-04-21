@@ -313,7 +313,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                   alignItems: "center",
                   justifyContent: "center",
                   overflow: "hidden",
-                  padding: `calc(6px * var(--s))`,
+                  padding: 0,
                   backdropFilter: showBgImage ? "blur(2px)" : undefined,
                 }}
               >
@@ -324,7 +324,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "contain",
+                    objectFit: "cover",
                     display: "block",
                   }}
                 />
