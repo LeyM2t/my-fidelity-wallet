@@ -59,8 +59,13 @@ type Props = {
 
 const HANDLE_SIZE_DESKTOP = 14;
 const HANDLE_SIZE_MOBILE = 22;
-const LOGO_SAFE_MARGIN = 8;
-const BG_SAFE_MARGIN = 0;
+
+/*
+  Avant tu avais une marge qui empêchait d'aller complètement au bord utile.
+  On la réduit à 0 pour que le cadre puisse vraiment aller tout à droite / tout à gauche.
+*/
+const LOGO_SAFE_MARGIN = 0;
+
 const LOGO_MIN_SIZE = 36;
 const LOGO_MAX_WIDTH = 220;
 const LOGO_MAX_HEIGHT = 180;
@@ -81,8 +86,11 @@ function clampBoxInsideCard(
   const width = clamp(box.width, 10, maxWidth);
   const height = clamp(box.height, 10, maxHeight);
 
-  const x = clamp(box.x, margin, cardWidth - margin - width);
-  const y = clamp(box.y, margin, cardHeight - margin - height);
+  const maxX = Math.max(margin, cardWidth - margin - width);
+  const maxY = Math.max(margin, cardHeight - margin - height);
+
+  const x = clamp(box.x, margin, maxX);
+  const y = clamp(box.y, margin, maxY);
 
   return { x, y, width, height };
 }
@@ -137,8 +145,6 @@ export default function TemplateEditorCard({
   loyaltyCardText,
   loyaltyProgramText,
   ownerPreviewText,
-  editLogoLabel,
-  editBackgroundLabel,
   fontDefaultLabel,
 }: Props) {
   const handleStyle = buildHandleStyle(
@@ -425,48 +431,6 @@ export default function TemplateEditorCard({
           )}
         </div>
       </Rnd>
-
-      {isMobile ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 12,
-            right: 12,
-            bottom: 10,
-            zIndex: 80,
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 8,
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "rgba(17,24,39,0.72)",
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            {editLogoLabel}: {editLogo ? "ON" : "OFF"}
-          </div>
-
-          <div
-            style={{
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "rgba(17,24,39,0.72)",
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            {editBackgroundLabel}: {editBg ? "ON" : "OFF"}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
