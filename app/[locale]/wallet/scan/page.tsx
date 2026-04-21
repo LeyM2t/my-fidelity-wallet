@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import QrScanner from "qr-scanner";
 import { useTranslations } from "next-intl";
 
+QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
+
 export default function WalletScanPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
@@ -17,8 +19,10 @@ export default function WalletScanPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [err, setErr] = useState("");
+  const [status, setStatus] = useState("");
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
   const [startingCamera, setStartingCamera] = useState(false);
+  const [detected, setDetected] = useState(false);
 
   function goToLogin() {
     router.replace(
@@ -29,6 +33,10 @@ export default function WalletScanPage() {
   function handleRaw(rawInput: string) {
     const raw = (rawInput || "").trim();
     if (!raw) return;
+
+    setDetected(true);
+    setStatus(t("status.detected"));
+    setErr("");
 
     if (
       raw.startsWith("http://") ||
@@ -43,13 +51,20 @@ export default function WalletScanPage() {
       const obj = JSON.parse(raw);
 
       if (obj?.token) {
+        setStatus(t("checkingSession"));
         window.location.href = `/${locale}/add?token=${encodeURIComponent(obj.token)}`;
         return;
       }
     } catch {}
 
-    setErr(t("status.invalid"));
+    setDetected(false);
+    setErr(t("errors.invalidQR"));
+    setStatus(t("status.invalid"));
   }
+
+  useEffect(() => {
+    setStatus(t("checkingSession"));
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +73,7 @@ export default function WalletScanPage() {
       try {
         setCheckingAuth(true);
         setErr("");
+        setStatus(t("checkingSession"));
 
         const res = await fetch("/api/auth/client/me", {
           method: "GET",
@@ -66,13 +82,13 @@ export default function WalletScanPage() {
 
         if (cancelled) return;
 
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           goToLogin();
           return;
         }
 
         if (!res.ok) {
-          throw new Error(t("status.pending"));
+          throw new Error(t("errors.sessionCheckFailed"));
         }
 
         const data = await res.json();
@@ -83,9 +99,11 @@ export default function WalletScanPage() {
         }
 
         setAuthorized(true);
+        setStatus(t("status.pending"));
       } catch (e: any) {
         if (cancelled) return;
-        setErr(e?.message || t("status.pending"));
+        setErr(e?.message || t("errors.sessionError"));
+        setStatus(t("status.invalid"));
       } finally {
         if (!cancelled) {
           setCheckingAuth(false);
@@ -108,7 +126,9 @@ export default function WalletScanPage() {
     async function startScanner() {
       try {
         setErr("");
+        setDetected(false);
         setStartingCamera(true);
+        setStatus(t("startingCamera"));
 
         const video = videoRef.current;
         if (!video) return;
@@ -119,17 +139,30 @@ export default function WalletScanPage() {
         setHasCamera(camAvailable);
 
         if (!camAvailable) {
-          setErr(t("status.cameraError"));
+          setErr(t("errors.cameraUnavailable"));
+          setStatus(t("cameraUnavailable"));
           return;
+        }
+
+        if (scannerRef.current) {
+          try {
+            await scannerRef.current.stop();
+          } catch {}
+          scannerRef.current.destroy();
+          scannerRef.current = null;
         }
 
         const scanner = new QrScanner(
           video,
-          (result) => {
-            if (cancelled) return;
+          async (result) => {
+            if (cancelled || detected) return;
 
             const raw = typeof result === "string" ? result : result?.data;
             if (!raw) return;
+
+            try {
+              await scanner.stop();
+            } catch {}
 
             handleRaw(raw);
           },
@@ -137,14 +170,20 @@ export default function WalletScanPage() {
             preferredCamera: "environment",
             highlightScanRegion: true,
             highlightCodeOutline: true,
+            returnDetailedScanResult: true,
           }
         );
 
         scannerRef.current = scanner;
         await scanner.start();
+
+        if (cancelled) return;
+
+        setStatus(t("status.pending"));
       } catch (e: any) {
         if (cancelled) return;
-        setErr(e?.message || t("status.cameraError"));
+        setErr(e?.message || t("errors.cameraError"));
+        setStatus(t("status.cameraError"));
       } finally {
         if (!cancelled) {
           setStartingCamera(false);
@@ -156,11 +195,13 @@ export default function WalletScanPage() {
 
     return () => {
       cancelled = true;
-      scannerRef.current?.stop();
+      try {
+        scannerRef.current?.stop();
+      } catch {}
       scannerRef.current?.destroy();
       scannerRef.current = null;
     };
-  }, [authorized, locale, t]);
+  }, [authorized, detected, t]);
 
   if (checkingAuth) {
     return (
@@ -177,7 +218,7 @@ export default function WalletScanPage() {
             'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
-        {t("status.pending")}
+        {t("checkingSession")}
       </main>
     );
   }
@@ -236,12 +277,25 @@ export default function WalletScanPage() {
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
             {t("title")}
           </h1>
-          <p style={{ marginTop: 8, opacity: 0.9 }}>
-            {t("description")}
-          </p>
+          <p style={{ marginTop: 8, opacity: 0.9 }}>{t("description")}</p>
         </section>
 
-        {err && (
+        <section
+          style={{
+            borderRadius: 20,
+            padding: 14,
+            background: "#fff",
+            border: "1px solid #e4e4e7",
+            textAlign: "center",
+            fontWeight: 700,
+            color: "#374151",
+            wordBreak: "break-word",
+          }}
+        >
+          {status}
+        </section>
+
+        {err ? (
           <section
             style={{
               border: "1px solid #fecaca",
@@ -251,10 +305,10 @@ export default function WalletScanPage() {
               borderRadius: 18,
             }}
           >
-            <strong>{t("status.invalid")}</strong>
+            <strong>{t("errorTitle")}</strong>
             <div>{err}</div>
           </section>
-        )}
+        ) : null}
 
         <section
           style={{
@@ -285,7 +339,7 @@ export default function WalletScanPage() {
               muted
             />
 
-            {hasCamera !== false && (
+            {hasCamera !== false ? (
               <div
                 style={{
                   position: "absolute",
@@ -295,9 +349,9 @@ export default function WalletScanPage() {
                   boxShadow: "0 0 0 9999px rgba(0,0,0,0.3)",
                 }}
               />
-            )}
+            ) : null}
 
-            {startingCamera && (
+            {startingCamera ? (
               <div
                 style={{
                   position: "absolute",
@@ -310,11 +364,30 @@ export default function WalletScanPage() {
                   background: "rgba(0,0,0,0.4)",
                 }}
               >
-                {t("status.pending")}
+                {t("startingCamera")}
               </div>
-            )}
+            ) : null}
 
-            {hasCamera === false && (
+            {detected ? (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 800,
+                  textAlign: "center",
+                  padding: 20,
+                  background: "rgba(0,0,0,0.4)",
+                }}
+              >
+                {t("status.detected")}
+              </div>
+            ) : null}
+
+            {hasCamera === false ? (
               <div
                 style={{
                   position: "absolute",
@@ -328,9 +401,9 @@ export default function WalletScanPage() {
                   padding: 20,
                 }}
               >
-                {t("status.cameraError")}
+                {t("errors.cameraUnavailable")}
               </div>
-            )}
+            ) : null}
           </div>
         </section>
       </div>

@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import QrScanner from "qr-scanner";
 import { useTranslations } from "next-intl";
 
+QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
+
 type ClientPayload = {
   storeId: string;
   cardId?: string;
@@ -25,11 +27,11 @@ function parseClientPayload(raw: string): ClientPayload | null {
   const storeId = (obj as any).storeId;
   const cardId = (obj as any).cardId;
 
-  if (typeof storeId !== "string" || !storeId) return null;
+  if (typeof storeId !== "string" || !storeId.trim()) return null;
 
   return {
-    storeId,
-    cardId: typeof cardId === "string" ? cardId : undefined,
+    storeId: storeId.trim(),
+    cardId: typeof cardId === "string" && cardId.trim() ? cardId.trim() : undefined,
   };
 }
 
@@ -50,63 +52,13 @@ export default function ScanPage() {
   const [payload, setPayload] = useState<ClientPayload | null>(null);
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
 
-  const [status, setStatus] = useState(t("status.pending"));
+  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [scannerReady, setScannerReady] = useState(false);
+  const [startingCamera, setStartingCamera] = useState(false);
+  const [hasCamera, setHasCamera] = useState<boolean | null>(null);
   const [hasDetectedClient, setHasDetectedClient] = useState(false);
   const [addCount, setAddCount] = useState(1);
-
-  function uiText(
-    key: "quantity" | "scanAnother" | "addStamps" | "detectedCard" | "scannerActive" | "scannerPaused"
-  ) {
-    const map = {
-      fr: {
-        quantity: "Quantité de tampons",
-        scanAnother: "Scanner un autre client",
-        addStamps: "Ajouter les tampons",
-        detectedCard: "Carte détectée",
-        scannerActive:
-          "Scanner actif. Une fois le client détecté, la carte reste sélectionnée jusqu’à ce que tu choisisses de scanner un autre client.",
-        scannerPaused: "Scanner en pause.",
-      },
-      en: {
-        quantity: "Stamp quantity",
-        scanAnother: "Scan another client",
-        addStamps: "Add stamps",
-        detectedCard: "Detected card",
-        scannerActive:
-          "Scanner active. Once a client is detected, the card stays selected until you choose to scan another client.",
-        scannerPaused: "Scanner paused.",
-      },
-      es: {
-        quantity: "Cantidad de sellos",
-        scanAnother: "Escanear otro cliente",
-        addStamps: "Añadir sellos",
-        detectedCard: "Tarjeta detectada",
-        scannerActive:
-          "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente.",
-        scannerPaused: "Escáner en pausa.",
-      },
-    } as const;
-
-    const lang =
-      locale === "fr" || locale === "es" || locale === "en" ? locale : "en";
-
-    return map[lang][key];
-  }
-
-  async function startScanner() {
-    const scanner = scannerRef.current;
-    if (!scanner) return;
-
-    try {
-      await scanner.start();
-      setScannerReady(true);
-    } catch {
-      setScannerReady(false);
-      setStatus(t("status.cameraError"));
-    }
-  }
 
   async function stopScanner() {
     const scanner = scannerRef.current;
@@ -115,51 +67,99 @@ export default function ScanPage() {
     try {
       await scanner.stop();
     } catch {}
+
     setScannerReady(false);
   }
+
+  async function startScanner() {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      setStartingCamera(true);
+      setStatus(t("startingCamera"));
+
+      const camAvailable = await QrScanner.hasCamera();
+      setHasCamera(camAvailable);
+
+      if (!camAvailable) {
+        setScannerReady(false);
+        setStatus(t("errors.cameraUnavailable"));
+        return;
+      }
+
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+        } catch {}
+        scannerRef.current.destroy();
+        scannerRef.current = null;
+      }
+
+      const scanner = new QrScanner(
+        video,
+        async (result) => {
+          const txt = typeof result === "string" ? result : result?.data;
+          if (!txt || busy || hasDetectedClient) return;
+
+          const parsed = parseClientPayload(txt);
+
+          if (!parsed) {
+            setStatus(t("status.invalid"));
+            return;
+          }
+
+          setPayload(parsed);
+          setCurrentCardId(parsed.cardId || null);
+          setHasDetectedClient(true);
+          setStatus(t("status.detected"));
+
+          await stopScanner();
+        },
+        {
+          preferredCamera: "environment",
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          returnDetailedScanResult: true,
+        }
+      );
+
+      scannerRef.current = scanner;
+      await scanner.start();
+
+      setScannerReady(true);
+      setStatus(t("status.pending"));
+    } catch (e: any) {
+      setScannerReady(false);
+      setStatus(e?.message || t("errors.cameraError"));
+    } finally {
+      setStartingCamera(false);
+    }
+  }
+
+  useEffect(() => {
+    setStatus(t("status.pending"));
+  }, [t]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const scanner = new QrScanner(
-      video,
-      async (result) => {
-        const txt = typeof result === "string" ? result : result?.data;
-        if (!txt || busy || hasDetectedClient) return;
-
-        const p = parseClientPayload(txt);
-
-        if (!p) {
-          setStatus(t("status.invalid"));
-          return;
-        }
-
-        setPayload(p);
-        setCurrentCardId(p.cardId || null);
-        setHasDetectedClient(true);
-        setStatus(t("status.detected"));
-
-        await stopScanner();
-      },
-      {
-        highlightScanRegion: true,
-        highlightCodeOutline: true,
-      }
-    );
-
-    scannerRef.current = scanner;
     startScanner();
 
     return () => {
+      const scanner = scannerRef.current;
+      if (!scanner) return;
+
       try {
         scanner.stop();
       } catch {}
+
       scanner.destroy();
       scannerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t]);
+  }, []);
 
   async function doEarn() {
     if (!currentCardId || busy) return;
@@ -184,9 +184,7 @@ export default function ScanPage() {
         throw new Error(data?.error || t("status.addError"));
       }
 
-      setStatus(
-        safeAdd === 1 ? t("status.added") : `${safeAdd} ${uiText("addStamps").toLowerCase()}`
-      );
+      setStatus(t("status.added"));
     } catch (e) {
       const message =
         e instanceof Error && e.message ? e.message : t("status.addError");
@@ -300,20 +298,59 @@ export default function ScanPage() {
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              display: hasCamera === false ? "none" : "block",
             }}
             playsInline
             muted
           />
 
-          <div
-            style={{
-              position: "absolute",
-              inset: "20%",
-              border: "2px solid white",
-              borderRadius: 20,
-              boxShadow: "0 0 0 9999px rgba(0,0,0,0.3)",
-            }}
-          />
+          {hasCamera !== false ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: "20%",
+                border: "2px solid white",
+                borderRadius: 20,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.3)",
+              }}
+            />
+          ) : null}
+
+          {startingCamera ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(0,0,0,0.35)",
+                color: "#fff",
+                fontWeight: 800,
+                textAlign: "center",
+                padding: 20,
+              }}
+            >
+              {t("startingCamera")}
+            </div>
+          ) : null}
+
+          {hasCamera === false ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                background: "rgba(0,0,0,0.35)",
+                color: "#fff",
+                fontWeight: 800,
+                textAlign: "center",
+                padding: 20,
+              }}
+            >
+              {t("errors.cameraUnavailable")}
+            </div>
+          ) : null}
 
           {hasDetectedClient ? (
             <div
@@ -334,12 +371,12 @@ export default function ScanPage() {
                   {t("status.detected")}
                 </div>
                 <div style={{ fontSize: 13, opacity: 0.9 }}>
-                  {uiText("detectedCard")}
+                  {t("detectedCard")}
                   {currentCardId ? ` : ${currentCardId}` : ""}
                 </div>
                 {payload?.storeId ? (
                   <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
-                    Store : {payload.storeId}
+                    {payload.storeId}
                   </div>
                 ) : null}
               </div>
@@ -379,7 +416,7 @@ export default function ScanPage() {
                 fontWeight: 700,
               }}
             >
-              {uiText("quantity")}
+              {t("quantity")}
             </div>
 
             <div
@@ -473,7 +510,7 @@ export default function ScanPage() {
               cursor: !currentCardId || busy ? "default" : "pointer",
             }}
           >
-            {hasDetectedClient ? uiText("addStamps") : t("earn")}
+            {hasDetectedClient ? t("addStamps") : t("earn")}
           </button>
 
           <button
@@ -511,7 +548,7 @@ export default function ScanPage() {
                 cursor: busy ? "default" : "pointer",
               }}
             >
-              {uiText("scanAnother")}
+              {t("scanAnother")}
             </button>
           </section>
         ) : null}
@@ -527,7 +564,7 @@ export default function ScanPage() {
             lineHeight: 1.5,
           }}
         >
-          {scannerReady ? uiText("scannerActive") : uiText("scannerPaused")}
+          {scannerReady ? t("scannerActive") : t("scannerPaused")}
         </section>
       </div>
     </main>

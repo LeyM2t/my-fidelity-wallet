@@ -50,7 +50,10 @@ function safeImageUrl(url?: string) {
   return "";
 }
 
-function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<Box> {
+function normalizeBox(
+  box: Box | undefined,
+  fallback: Required<Box>
+): Required<Box> {
   const x =
     typeof box?.x === "number" && Number.isFinite(box.x) ? box.x : fallback.x;
   const y =
@@ -67,7 +70,10 @@ function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<B
   return { x, y, width, height };
 }
 
-function templateToCardCanvasTemplate(template: CardTemplate | null, storeId: string) {
+function templateToCardCanvasTemplate(
+  template: CardTemplate | null,
+  storeId: string
+) {
   const title = (template?.title || "").trim() || storeId;
   const bgType = template?.bgType || "color";
 
@@ -124,6 +130,7 @@ export default function CardPage() {
   const [card, setCard] = useState<FirestoreCard | null>(null);
   const [template, setTemplate] = useState<CardTemplate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -134,7 +141,7 @@ export default function CardPage() {
 
         const res = await fetch("/api/cards", { cache: "no-store" });
 
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           router.replace(
             `/${locale}/client/login?next=${encodeURIComponent(
               `/${locale}/wallet/card/${cardId}`
@@ -208,6 +215,49 @@ export default function CardPage() {
     fetchCardAndTemplate();
   }, [cardId, locale, router, t]);
 
+  async function handleDelete() {
+    if (!card || deleting) return;
+
+    const confirmed = window.confirm(t("confirmDelete"));
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      setError("");
+
+      const res = await fetch("/api/cards/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cardId: card.id }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.status === 401 || res.status === 403) {
+        router.replace(
+          `/${locale}/client/login?next=${encodeURIComponent(
+            `/${locale}/wallet/card/${cardId}`
+          )}`
+        );
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || t("errors.deleteFailed"));
+      }
+
+      router.replace(`/${locale}/wallet`);
+      router.refresh();
+    } catch (e) {
+      const message =
+        e instanceof Error && e.message ? e.message : t("errors.deleteFailed");
+      setError(message);
+      setDeleting(false);
+    }
+  }
+
   const qrPayload = useMemo(() => {
     if (!card) return "";
     return JSON.stringify({
@@ -243,7 +293,7 @@ export default function CardPage() {
     );
   }
 
-  if (error) {
+  if (error && !card) {
     return (
       <main
         style={{
@@ -311,6 +361,22 @@ export default function CardPage() {
           ← {t("back")}
         </button>
 
+        {error ? (
+          <div
+            style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: "14px 16px",
+              borderRadius: 14,
+              fontSize: 14,
+              lineHeight: 1.4,
+              textAlign: "center",
+            }}
+          >
+            ❌ {error}
+          </div>
+        ) : null}
+
         <div
           style={{
             background: "#fff",
@@ -342,12 +408,32 @@ export default function CardPage() {
           <p
             style={{
               margin: 0,
+              marginBottom: 18,
               fontSize: 14,
               color: "#6b7280",
             }}
           >
             {t("showQR")}
           </p>
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              borderRadius: 14,
+              border: "none",
+              background: "#b91c1c",
+              color: "#ffffff",
+              fontSize: 15,
+              fontWeight: 800,
+              cursor: deleting ? "default" : "pointer",
+            }}
+          >
+            {deleting ? `⏳ ${t("deleting")}` : t("delete")}
+          </button>
         </div>
       </div>
     </main>
