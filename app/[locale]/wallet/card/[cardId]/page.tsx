@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { useTranslations } from "next-intl";
+import CardCanvas from "@/components/CardCanvas";
 
 type FirestoreCard = {
   id: string;
@@ -15,9 +16,17 @@ type FirestoreCard = {
   rewardAvailable?: boolean;
 };
 
+type Box = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
+
 type CardTemplate = {
   title?: string;
   logoUrl?: string;
+  logoBox?: Box;
   bgColor?: string;
   textColor?: string;
   font?: string;
@@ -27,6 +36,10 @@ type CardTemplate = {
     to?: string;
     angle?: number;
   };
+  bgImageUrl?: string;
+  bgImageEnabled?: boolean;
+  bgImageOpacity?: number;
+  bgImageBox?: Box;
 };
 
 function safeImageUrl(url?: string) {
@@ -37,23 +50,68 @@ function safeImageUrl(url?: string) {
   return "";
 }
 
-function templateBackground(template: CardTemplate | null) {
-  if (!template) return "#111827";
+function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<Box> {
+  const x =
+    typeof box?.x === "number" && Number.isFinite(box.x) ? box.x : fallback.x;
+  const y =
+    typeof box?.y === "number" && Number.isFinite(box.y) ? box.y : fallback.y;
+  const width =
+    typeof box?.width === "number" && Number.isFinite(box.width)
+      ? box.width
+      : fallback.width;
+  const height =
+    typeof box?.height === "number" && Number.isFinite(box.height)
+      ? box.height
+      : fallback.height;
 
-  if (
-    template.bgType === "gradient" &&
-    template.gradient?.from &&
-    template.gradient?.to
-  ) {
-    const angle =
-      typeof template.gradient.angle === "number"
-        ? template.gradient.angle
-        : 45;
+  return { x, y, width, height };
+}
 
-    return `linear-gradient(${angle}deg, ${template.gradient.from}, ${template.gradient.to})`;
-  }
+function templateToCardCanvasTemplate(template: CardTemplate | null, storeId: string) {
+  const title = (template?.title || "").trim() || storeId;
+  const bgType = template?.bgType || "color";
 
-  return template.bgColor || "#111827";
+  const gradient =
+    bgType === "gradient" &&
+    template?.gradient?.from &&
+    template?.gradient?.to
+      ? `linear-gradient(${
+          typeof template.gradient.angle === "number"
+            ? template.gradient.angle
+            : 45
+        }deg, ${template.gradient.from}, ${template.gradient.to})`
+      : undefined;
+
+  return {
+    title,
+    scoreText: "",
+    textColor: (template?.textColor || "#ffffff").trim() || "#ffffff",
+    font: (template?.font || "inter").trim() || "inter",
+    bgColor: gradient ? undefined : template?.bgColor || "#111827",
+    bgGradient: gradient,
+    bgImageUrl: safeImageUrl(template?.bgImageUrl),
+    bgImageEnabled:
+      typeof template?.bgImageEnabled === "boolean"
+        ? template.bgImageEnabled
+        : true,
+    bgImageOpacity:
+      typeof template?.bgImageOpacity === "number"
+        ? Math.max(0, Math.min(1, template.bgImageOpacity))
+        : 0.7,
+    bgImageBox: normalizeBox(template?.bgImageBox, {
+      x: 0,
+      y: 0,
+      width: 420,
+      height: 220,
+    }),
+    logoUrl: safeImageUrl(template?.logoUrl),
+    logoBox: normalizeBox(template?.logoBox, {
+      x: 18,
+      y: 18,
+      width: 56,
+      height: 56,
+    }),
+  };
 }
 
 export default function CardPage() {
@@ -158,6 +216,11 @@ export default function CardPage() {
     });
   }, [card]);
 
+  const canvasTemplate = useMemo(() => {
+    if (!card) return null;
+    return templateToCardCanvasTemplate(template, card.storeId);
+  }, [template, card]);
+
   if (loading) {
     return (
       <main
@@ -212,12 +275,7 @@ export default function CardPage() {
     );
   }
 
-  if (!card) return null;
-
-  const titleToShow = (template?.title || "").trim() || card.storeId;
-  const logoUrl = safeImageUrl(template?.logoUrl);
-  const headerBackground = templateBackground(template);
-  const headerTextColor = (template?.textColor || "#ffffff").trim() || "#ffffff";
+  if (!card || !canvasTemplate) return null;
 
   return (
     <main
@@ -262,57 +320,13 @@ export default function CardPage() {
             textAlign: "center",
           }}
         >
-          <div
-            style={{
-              borderRadius: 22,
-              padding: 20,
-              marginBottom: 20,
-              background: headerBackground,
-              color: headerTextColor,
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {logoUrl ? (
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  margin: "0 auto 14px",
-                  borderRadius: 18,
-                  overflow: "hidden",
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 8,
-                }}
-              >
-                <img
-                  src={logoUrl}
-                  alt=""
-                  aria-hidden="true"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain",
-                    display: "block",
-                  }}
-                />
-              </div>
-            ) : null}
-
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 28,
-                lineHeight: 1.1,
-                color: "inherit",
+          <div style={{ marginBottom: 20 }}>
+            <CardCanvas
+              template={{
+                ...canvasTemplate,
+                scoreText: `${card.stamps}/${card.goal}`,
               }}
-            >
-              {titleToShow}
-            </h1>
+            />
           </div>
 
           <div

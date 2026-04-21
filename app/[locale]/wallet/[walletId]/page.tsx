@@ -18,6 +18,13 @@ type FirestoreCard = {
   updatedAt?: any;
 };
 
+type Box = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
+
 type CardTemplate = {
   title?: string;
   bgColor?: string;
@@ -28,7 +35,9 @@ type CardTemplate = {
   bgImageEnabled?: boolean;
   bgImageOpacity?: number;
   bgImageUrl?: string;
+  bgImageBox?: Box;
   logoUrl?: string;
+  logoBox?: Box;
 };
 
 type LocalWallet = {
@@ -46,6 +55,23 @@ function safeCssUrl(url: string): string {
   if (u.startsWith("/")) return u;
   if (/^https?:\/\/[^\s]+$/i.test(u)) return u;
   return "";
+}
+
+function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<Box> {
+  const x =
+    typeof box?.x === "number" && Number.isFinite(box.x) ? box.x : fallback.x;
+  const y =
+    typeof box?.y === "number" && Number.isFinite(box.y) ? box.y : fallback.y;
+  const width =
+    typeof box?.width === "number" && Number.isFinite(box.width)
+      ? box.width
+      : fallback.width;
+  const height =
+    typeof box?.height === "number" && Number.isFinite(box.height)
+      ? box.height
+      : fallback.height;
+
+  return { x, y, width, height };
 }
 
 function templateToCss(tpl: CardTemplate | undefined | null) {
@@ -72,7 +98,19 @@ function templateToCss(tpl: CardTemplate | undefined | null) {
         ? Math.max(0, Math.min(1, tpl.bgImageOpacity))
         : 0.7,
     bgImageUrl: safeCssUrl(tpl?.bgImageUrl || ""),
+    bgImageBox: normalizeBox(tpl?.bgImageBox, {
+      x: 0,
+      y: 0,
+      width: 420,
+      height: 220,
+    }),
     logoUrl: safeCssUrl(tpl?.logoUrl || ""),
+    logoBox: normalizeBox(tpl?.logoBox, {
+      x: 18,
+      y: 18,
+      width: 56,
+      height: 56,
+    }),
   };
 }
 
@@ -88,7 +126,9 @@ function templateToCardCanvasTemplate(css: ReturnType<typeof templateToCss>) {
     bgGradient: isGradient ? base : undefined,
     bgImageUrl: css.bgImageEnabled ? css.bgImageUrl : "",
     bgImageOpacity: css.bgImageOpacity,
+    bgImageBox: css.bgImageBox,
     logoUrl: css.logoUrl,
+    logoBox: css.logoBox,
   };
 }
 
@@ -462,9 +502,7 @@ export default function WalletDetailPage() {
                       position: "absolute",
                       width: "min(100%, 320px)",
                       cursor: "pointer",
-                      transform: `translateY(${offset * 126}px) scale(${
-                        isActive ? 1 : 0.92
-                      }) rotate(${offset * 4}deg)`,
+                      transform: `translateY(${offset * 126}px) scale(${isActive ? 1 : 0.92}) rotate(${offset * 4}deg)`,
                       opacity: isActive ? 1 : 0.58,
                       zIndex: 100 - Math.abs(offset),
                       transition:
@@ -627,3 +665,6 @@ export default function WalletDetailPage() {
     </main>
   );
 }
+
+
+envoi le code complet a jour si besoin de modification
