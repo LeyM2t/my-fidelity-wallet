@@ -37,7 +37,10 @@ const ALLOWED_WALLET_COLORS = [
 ] as const;
 
 function canUseLocalStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  return (
+    typeof window !== "undefined" &&
+    typeof window.localStorage !== "undefined"
+  );
 }
 
 export function isValidHexColor(value: unknown): value is string {
@@ -49,8 +52,7 @@ export function sanitizeWalletColor(
   fallback = DEFAULT_CUSTOM_WALLET_COLOR
 ): string {
   if (!isValidHexColor(value)) return fallback;
-  const normalized = value.trim().toLowerCase();
-  return normalized;
+  return value.trim().toLowerCase();
 }
 
 export function getWalletColorChoices(): readonly string[] {
@@ -163,12 +165,14 @@ export function updateLocalWallet(
 
     return {
       ...wallet,
-      name: updates.name !== undefined
-        ? sanitizeWalletName(updates.name, wallet.name)
-        : wallet.name,
-      color: updates.color !== undefined
-        ? sanitizeWalletColor(updates.color, wallet.color)
-        : wallet.color,
+      name:
+        updates.name !== undefined
+          ? sanitizeWalletName(updates.name, wallet.name)
+          : wallet.name,
+      color:
+        updates.color !== undefined
+          ? sanitizeWalletColor(updates.color, wallet.color)
+          : wallet.color,
     };
   });
 
@@ -182,7 +186,9 @@ export function deleteLocalWallet(walletId: string): LocalWallet[] {
     return loadLocalWallets();
   }
 
-  const wallets = loadLocalWallets().filter((wallet) => wallet.id !== cleanWalletId);
+  const wallets = loadLocalWallets().filter(
+    (wallet) => wallet.id !== cleanWalletId
+  );
   saveLocalWallets(wallets);
 
   const map = loadCardWalletMap();
@@ -210,10 +216,7 @@ export function loadMainWalletConfig(): MainWalletConfig {
 
   return {
     name: sanitizeWalletName(parsed?.name, DEFAULT_MAIN_WALLET_NAME),
-    color: sanitizeWalletColor(
-      parsed?.color,
-      DEFAULT_MAIN_WALLET_COLOR
-    ),
+    color: sanitizeWalletColor(parsed?.color, DEFAULT_MAIN_WALLET_COLOR),
   };
 }
 
@@ -315,12 +318,15 @@ export function getCardsForWallet<T extends { id: string }>(
   walletId: string
 ): T[] {
   const cleanWalletId = String(walletId || "").trim() || DEFAULT_WALLET_ID;
+  const map = loadCardWalletMap();
 
   if (cleanWalletId === DEFAULT_WALLET_ID) {
-    return cards;
+    return cards.filter((card) => {
+      const assignedWalletId = map[String(card.id)]?.trim();
+      return !assignedWalletId || assignedWalletId === DEFAULT_WALLET_ID;
+    });
   }
 
-  const map = loadCardWalletMap();
   return cards.filter((card) => map[String(card.id)] === cleanWalletId);
 }
 

@@ -497,13 +497,15 @@ export default function WalletPage() {
   }
 
   const walletEntries = useMemo(() => {
+    const mainWalletCards = getCardsForWallet(cards, DEFAULT_WALLET_ID);
+
     const base = [
       {
         id: DEFAULT_WALLET_ID,
         name: mainWallet.name || t("main"),
         color: mainWallet.color || DEFAULT_MAIN_WALLET_COLOR,
-        subtitle: formatWalletSubtitle(cards.length),
-        cardCount: cards.length,
+        subtitle: formatWalletSubtitle(mainWalletCards.length),
+        cardCount: mainWalletCards.length,
         isDefault: true,
       },
     ];
