@@ -5,8 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import QrScanner from "qr-scanner";
 import { useTranslations } from "next-intl";
 
-QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
-
 type ClientPayload = {
   storeId: string;
   cardId?: string;
@@ -31,7 +29,8 @@ function parseClientPayload(raw: string): ClientPayload | null {
 
   return {
     storeId: storeId.trim(),
-    cardId: typeof cardId === "string" && cardId.trim() ? cardId.trim() : undefined,
+    cardId:
+      typeof cardId === "string" && cardId.trim() ? cardId.trim() : undefined,
   };
 }
 

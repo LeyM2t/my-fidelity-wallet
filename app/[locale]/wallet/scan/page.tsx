@@ -5,8 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import QrScanner from "qr-scanner";
 import { useTranslations } from "next-intl";
 
-QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
-
 export default function WalletScanPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
@@ -140,7 +138,7 @@ export default function WalletScanPage() {
 
         if (!camAvailable) {
           setErr(t("errors.cameraUnavailable"));
-          setStatus(t("cameraUnavailable"));
+          setStatus(t("errors.cameraUnavailable"));
           return;
         }
 

@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QrScanner from "qr-scanner";
-
-// ✅ obligatoire pour qr-scanner (worker)
-QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
 
 type Payload = {
   storeId: string;
   customerId: string;
 };
 
-function safeParsePayload(text: string): { ok: true; payload: Payload } | { ok: false; error: string } {
+function safeParsePayload(
+  text: string
+): { ok: true; payload: Payload } | { ok: false; error: string } {
   try {
     const obj = JSON.parse(text);
 
@@ -25,11 +24,18 @@ function safeParsePayload(text: string): { ok: true; payload: Payload } | { ok: 
     if (typeof storeId !== "string" || storeId.trim() === "") {
       return { ok: false, error: "QR invalide : storeId manquant." };
     }
+
     if (typeof customerId !== "string" || customerId.trim() === "") {
       return { ok: false, error: "QR invalide : customerId manquant." };
     }
 
-    return { ok: true, payload: { storeId, customerId } };
+    return {
+      ok: true,
+      payload: {
+        storeId: storeId.trim(),
+        customerId: customerId.trim(),
+      },
+    };
   } catch {
     return { ok: false, error: "QR invalide : le contenu n’est pas du JSON." };
   }
@@ -40,17 +46,18 @@ export default function ScanClient() {
   const scannerRef = useRef<QrScanner | null>(null);
 
   const [isRunning, setIsRunning] = useState(false);
-  const [rawText, setRawText] = useState<string>("");
+  const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState<Payload | null>(null);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
-  const canStop = useMemo(() => isRunning, [isRunning]);
+  const canStop = isRunning;
 
   useEffect(() => {
     return () => {
-      // cleanup à la sortie de page
       if (scannerRef.current) {
-        scannerRef.current.stop();
+        try {
+          scannerRef.current.stop();
+        } catch {}
         scannerRef.current.destroy();
         scannerRef.current = null;
       }
@@ -69,25 +76,30 @@ export default function ScanClient() {
     }
 
     try {
-      // Si un scanner existe déjà, on le détruit proprement
       if (scannerRef.current) {
-        await scannerRef.current.stop();
+        try {
+          await scannerRef.current.stop();
+        } catch {}
         scannerRef.current.destroy();
         scannerRef.current = null;
       }
 
       const scanner = new QrScanner(
         video,
-        (result) => {
+        async (result) => {
           const text = typeof result === "string" ? result : result.data;
           setRawText(text);
 
           const parsedResult = safeParsePayload(text);
+
           if (parsedResult.ok) {
             setParsed(parsedResult.payload);
             setError("");
-            // ✅ on stop dès qu'on a un QR valide (plus propre en caisse)
-            scanner.stop();
+
+            try {
+              await scanner.stop();
+            } catch {}
+
             setIsRunning(false);
           } else {
             setParsed(null);
@@ -95,7 +107,6 @@ export default function ScanClient() {
           }
         },
         {
-          // mobile-friendly
           preferredCamera: "environment",
           highlightScanRegion: true,
           highlightCodeOutline: true,
@@ -120,7 +131,10 @@ export default function ScanClient() {
     setError("");
     if (!scannerRef.current) return;
 
-    await scannerRef.current.stop();
+    try {
+      await scannerRef.current.stop();
+    } catch {}
+
     setIsRunning(false);
   }
 
@@ -140,7 +154,14 @@ export default function ScanClient() {
           background: "rgba(0,0,0,0.02)",
         }}
       >
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginBottom: 10,
+          }}
+        >
           <button
             onClick={start}
             disabled={isRunning}
@@ -197,11 +218,18 @@ export default function ScanClient() {
           />
         </div>
 
-        {error && (
-          <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: "rgba(255,0,0,0.08)" }}>
+        {error ? (
+          <div
+            style={{
+              marginTop: 10,
+              padding: 10,
+              borderRadius: 10,
+              background: "rgba(255,0,0,0.08)",
+            }}
+          >
             <b>Erreur :</b> {error}
           </div>
-        )}
+        ) : null}
       </div>
 
       <div
@@ -211,17 +239,24 @@ export default function ScanClient() {
           padding: 12,
         }}
       >
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 0 }}>Résultat</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 0 }}>
+          Résultat
+        </h2>
 
         {parsed ? (
           <div style={{ display: "grid", gap: 8 }}>
             <div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>storeId</div>
-              <div style={{ fontFamily: "monospace", fontSize: 14 }}>{parsed.storeId}</div>
+              <div style={{ fontFamily: "monospace", fontSize: 14 }}>
+                {parsed.storeId}
+              </div>
             </div>
+
             <div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>customerId</div>
-              <div style={{ fontFamily: "monospace", fontSize: 14 }}>{parsed.customerId}</div>
+              <div style={{ fontFamily: "monospace", fontSize: 14 }}>
+                {parsed.customerId}
+              </div>
             </div>
 
             <div style={{ marginTop: 6, opacity: 0.75 }}>
@@ -230,11 +265,12 @@ export default function ScanClient() {
           </div>
         ) : (
           <div style={{ opacity: 0.8 }}>
-            Scanne un QR client pour afficher <code>storeId</code> et <code>customerId</code>.
+            Scanne un QR client pour afficher <code>storeId</code> et{" "}
+            <code>customerId</code>.
           </div>
         )}
 
-        {rawText && (
+        {rawText ? (
           <details style={{ marginTop: 10 }}>
             <summary style={{ cursor: "pointer" }}>Voir le contenu brut</summary>
             <pre
@@ -249,7 +285,7 @@ export default function ScanClient() {
               {rawText}
             </pre>
           </details>
-        )}
+        ) : null}
       </div>
     </section>
   );
