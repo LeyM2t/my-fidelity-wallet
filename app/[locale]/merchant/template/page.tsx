@@ -13,7 +13,6 @@ import {
   Oswald,
   Nunito,
 } from "next/font/google";
-import { Rnd } from "react-rnd";
 import { HexColorPicker } from "react-colorful";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/firebaseClient";
@@ -21,14 +20,11 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
+import TemplatePreviewSticky from "@/components/TemplatePreviewSticky";
+import TemplateEditorCard from "@/components/TemplateEditorCard";
 
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
-
-const LOGO_SAFE_MARGIN = 12;
-const LOGO_MIN_SIZE = 36;
-const LOGO_MAX_WIDTH = 160;
-const LOGO_MAX_HEIGHT = 160;
 
 type BgType = "color" | "gradient" | "image";
 
@@ -178,71 +174,11 @@ function normalizeBox(b: unknown, fallback: Box): Box {
   };
 }
 
-function clampBoxInsideArea(
-  box: Box,
-  cardWidth: number,
-  cardHeight: number,
-  options?: {
-    margin?: number;
-    minWidth?: number;
-    minHeight?: number;
-    maxWidth?: number;
-    maxHeight?: number;
-  }
-): Box {
-  const margin = options?.margin ?? 0;
-  const minWidth = options?.minWidth ?? 10;
-  const minHeight = options?.minHeight ?? 10;
-  const maxWidth = Math.max(
-    minWidth,
-    Math.min(options?.maxWidth ?? cardWidth, cardWidth - margin * 2)
-  );
-  const maxHeight = Math.max(
-    minHeight,
-    Math.min(options?.maxHeight ?? cardHeight, cardHeight - margin * 2)
-  );
-
-  const width = clampNumber(box.width, minWidth, maxWidth, minWidth);
-  const height = clampNumber(box.height, minHeight, maxHeight, minHeight);
-
-  const maxX = Math.max(margin, cardWidth - margin - width);
-  const maxY = Math.max(margin, cardHeight - margin - height);
-
-  return {
-    x: clampNumber(box.x, margin, maxX, margin),
-    y: clampNumber(box.y, margin, maxY, margin),
-    width,
-    height,
-  };
-}
-
 function sanitizeTemplateBoxes(template: CardTemplate): CardTemplate {
   return {
     ...template,
-    logoBox: clampBoxInsideArea(
-      normalizeBox(template.logoBox, DEFAULT.logoBox),
-      CARD_WIDTH,
-      CARD_HEIGHT,
-      {
-        margin: LOGO_SAFE_MARGIN,
-        minWidth: LOGO_MIN_SIZE,
-        minHeight: LOGO_MIN_SIZE,
-        maxWidth: LOGO_MAX_WIDTH,
-        maxHeight: LOGO_MAX_HEIGHT,
-      }
-    ),
-    bgImageBox: clampBoxInsideArea(
-      normalizeBox(template.bgImageBox, DEFAULT.bgImageBox),
-      CARD_WIDTH,
-      CARD_HEIGHT,
-      {
-        margin: 0,
-        minWidth: 40,
-        minHeight: 40,
-        maxWidth: CARD_WIDTH,
-        maxHeight: CARD_HEIGHT,
-      }
-    ),
+    logoBox: normalizeBox(template.logoBox, DEFAULT.logoBox),
+    bgImageBox: normalizeBox(template.bgImageBox, DEFAULT.bgImageBox),
   };
 }
 
@@ -339,29 +275,14 @@ export default function MerchantTemplatePage() {
   const hasBgImg = !!(tpl.bgImageUrl && tpl.bgImageUrl.trim());
   const showBgImg = tpl.bgImageEnabled && hasBgImg;
 
-  const handleStyle = useMemo<React.CSSProperties>(() => {
-    const size = isMobile ? 18 : 12;
-    const radius = isMobile ? 6 : 4;
-
-    return {
-      width: size,
-      height: size,
-      borderRadius: radius,
-      background: "rgba(255,255,255,0.98)",
-      border: "1px solid rgba(0,0,0,0.35)",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
-    };
-  }, [isMobile]);
-
   useEffect(() => {
     const checkViewport = () => {
       const width = window.innerWidth;
       setIsMobile(width < 900);
 
-      const pagePadding = width < 640 ? 36 : 72;
-      const maxCardWidth = CARD_WIDTH;
+      const pagePadding = width < 640 ? 28 : 72;
       const availableWidth = Math.max(280, width - pagePadding);
-      const targetWidth = Math.min(maxCardWidth, availableWidth);
+      const targetWidth = Math.min(CARD_WIDTH, availableWidth);
       setCardScale(targetWidth / CARD_WIDTH);
     };
 
@@ -1060,8 +981,8 @@ export default function MerchantTemplatePage() {
               {uploadingLogo
                 ? "Uploading logo..."
                 : cloudinaryReady
-                ? "Browse logo"
-                : "Loading uploader..."}
+                  ? "Browse logo"
+                  : "Loading uploader..."}
             </button>
 
             {!!tpl.logoUrl && (
@@ -1091,7 +1012,9 @@ export default function MerchantTemplatePage() {
             Use the button above to upload a public logo with Cloudinary, or paste a logo URL manually.
           </div>
 
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("backgroundImageUrl")}</div>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            {t("backgroundImageUrl")}
+          </div>
           <input
             value={tpl.bgImageUrl || ""}
             onChange={(e) =>
@@ -1196,7 +1119,9 @@ export default function MerchantTemplatePage() {
                     minWidth: 0,
                   }}
                 >
-                  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>{f.label}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
+                    {f.label}
+                  </div>
                   <div style={{ fontFamily: f.family, fontWeight: 900, fontSize: 18 }}>
                     {t("previewTitleExample")}
                   </div>
@@ -1210,360 +1135,110 @@ export default function MerchantTemplatePage() {
   );
 
   const previewPanel = (
-    <div
-      style={{
-        ...panelStyle,
-        position: isMobile ? "relative" : "sticky",
-        top: isMobile ? undefined : 18,
-      }}
-    >
+    <TemplatePreviewSticky isMobile={isMobile}>
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: 10,
-          gap: 12,
-          flexWrap: "wrap",
+          ...panelStyle,
+          position: isMobile ? "relative" : "sticky",
+          top: isMobile ? undefined : 18,
+          padding: isMobile ? 14 : 18,
         }}
       >
-        <div style={{ fontWeight: 900, fontSize: 18 }}>{t("preview")}</div>
-
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <label
-            style={{
-              display: "flex",
-              gap: 6,
-              alignItems: "center",
-              fontSize: 12,
-              color: "#52525b",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={editLogo}
-              onChange={(e) => setEditLogo(e.target.checked)}
-            />
-            {t("editLogo")}
-          </label>
-
-          <label
-            style={{
-              display: "flex",
-              gap: 6,
-              alignItems: "center",
-              fontSize: 12,
-              color: "#52525b",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={editBg}
-              onChange={(e) => setEditBg(e.target.checked)}
-            />
-            {t("editBackground")}
-          </label>
-
-          <div style={{ color: "#71717a", fontSize: 12 }}>
-            {loading ? t("loading") : t("live")} • {storeId || "no-store"}
-          </div>
-        </div>
-      </div>
-
-      <div style={cardShellStyle}>
         <div
           style={{
-            ...cardBaseStyle,
-            width: "100%",
-            height: "100%",
-            borderRadius: 22,
-            position: "relative",
-            boxShadow: "0 14px 35px rgba(0,0,0,0.25)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            overflow: "hidden",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 10,
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {showBgImg ? (
-            <Rnd
-              bounds="parent"
-              disableDragging={!editBg}
-              enableResizing={editBg}
-              scale={cardScale}
-              size={{
-                width: tpl.bgImageBox.width * cardScale,
-                height: tpl.bgImageBox.height * cardScale,
-              }}
-              position={{
-                x: tpl.bgImageBox.x * cardScale,
-                y: tpl.bgImageBox.y * cardScale,
-              }}
-              onDragStop={(_, d) => {
-                setTpl((p) => ({
-                  ...p,
-                  bgImageBox: clampBoxInsideArea(
-                    {
-                      ...p.bgImageBox,
-                      x: d.x / cardScale,
-                      y: d.y / cardScale,
-                    },
-                    CARD_WIDTH,
-                    CARD_HEIGHT,
-                    {
-                      margin: 0,
-                      minWidth: 40,
-                      minHeight: 40,
-                      maxWidth: CARD_WIDTH,
-                      maxHeight: CARD_HEIGHT,
-                    }
-                  ),
-                }));
-              }}
-              onResizeStop={(_, __, ref, ___, position) => {
-                const w = ref.offsetWidth / cardScale;
-                const h = ref.offsetHeight / cardScale;
-                setTpl((p) => ({
-                  ...p,
-                  bgImageBox: clampBoxInsideArea(
-                    {
-                      x: position.x / cardScale,
-                      y: position.y / cardScale,
-                      width: w,
-                      height: h,
-                    },
-                    CARD_WIDTH,
-                    CARD_HEIGHT,
-                    {
-                      margin: 0,
-                      minWidth: 40,
-                      minHeight: 40,
-                      maxWidth: CARD_WIDTH,
-                      maxHeight: CARD_HEIGHT,
-                    }
-                  ),
-                }));
-              }}
-              minWidth={40 * cardScale}
-              minHeight={40 * cardScale}
-              maxWidth={CARD_WIDTH * cardScale}
-              maxHeight={CARD_HEIGHT * cardScale}
-              resizeHandleStyles={{
-                topLeft: handleStyle,
-                topRight: handleStyle,
-                bottomLeft: handleStyle,
-                bottomRight: handleStyle,
-              }}
-              style={{
-                zIndex: editBg ? 50 : 1,
-                outline: editBg ? "2px dashed rgba(255,255,255,0.55)" : "none",
-                borderRadius: 22,
-                pointerEvents: editBg ? "auto" : "none",
-                opacity: tpl.bgImageOpacity,
-              }}
-            >
-              <img
-                src={tpl.bgImageUrl}
-                alt="background"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  pointerEvents: "none",
-                  userSelect: "none",
-                }}
-              />
-            </Rnd>
-          ) : null}
-
-          {showBgImg ? (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "rgba(0,0,0,0.20)",
-                zIndex: 10,
-                pointerEvents: "none",
-              }}
-            />
-          ) : null}
+          <div style={{ fontWeight: 900, fontSize: 18 }}>{t("preview")}</div>
 
           <div
             style={{
-              position: "absolute",
-              inset: 0,
-              padding: 18 * cardScale,
-              zIndex: 20,
-              pointerEvents: editBg ? "none" : "auto",
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
             }}
           >
-            <div
+            <label
               style={{
-                position: "absolute",
-                top: 18 * cardScale,
-                right: 18 * cardScale,
-                fontWeight: 900,
-                fontSize: 18 * cardScale,
-                opacity: 0.95,
+                display: "flex",
+                gap: 6,
+                alignItems: "center",
+                fontSize: 12,
+                color: "#52525b",
               }}
             >
-              {t("previewScore")}
-            </div>
+              <input
+                type="checkbox"
+                checked={editLogo}
+                onChange={(e) => setEditLogo(e.target.checked)}
+              />
+              {t("editLogo")}
+            </label>
 
-            <div
+            <label
               style={{
-                position: "absolute",
-                top: 18 * cardScale,
-                left: 18 * cardScale,
-                right: 90 * cardScale,
+                display: "flex",
+                gap: 6,
+                alignItems: "center",
+                fontSize: 12,
+                color: "#52525b",
               }}
             >
-              <div
-                style={{
-                  fontSize: 26 * cardScale,
-                  fontWeight: 900,
-                  lineHeight: 1.05,
-                  wordBreak: "break-word",
-                }}
-              >
-                {tpl.title || t("loyaltyCard")}
-              </div>
+              <input
+                type="checkbox"
+                checked={editBg}
+                onChange={(e) => setEditBg(e.target.checked)}
+              />
+              {t("editBackground")}
+            </label>
 
-              <div
-                style={{
-                  opacity: 0.9,
-                  fontSize: 12 * cardScale,
-                  marginTop: 4 * cardScale,
-                }}
-              >
-                {t("loyaltyProgram")} •{" "}
-                {FONT_OPTIONS.find((f) => f.key === tpl.font)?.label ||
-                  t("fontDefault")}
-              </div>
-            </div>
-
-            <div
-              style={{
-                position: "absolute",
-                left: 18 * cardScale,
-                bottom: 16 * cardScale,
-                fontSize: 13 * cardScale,
-                opacity: 0.9,
-              }}
-            >
-              {t("ownerPreview")}
+            <div style={{ color: "#71717a", fontSize: 12 }}>
+              {loading ? t("loading") : t("live")} • {storeId || "no-store"}
             </div>
           </div>
+        </div>
 
-          <Rnd
-            bounds="parent"
-            disableDragging={!editLogo}
-            enableResizing={editLogo}
-            scale={cardScale}
-            size={{
-              width: tpl.logoBox.width * cardScale,
-              height: tpl.logoBox.height * cardScale,
+        <div style={cardShellStyle}>
+          <TemplateEditorCard
+            tpl={tpl}
+            isMobile={isMobile}
+            cardScale={cardScale}
+            showBgImg={showBgImg}
+            fontOptions={FONT_OPTIONS}
+            cardBaseStyle={cardBaseStyle}
+            editLogo={editLogo}
+            editBg={editBg}
+            previewScore={t("previewScore")}
+            loyaltyCardText={t("loyaltyCard")}
+            loyaltyProgramText={t("loyaltyProgram")}
+            ownerPreviewText={t("ownerPreview")}
+            editLogoLabel={t("editLogo")}
+            editBackgroundLabel={t("editBackground")}
+            fontDefaultLabel={t("fontDefault")}
+            onChange={(updater) => {
+              setTpl((prev) => sanitizeTemplateBoxes(updater(prev)));
             }}
-            position={{
-              x: tpl.logoBox.x * cardScale,
-              y: tpl.logoBox.y * cardScale,
-            }}
-            onDragStop={(_, d) => {
-              setTpl((p) => ({
-                ...p,
-                logoBox: clampBoxInsideArea(
-                  {
-                    ...p.logoBox,
-                    x: d.x / cardScale,
-                    y: d.y / cardScale,
-                  },
-                  CARD_WIDTH,
-                  CARD_HEIGHT,
-                  {
-                    margin: LOGO_SAFE_MARGIN,
-                    minWidth: LOGO_MIN_SIZE,
-                    minHeight: LOGO_MIN_SIZE,
-                    maxWidth: LOGO_MAX_WIDTH,
-                    maxHeight: LOGO_MAX_HEIGHT,
-                  }
-                ),
-              }));
-            }}
-            onResizeStop={(_, __, ref, ___, position) => {
-              const w = ref.offsetWidth / cardScale;
-              const h = ref.offsetHeight / cardScale;
-              setTpl((p) => ({
-                ...p,
-                logoBox: clampBoxInsideArea(
-                  {
-                    x: position.x / cardScale,
-                    y: position.y / cardScale,
-                    width: w,
-                    height: h,
-                  },
-                  CARD_WIDTH,
-                  CARD_HEIGHT,
-                  {
-                    margin: LOGO_SAFE_MARGIN,
-                    minWidth: LOGO_MIN_SIZE,
-                    minHeight: LOGO_MIN_SIZE,
-                    maxWidth: LOGO_MAX_WIDTH,
-                    maxHeight: LOGO_MAX_HEIGHT,
-                  }
-                ),
-              }));
-            }}
-            minWidth={LOGO_MIN_SIZE * cardScale}
-            minHeight={LOGO_MIN_SIZE * cardScale}
-            maxWidth={LOGO_MAX_WIDTH * cardScale}
-            maxHeight={LOGO_MAX_HEIGHT * cardScale}
-            resizeHandleStyles={{
-              topLeft: handleStyle,
-              topRight: handleStyle,
-              bottomLeft: handleStyle,
-              bottomRight: handleStyle,
-            }}
-            style={{
-              zIndex: editLogo ? 60 : 30,
-              outline: editLogo ? "2px dashed rgba(255,255,255,0.55)" : "none",
-              borderRadius: 16,
-              pointerEvents: editLogo ? "auto" : "none",
-            }}
-          >
-            {tpl.logoUrl ? (
-              <img
-                src={tpl.logoUrl}
-                alt="logo"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: 16,
-                  objectFit: "cover",
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  pointerEvents: "none",
-                  userSelect: "none",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                }}
-              />
-            )}
-          </Rnd>
+          />
+        </div>
+
+        <div
+          style={{
+            marginTop: 12,
+            color: "#71717a",
+            fontSize: 12,
+            lineHeight: 1.35,
+          }}
+        >
+          {t("previewHelp")}
         </div>
       </div>
-
-      <div style={{ marginTop: 12, color: "#71717a", fontSize: 12, lineHeight: 1.35 }}>
-        {t("previewHelp")}
-      </div>
-    </div>
+    </TemplatePreviewSticky>
   );
 
   return (
