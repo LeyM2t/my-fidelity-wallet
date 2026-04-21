@@ -665,6 +665,3 @@ export default function WalletDetailPage() {
     </main>
   );
 }
-
-
-envoi le code complet a jour si besoin de modification
