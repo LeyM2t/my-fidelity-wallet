@@ -1,13 +1,31 @@
 import "@/lib/firebaseAdmin";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
+import { db } from "@/lib/firebaseAdmin";
 
 export const CLIENT_SESSION_COOKIE = "clientSession";
 
 const EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000;
 
+type AppUserRole = "client" | "merchant";
+
 function isProd() {
   return process.env.NODE_ENV === "production";
+}
+
+async function getUserRole(uid: string): Promise<AppUserRole | null> {
+  const snap = await db.collection("users").doc(uid).get();
+
+  if (!snap.exists) return null;
+
+  const data = snap.data() as { role?: AppUserRole } | undefined;
+  const role = data?.role;
+
+  if (role !== "client" && role !== "merchant") {
+    return null;
+  }
+
+  return role;
 }
 
 export async function createClientSessionCookie(idToken: string) {
@@ -53,7 +71,14 @@ export async function verifyClientSessionCookie(
   try {
     const auth = getAuth();
     const decoded = await auth.verifySessionCookie(sessionCookie, checkRevoked);
-    return decoded.uid;
+    const uid = decoded.uid;
+
+    const role = await getUserRole(uid);
+    if (role !== "client") {
+      return null;
+    }
+
+    return uid;
   } catch {
     return null;
   }

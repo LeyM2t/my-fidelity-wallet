@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
@@ -26,10 +27,8 @@ function getForgotTexts(locale: string) {
     return {
       forgotPassword: "¿Olvidaste tu contraseña?",
       emailRequired: "Introduce tu email para restablecer tu contraseña.",
-      resetSent:
-        "Correo de restablecimiento enviado. Revisa tu buzón.",
-      resetFailed:
-        "No se pudo enviar el correo de restablecimiento.",
+      resetSent: "Correo de restablecimiento enviado. Revisa tu buzón.",
+      resetFailed: "No se pudo enviar el correo de restablecimiento.",
     };
   }
 
@@ -41,13 +40,71 @@ function getForgotTexts(locale: string) {
   };
 }
 
+function getMerchantModeTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      titleLogin: "Connexion merchant",
+      titleSignup: "Créer un compte merchant",
+      subtitleLogin: "Connecte-toi à ton espace commerçant.",
+      subtitleSignup: "Crée ton compte pour gérer ton commerce.",
+      signup: "Créer mon compte",
+      switchToSignup: "Créer un compte merchant",
+      switchToLogin: "J’ai déjà un compte merchant",
+      roleMismatch:
+        "Ce compte appartient à l’espace client. Connecte-toi depuis la page client.",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      titleLogin: "Inicio de sesión merchant",
+      titleSignup: "Crear una cuenta merchant",
+      subtitleLogin: "Inicia sesión en tu espacio de comerciante.",
+      subtitleSignup: "Crea tu cuenta para gestionar tu negocio.",
+      signup: "Crear mi cuenta",
+      switchToSignup: "Crear una cuenta merchant",
+      switchToLogin: "Ya tengo una cuenta merchant",
+      roleMismatch:
+        "Esta cuenta pertenece al espacio cliente. Inicia sesión desde la página client.",
+    };
+  }
+
+  return {
+    titleLogin: "Merchant login",
+    titleSignup: "Create a merchant account",
+    subtitleLogin: "Sign in to your merchant area.",
+    subtitleSignup: "Create your account to manage your business.",
+    signup: "Create my account",
+    switchToSignup: "Create a merchant account",
+    switchToLogin: "I already have a merchant account",
+    roleMismatch:
+      "This account belongs to the client area. Please sign in from the client page.",
+  };
+}
+
+function mapMerchantErrorMessage(
+  rawMessage: string,
+  fallback: string,
+  locale: string
+) {
+  const texts = getMerchantModeTexts(locale);
+
+  if (rawMessage === "ROLE_MISMATCH") {
+    return texts.roleMismatch;
+  }
+
+  return rawMessage || fallback;
+}
+
 export default function MerchantLoginPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchantLogin");
   const forgotTexts = useMemo(() => getForgotTexts(locale), [locale]);
+  const modeTexts = useMemo(() => getMerchantModeTexts(locale), [locale]);
 
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [nextPath, setNextPath] = useState(`/${locale}/merchant`);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,7 +146,17 @@ export default function MerchantLoginPage() {
     setLoading(true);
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const cleanEmail = email.trim();
+
+      if (!cleanEmail || !password) {
+        throw new Error(t("errors.login"));
+      }
+
+      const cred =
+        mode === "login"
+          ? await signInWithEmailAndPassword(auth, cleanEmail, password)
+          : await createUserWithEmailAndPassword(auth, cleanEmail, password);
+
       const idToken = await cred.user.getIdToken();
 
       const res = await fetch("/api/auth/sessionLogin", {
@@ -104,8 +171,10 @@ export default function MerchantLoginPage() {
       }
 
       router.replace(nextPath);
+      router.refresh();
     } catch (e: any) {
-      setErr(e?.message || t("errors.login"));
+      const rawMessage = e?.message || t("errors.login");
+      setErr(mapMerchantErrorMessage(rawMessage, t("errors.login"), locale));
     } finally {
       setLoading(false);
     }
@@ -166,7 +235,7 @@ export default function MerchantLoginPage() {
               color: "#111",
             }}
           >
-            {t("title")}
+            {mode === "login" ? modeTexts.titleLogin : modeTexts.titleSignup}
           </h1>
 
           <p
@@ -177,7 +246,9 @@ export default function MerchantLoginPage() {
               marginBottom: 20,
             }}
           >
-            {t("subtitle")}
+            {mode === "login"
+              ? modeTexts.subtitleLogin
+              : modeTexts.subtitleSignup}
           </p>
 
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
@@ -205,7 +276,9 @@ export default function MerchantLoginPage() {
                 type="password"
                 placeholder={t("password")}
                 required
-                autoComplete="current-password"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
                 style={{
                   padding: 12,
                   borderRadius: 12,
@@ -216,25 +289,27 @@ export default function MerchantLoginPage() {
                 }}
               />
 
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                disabled={resetLoading}
-                style={{
-                  alignSelf: "flex-end",
-                  border: "none",
-                  background: "transparent",
-                  color: "#2563eb",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: resetLoading ? "default" : "pointer",
-                  padding: 0,
-                }}
-              >
-                {resetLoading
-                  ? `⏳ ${forgotTexts.forgotPassword}`
-                  : forgotTexts.forgotPassword}
-              </button>
+              {mode === "login" ? (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetLoading}
+                  style={{
+                    alignSelf: "flex-end",
+                    border: "none",
+                    background: "transparent",
+                    color: "#2563eb",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: resetLoading ? "default" : "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {resetLoading
+                    ? `⏳ ${forgotTexts.forgotPassword}`
+                    : forgotTexts.forgotPassword}
+                </button>
+              ) : null}
             </div>
 
             <button
@@ -251,7 +326,33 @@ export default function MerchantLoginPage() {
                 cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? `⏳ ${t("loading")}` : t("login")}
+              {loading
+                ? `⏳ ${t("loading")}`
+                : mode === "login"
+                  ? t("login")
+                  : modeTexts.signup}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMode((prev) => (prev === "login" ? "signup" : "login"));
+                setErr(null);
+                setInfo("");
+              }}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {mode === "login"
+                ? modeTexts.switchToSignup
+                : modeTexts.switchToLogin}
             </button>
 
             {info && (

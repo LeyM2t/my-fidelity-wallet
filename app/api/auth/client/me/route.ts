@@ -1,3 +1,4 @@
+import "@/lib/firebaseAdmin";
 import { NextResponse } from "next/server";
 import { verifyClientSessionCookie } from "@/lib/clientSession";
 
@@ -15,6 +16,7 @@ export async function GET() {
     return NextResponse.json({
       authenticated: true,
       uid,
+      role: "client",
     });
   } catch (error) {
     console.error("client me error", error);

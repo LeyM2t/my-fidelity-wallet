@@ -27,10 +27,8 @@ function getForgotTexts(locale: string) {
     return {
       forgotPassword: "¿Olvidaste tu contraseña?",
       emailRequired: "Introduce tu email para restablecer tu contraseña.",
-      resetSent:
-        "Correo de restablecimiento enviado. Revisa tu buzón.",
-      resetFailed:
-        "No se pudo enviar el correo de restablecimiento.",
+      resetSent: "Correo de restablecimiento enviado. Revisa tu buzón.",
+      resetFailed: "No se pudo enviar el correo de restablecimiento.",
     };
   }
 
@@ -40,6 +38,41 @@ function getForgotTexts(locale: string) {
     resetSent: "Password reset email sent. Check your inbox.",
     resetFailed: "Could not send password reset email.",
   };
+}
+
+function getRoleTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      roleMismatch:
+        "Ce compte appartient à l’espace commerçant. Connecte-toi depuis la page merchant.",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      roleMismatch:
+        "Esta cuenta pertenece al espacio merchant. Inicia sesión desde la página merchant.",
+    };
+  }
+
+  return {
+    roleMismatch:
+      "This account belongs to the merchant area. Please sign in from the merchant page.",
+  };
+}
+
+function mapAuthErrorMessage(
+  rawMessage: string,
+  fallback: string,
+  locale: string
+) {
+  const roleTexts = getRoleTexts(locale);
+
+  if (rawMessage === "ROLE_MISMATCH") {
+    return roleTexts.roleMismatch;
+  }
+
+  return rawMessage || fallback;
 }
 
 export default function ClientLoginPage() {
@@ -99,9 +132,9 @@ export default function ClientLoginPage() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      const message =
+      const rawMessage =
         err instanceof Error ? err.message : t("errors.generic");
-      setError(message);
+      setError(mapAuthErrorMessage(rawMessage, t("errors.generic"), locale));
     } finally {
       setLoading(false);
     }

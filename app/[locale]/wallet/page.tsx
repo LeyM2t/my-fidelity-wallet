@@ -137,6 +137,12 @@ export default function WalletPage() {
     return t("cards.many", { count: cardCount });
   }
 
+  async function redirectToClientLogin() {
+    router.replace(
+      `/${locale}/client/login?next=${encodeURIComponent(`/${locale}/wallet`)}`
+    );
+  }
+
   const fetchCards = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -147,10 +153,10 @@ export default function WalletPage() {
         cache: "no-store",
       });
 
-      if (res.status === 401) {
-        router.replace(
-          `/${locale}/client/login?next=${encodeURIComponent(`/${locale}/wallet`)}`
-        );
+      if (res.status === 401 || res.status === 403) {
+        setCards([]);
+        await signOut(auth).catch(() => null);
+        await redirectToClientLogin();
         return;
       }
 
@@ -226,11 +232,11 @@ export default function WalletPage() {
     setError("");
 
     try {
-      await signOut(auth);
+      await signOut(auth).catch(() => null);
 
       await fetch("/api/auth/client/sessionLogout", {
         method: "POST",
-      });
+      }).catch(() => null);
 
       router.replace(`/${locale}/client/login`);
       router.refresh();
@@ -270,6 +276,12 @@ export default function WalletPage() {
       });
 
       const deleteData = await deleteRes.json().catch(() => ({}));
+
+      if (deleteRes.status === 401 || deleteRes.status === 403) {
+        await signOut(auth).catch(() => null);
+        await redirectToClientLogin();
+        return;
+      }
 
       if (!deleteRes.ok) {
         throw new Error(deleteData?.error || deleteTexts.deleteApiFailed);

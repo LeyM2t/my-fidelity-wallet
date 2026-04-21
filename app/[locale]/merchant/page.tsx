@@ -89,11 +89,25 @@ export default function MerchantPage() {
   const [deleteError, setDeleteError] = useState("");
   const [deleteInfo, setDeleteInfo] = useState("");
 
+  async function redirectToMerchantLogin() {
+    router.replace(
+      `/${locale}/merchant/login?next=${encodeURIComponent(`/${locale}/merchant`)}`
+    );
+  }
+
   async function loadStore() {
     try {
       setStoreError("");
+
       const res = await fetch("/api/merchant/store", { cache: "no-store" });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (res.status === 401 || res.status === 403) {
+        setStore(null);
+        await signOut(auth).catch(() => null);
+        await redirectToMerchantLogin();
+        return;
+      }
 
       if (!res.ok) {
         setStoreError(data?.error || t("errors.loadStore"));
@@ -101,7 +115,7 @@ export default function MerchantPage() {
         return;
       }
 
-      setStore(data.store || null);
+      setStore(data?.store || null);
     } catch (e: any) {
       setStoreError(e?.message || t("errors.network"));
       setStore(null);
@@ -127,7 +141,13 @@ export default function MerchantPage() {
         body: JSON.stringify({ name: name.trim() }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (res.status === 401 || res.status === 403) {
+        await signOut(auth).catch(() => null);
+        await redirectToMerchantLogin();
+        return;
+      }
 
       if (!res.ok) {
         setStoreError(data?.error || t("errors.createStore"));
@@ -154,14 +174,20 @@ export default function MerchantPage() {
         body: JSON.stringify({ storeId }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+
+      if (res.status === 401 || res.status === 403) {
+        await signOut(auth).catch(() => null);
+        await redirectToMerchantLogin();
+        return;
+      }
 
       if (!res.ok) {
         setTokenError(data?.error || t("errors.token"));
         return;
       }
 
-      setToken(data.token);
+      setToken(data?.token || "");
     } catch (e: any) {
       setTokenError(e?.message || t("errors.network"));
     } finally {
@@ -222,7 +248,13 @@ export default function MerchantPage() {
         method: "POST",
       });
 
-      const deleteData = await deleteRes.json().catch(() => ({}));
+      const deleteData = await deleteRes.json().catch(() => null);
+
+      if (deleteRes.status === 401 || deleteRes.status === 403) {
+        await signOut(auth).catch(() => null);
+        await redirectToMerchantLogin();
+        return;
+      }
 
       if (!deleteRes.ok) {
         throw new Error(deleteData?.error || deleteTexts.deleteApiFailed);
@@ -466,10 +498,10 @@ export default function MerchantPage() {
 
         <p style={{ color: "#6b7280" }}>{t("qrDescription")}</p>
 
-        {tokenError && <div style={{ color: "red" }}>{tokenError}</div>}
+        {tokenError ? <div style={{ color: "red" }}>{tokenError}</div> : null}
 
         <div style={{ margin: 20 }}>
-          {claimUrl && <QRCodeCanvas value={claimUrl} size={260} />}
+          {claimUrl ? <QRCodeCanvas value={claimUrl} size={260} /> : null}
         </div>
 
         <button

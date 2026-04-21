@@ -5,27 +5,35 @@
     "es": "Spanish"
   },
   "clientLogin": {
-    "title": {
-      "login": "Client login",
-      "signup": "Create client account"
-    },
-    "placeholders": {
-      "email": "Email",
-      "password": "Password"
-    },
-    "buttons": {
-      "loading": "Loading...",
-      "login": "Log in",
-      "signup": "Create my account",
-      "switchToSignup": "Create an account",
-      "switchToLogin": "I already have an account"
-    },
-    "errors": {
-      "requiredFields": "Email and password are required",
-      "sessionCreationFailed": "Failed to create session",
-      "generic": "An error occurred"
-    }
+  "title": {
+    "login": "Client login",
+    "signup": "Create client account"
   },
+  "placeholders": {
+    "email": "Email",
+    "password": "Password"
+  },
+  "buttons": {
+    "loading": "Loading...",
+    "login": "Log in",
+    "signup": "Create my account",
+    "switchToSignup": "Create an account",
+    "switchToLogin": "I already have an account",
+    "switchToMerchant": "I am a merchant"
+  },
+  "forgotPassword": {
+    "button": "Forgot password?",
+    "emailRequired": "Enter your email to reset your password.",
+    "resetSent": "Password reset email sent. Check your inbox.",
+    "resetFailed": "Could not send password reset email."
+  },
+  "errors": {
+    "requiredFields": "Email and password are required",
+    "sessionCreationFailed": "Failed to create session",
+    "generic": "An error occurred",
+    "roleMismatch": "This account belongs to the merchant area. Please sign in from the merchant page."
+  }
+},
   "wallet": {
     "brand": "FIDELITY WALLET",
     "error": "Error",
@@ -159,17 +167,39 @@
     }
   },
   "merchantLogin": {
-    "title": "Merchant login",
-    "subtitle": "Log in to access the scan page",
+  "title": {
+    "login": "Merchant login",
+    "signup": "Create a merchant account"
+  },
+  "subtitle": {
+    "login": "Log in to access your merchant area",
+    "signup": "Create your account to manage your business"
+  },
+  "placeholders": {
     "email": "Email",
-    "password": "Password",
+    "password": "Password"
+  },
+  "buttons": {
     "loading": "Loading...",
     "login": "Log in",
-    "errors": {
-      "sessionLogin": "Session error",
-      "login": "Login error"
-    }
+    "signup": "Create my account",
+    "switchToSignup": "Create a merchant account",
+    "switchToLogin": "I already have a merchant account",
+    "switchToClient": "I am a client"
   },
+  "forgotPassword": {
+    "button": "Forgot password?",
+    "emailRequired": "Enter your email to reset your password.",
+    "resetSent": "Password reset email sent. Check your inbox.",
+    "resetFailed": "Could not send password reset email."
+  },
+  "errors": {
+    "requiredFields": "Email and password are required",
+    "sessionLogin": "Session error",
+    "login": "Login error",
+    "roleMismatch": "This account belongs to the client area. Please sign in from the client page."
+  }
+},
   "merchantQr": {
     "title": "Merchant QR code",
     "merchantId": "Merchant ID (unique)",
