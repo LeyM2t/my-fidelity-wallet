@@ -47,6 +47,8 @@ export default function ScanPage() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
+  const busyRef = useRef(false);
+  const hasDetectedClientRef = useRef(false);
 
   const [payload, setPayload] = useState<ClientPayload | null>(null);
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
@@ -58,6 +60,14 @@ export default function ScanPage() {
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
   const [hasDetectedClient, setHasDetectedClient] = useState(false);
   const [addCount, setAddCount] = useState(1);
+
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
+
+  useEffect(() => {
+    hasDetectedClientRef.current = hasDetectedClient;
+  }, [hasDetectedClient]);
 
   async function stopScanner() {
     const scanner = scannerRef.current;
@@ -99,7 +109,7 @@ export default function ScanPage() {
         video,
         async (result) => {
           const txt = typeof result === "string" ? result : result?.data;
-          if (!txt || busy || hasDetectedClient) return;
+          if (!txt || busyRef.current || hasDetectedClientRef.current) return;
 
           const parsed = parseClientPayload(txt);
 
@@ -161,7 +171,7 @@ export default function ScanPage() {
   }, []);
 
   async function doEarn() {
-    if (!currentCardId || busy) return;
+    if (!currentCardId || busyRef.current) return;
 
     const safeAdd = clampAddCount(addCount);
 
@@ -194,7 +204,7 @@ export default function ScanPage() {
   }
 
   async function doConsume() {
-    if (!currentCardId || busy) return;
+    if (!currentCardId || busyRef.current) return;
 
     setBusy(true);
     setStatus(t("status.validating"));
@@ -228,6 +238,7 @@ export default function ScanPage() {
     setPayload(null);
     setCurrentCardId(null);
     setHasDetectedClient(false);
+    hasDetectedClientRef.current = false;
     setAddCount(1);
     setStatus(t("status.pending"));
     await startScanner();
