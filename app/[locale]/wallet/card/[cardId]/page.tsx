@@ -5,6 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { useTranslations } from "next-intl";
 import CardCanvas from "@/components/CardCanvas";
+import {
+  DEFAULT_WALLET_ID,
+  loadLocalWallets,
+  moveCardToWallet,
+  removeCardFromWalletMap,
+  type LocalWallet,
+} from "@/lib/walletLocal";
 
 type FirestoreCard = {
   id: string;
@@ -120,24 +127,69 @@ function templateToCardCanvasTemplate(
   };
 }
 
+function getMoveTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      moveButton: "Déplacer la carte",
+      moveBackButton: "Remettre dans le wallet principal",
+      promptTitle: "ID du wallet de destination",
+      moved: "Carte déplacée.",
+      moveError: "Impossible de déplacer la carte.",
+      noWallets: "Aucun wallet personnalisé disponible.",
+      chooseWalletHelp: "Wallets disponibles",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      moveButton: "Mover la tarjeta",
+      moveBackButton: "Volver al wallet principal",
+      promptTitle: "ID del wallet de destino",
+      moved: "Tarjeta movida.",
+      moveError: "No se pudo mover la tarjeta.",
+      noWallets: "No hay wallets personalizados disponibles.",
+      chooseWalletHelp: "Wallets disponibles",
+    };
+  }
+
+  return {
+    moveButton: "Move card",
+    moveBackButton: "Move back to main wallet",
+    promptTitle: "Destination wallet ID",
+    moved: "Card moved.",
+    moveError: "Could not move the card.",
+    noWallets: "No custom wallets available.",
+    chooseWalletHelp: "Available wallets",
+  };
+}
+
 export default function CardPage() {
   const router = useRouter();
   const params = useParams<{ locale: string; cardId: string }>();
   const locale = String(params?.locale ?? "en");
   const cardId = String(params?.cardId ?? "");
   const t = useTranslations("card");
+  const moveTexts = useMemo(() => getMoveTexts(locale), [locale]);
 
   const [card, setCard] = useState<FirestoreCard | null>(null);
   const [template, setTemplate] = useState<CardTemplate | null>(null);
+  const [customWallets, setCustomWallets] = useState<LocalWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+
+  useEffect(() => {
+    setCustomWallets(loadLocalWallets());
+  }, []);
 
   useEffect(() => {
     async function fetchCardAndTemplate() {
       try {
         setLoading(true);
         setError("");
+        setInfo("");
 
         const res = await fetch("/api/cards", { cache: "no-store" });
 
@@ -224,6 +276,7 @@ export default function CardPage() {
     try {
       setDeleting(true);
       setError("");
+      setInfo("");
 
       const res = await fetch("/api/cards/delete", {
         method: "POST",
@@ -248,6 +301,8 @@ export default function CardPage() {
         throw new Error(data?.error || t("errors.deleteFailed"));
       }
 
+      removeCardFromWalletMap(card.id);
+
       router.replace(`/${locale}/wallet`);
       router.refresh();
     } catch (e) {
@@ -260,6 +315,70 @@ export default function CardPage() {
 
   function handleBackToWallet() {
     router.replace(`/${locale}/wallet`);
+  }
+
+  function handleMoveToWallet() {
+    if (!card || moving) return;
+
+    if (customWallets.length === 0) {
+      setError(moveTexts.noWallets);
+      return;
+    }
+
+    setError("");
+    setInfo("");
+    setMoving(true);
+
+    try {
+      const choices = customWallets
+        .map((wallet) => `${wallet.id} — ${wallet.name}`)
+        .join("\n");
+
+      const targetId = window.prompt(
+        `${moveTexts.promptTitle}\n\n${moveTexts.chooseWalletHelp}:\n${choices}`,
+        customWallets[0]?.id || ""
+      );
+
+      if (targetId === null) {
+        setMoving(false);
+        return;
+      }
+
+      const trimmed = targetId.trim();
+      const exists = customWallets.some((wallet) => wallet.id === trimmed);
+
+      if (!trimmed || !exists) {
+        throw new Error(moveTexts.moveError);
+      }
+
+      moveCardToWallet(card.id, trimmed);
+      setInfo(moveTexts.moved);
+    } catch (e) {
+      const message =
+        e instanceof Error && e.message ? e.message : moveTexts.moveError;
+      setError(message);
+    } finally {
+      setMoving(false);
+    }
+  }
+
+  function handleMoveBackToMain() {
+    if (!card || moving) return;
+
+    setError("");
+    setInfo("");
+    setMoving(true);
+
+    try {
+      moveCardToWallet(card.id, DEFAULT_WALLET_ID);
+      setInfo(moveTexts.moved);
+    } catch (e) {
+      const message =
+        e instanceof Error && e.message ? e.message : moveTexts.moveError;
+      setError(message);
+    } finally {
+      setMoving(false);
+    }
   }
 
   const qrPayload = useMemo(() => {
@@ -381,6 +500,22 @@ export default function CardPage() {
           </div>
         ) : null}
 
+        {info ? (
+          <div
+            style={{
+              background: "#dcfce7",
+              color: "#166534",
+              padding: "14px 16px",
+              borderRadius: 14,
+              fontSize: 14,
+              lineHeight: 1.4,
+              textAlign: "center",
+            }}
+          >
+            ✅ {info}
+          </div>
+        ) : null}
+
         <div
           style={{
             background: "#fff",
@@ -419,6 +554,57 @@ export default function CardPage() {
           >
             {t("showQR")}
           </p>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+              marginBottom: 14,
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleMoveToWallet}
+              disabled={moving || customWallets.length === 0}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                background: "#ffffff",
+                color: "#111827",
+                fontSize: 15,
+                fontWeight: 800,
+                cursor:
+                  moving || customWallets.length === 0
+                    ? "default"
+                    : "pointer",
+                opacity: moving || customWallets.length === 0 ? 0.5 : 1,
+              }}
+            >
+              {moveTexts.moveButton}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleMoveBackToMain}
+              disabled={moving}
+              style={{
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: 14,
+                border: "1px solid #d1d5db",
+                background: "#ffffff",
+                color: "#111827",
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: moving ? "default" : "pointer",
+                opacity: moving ? 0.5 : 1,
+              }}
+            >
+              {moveTexts.moveBackButton}
+            </button>
+          </div>
 
           <button
             type="button"

@@ -11,6 +11,18 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import CardCanvas from "@/components/CardCanvas";
 import { useTranslations } from "next-intl";
+import {
+  DEFAULT_CUSTOM_WALLET_COLOR,
+  DEFAULT_MAIN_WALLET_COLOR,
+  DEFAULT_WALLET_ID,
+  getCardsForWallet,
+  getWalletColorChoices,
+  getWalletDisplayColor,
+  getWalletDisplayName,
+  loadLocalWallets,
+  moveCardToWallet,
+  type LocalWallet,
+} from "@/lib/walletLocal";
 
 type FirestoreCard = {
   id: string;
@@ -47,14 +59,6 @@ type CardTemplate = {
   logoBox?: Box;
 };
 
-type LocalWallet = {
-  id: string;
-  name: string;
-  createdAt: number;
-};
-
-const LOCAL_WALLETS_KEY = "fw_custom_wallets_v1";
-const DEFAULT_WALLET_ID = "__all_cards__";
 const MAX_VISIBLE_DISTANCE = 3;
 const SWIPE_THRESHOLD = 42;
 
@@ -144,24 +148,45 @@ function templateToCardCanvasTemplate(css: ReturnType<typeof templateToCss>) {
   };
 }
 
-function loadLocalWallets(): LocalWallet[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(LOCAL_WALLETS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+function buildWalletBackground(color: string, isDefault: boolean) {
+  const base = color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
 
-    return parsed
-      .map((item) => ({
-        id: String(item?.id || ""),
-        name: String(item?.name || "").trim(),
-        createdAt: Number(item?.createdAt || Date.now()),
-      }))
-      .filter((item) => item.id && item.name);
-  } catch {
-    return [];
+  return isDefault
+    ? `linear-gradient(135deg, ${base} 0%, #18181b 100%)`
+    : `linear-gradient(135deg, ${base} 0%, #854d0e 100%)`;
+}
+
+function getMoveTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      moveButton: "Déplacer la carte",
+      moveBackButton: "Remettre dans le wallet principal",
+      movePrompt: "ID du wallet de destination",
+      movedInfo: "Carte déplacée.",
+      noActiveCard: "Aucune carte active.",
+      targetMissing: "Wallet cible introuvable.",
+    };
   }
+
+  if (locale === "es") {
+    return {
+      moveButton: "Mover la tarjeta",
+      moveBackButton: "Volver al wallet principal",
+      movePrompt: "ID del wallet de destino",
+      movedInfo: "Tarjeta movida.",
+      noActiveCard: "No hay tarjeta activa.",
+      targetMissing: "Wallet de destino no encontrado.",
+    };
+  }
+
+  return {
+    moveButton: "Move card",
+    moveBackButton: "Move back to main wallet",
+    movePrompt: "Destination wallet ID",
+    movedInfo: "Card moved.",
+    noActiveCard: "No active card.",
+    targetMissing: "Destination wallet not found.",
+  };
 }
 
 export default function WalletDetailPage() {
@@ -171,6 +196,7 @@ export default function WalletDetailPage() {
   const locale = String(params?.locale ?? "en");
   const walletId = String(params?.walletId || "");
   const t = useTranslations("walletDetail");
+  const moveTexts = useMemo(() => getMoveTexts(locale), [locale]);
 
   const [cards, setCards] = useState<FirestoreCard[]>([]);
   const [templatesByStore, setTemplatesByStore] =
@@ -178,7 +204,9 @@ export default function WalletDetailPage() {
   const [customWallets, setCustomWallets] = useState<LocalWallet[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [isCompact, setIsCompact] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
@@ -217,9 +245,14 @@ export default function WalletDetailPage() {
     });
   }, []);
 
+  const refreshWallets = useCallback(() => {
+    setCustomWallets(loadLocalWallets());
+  }, []);
+
   const fetchCards = useCallback(async () => {
     setLoading(true);
     setError("");
+    setInfo("");
 
     try {
       const res = await fetch("/api/cards", {
@@ -227,7 +260,7 @@ export default function WalletDetailPage() {
         cache: "no-store",
       });
 
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         router.replace(
           `/${locale}/client/login?next=${encodeURIComponent(
             `/${locale}/wallet/${walletId}`
@@ -283,8 +316,8 @@ export default function WalletDetailPage() {
   }, [fetchTemplatesForStores, locale, router, walletId, t]);
 
   useEffect(() => {
-    setCustomWallets(loadLocalWallets());
-  }, []);
+    refreshWallets();
+  }, [refreshWallets]);
 
   useEffect(() => {
     const updateViewportMode = () => {
@@ -300,9 +333,16 @@ export default function WalletDetailPage() {
   useEffect(() => {
     fetchCards();
 
-    const onFocus = () => fetchCards();
+    const onFocus = () => {
+      refreshWallets();
+      fetchCards();
+    };
+
     const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchCards();
+      if (document.visibilityState === "visible") {
+        refreshWallets();
+        fetchCards();
+      }
     };
 
     window.addEventListener("focus", onFocus);
@@ -312,17 +352,22 @@ export default function WalletDetailPage() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [fetchCards]);
+  }, [fetchCards, refreshWallets]);
 
   const walletName = useMemo(() => {
-    if (walletId === DEFAULT_WALLET_ID) return t("mainWallet");
-    const found = customWallets.find((w) => w.id === walletId);
-    return found?.name || t("fallbackWallet");
-  }, [customWallets, walletId, t]);
+    return getWalletDisplayName(walletId, t("mainWallet"), t("fallbackWallet"));
+  }, [walletId, t]);
+
+  const walletColor = useMemo(() => {
+    return getWalletDisplayColor(
+      walletId,
+      DEFAULT_MAIN_WALLET_COLOR,
+      DEFAULT_CUSTOM_WALLET_COLOR
+    );
+  }, [walletId]);
 
   const visibleCards = useMemo(() => {
-    if (walletId === DEFAULT_WALLET_ID) return cards;
-    return [];
+    return getCardsForWallet(cards, walletId);
   }, [cards, walletId]);
 
   useEffect(() => {
@@ -374,6 +419,57 @@ export default function WalletDetailPage() {
     touchStartXRef.current = null;
     touchDeltaXRef.current = 0;
   }, [goNext, goPrev]);
+
+  function handleMoveActiveCard() {
+    if (!activeCard) {
+      setError(moveTexts.noActiveCard);
+      return;
+    }
+
+    const choices = customWallets
+      .map((wallet) => `${wallet.id} — ${wallet.name}`)
+      .join("\n");
+
+    const targetId = window.prompt(
+      `${moveTexts.movePrompt}\n\n${choices || "-"}`,
+      customWallets[0]?.id || ""
+    );
+
+    if (targetId === null) return;
+
+    const trimmed = targetId.trim();
+    const exists = customWallets.some((wallet) => wallet.id === trimmed);
+
+    if (!trimmed || !exists) {
+      setError(moveTexts.targetMissing);
+      return;
+    }
+
+    setMoving(true);
+    setError("");
+    setInfo("");
+
+    moveCardToWallet(activeCard.id, trimmed);
+    setInfo(moveTexts.movedInfo);
+    refreshWallets();
+    fetchCards().finally(() => setMoving(false));
+  }
+
+  function handleMoveBackToMain() {
+    if (!activeCard) {
+      setError(moveTexts.noActiveCard);
+      return;
+    }
+
+    setMoving(true);
+    setError("");
+    setInfo("");
+
+    moveCardToWallet(activeCard.id, DEFAULT_WALLET_ID);
+    setInfo(moveTexts.movedInfo);
+    refreshWallets();
+    fetchCards().finally(() => setMoving(false));
+  }
 
   return (
     <main
@@ -442,7 +538,7 @@ export default function WalletDetailPage() {
           style={{
             borderRadius: 28,
             padding: 22,
-            background: "linear-gradient(135deg, #3f3f46 0%, #18181b 100%)",
+            background: buildWalletBackground(walletColor, walletId === DEFAULT_WALLET_ID),
             color: "#fff",
             boxShadow: "0 18px 40px rgba(24,24,27,0.28)",
           }}
@@ -478,11 +574,9 @@ export default function WalletDetailPage() {
               opacity: 0.88,
             }}
           >
-            {walletId === DEFAULT_WALLET_ID
-              ? visibleCards.length === 1
-                ? t("realCards_one")
-                : t("realCards_other", { count: visibleCards.length })
-              : t("customWalletReady")}
+            {visibleCards.length === 1
+              ? t("realCards_one")
+              : t("realCards_other", { count: visibleCards.length })}
           </p>
         </section>
 
@@ -502,6 +596,20 @@ export default function WalletDetailPage() {
             <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
               {error}
             </div>
+          </section>
+        ) : null}
+
+        {info ? (
+          <section
+            style={{
+              border: "1px solid #bbf7d0",
+              background: "#f0fdf4",
+              color: "#166534",
+              padding: 14,
+              borderRadius: 18,
+            }}
+          >
+            <div style={{ fontWeight: 800 }}>{info}</div>
           </section>
         ) : null}
 
@@ -567,8 +675,6 @@ export default function WalletDetailPage() {
                 const isActive = offset === 0;
 
                 const absOffset = Math.abs(offset);
-                const direction = offset < 0 ? -1 : 1;
-
                 const translateX = offset * (isCompact ? 78 : 108);
                 const translateY = absOffset * (isCompact ? 22 : 18);
                 const scale = isActive
@@ -619,19 +725,13 @@ export default function WalletDetailPage() {
                           : "none",
                     }}
                   >
-                    <div
-                      style={{
-                        transform: `translateX(${direction * absOffset * 0}px)`,
+                    <CardCanvas
+                      template={{
+                        ...canvasTpl,
+                        title: titleToShow,
+                        scoreText: `${card.stamps}/${card.goal}`,
                       }}
-                    >
-                      <CardCanvas
-                        template={{
-                          ...canvasTpl,
-                          title: titleToShow,
-                          scoreText: `${card.stamps}/${card.goal}`,
-                        }}
-                      />
-                    </div>
+                    />
 
                     <div
                       style={{
@@ -755,29 +855,74 @@ export default function WalletDetailPage() {
             </section>
 
             {activeCard ? (
-              <section>
-                <button
-                  onClick={() =>
-                    router.push(
-                      `/${locale}/wallet/card/${encodeURIComponent(activeCard.id)}`
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    height: 54,
-                    borderRadius: 20,
-                    border: "none",
-                    background: "#18181b",
-                    color: "#fff",
-                    fontSize: 15,
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    boxShadow: "0 12px 28px rgba(24,24,27,0.22)",
-                  }}
-                >
-                  {t("openCard")}
-                </button>
-              </section>
+              <>
+                <section style={{ display: "grid", gap: 10 }}>
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/${locale}/wallet/card/${encodeURIComponent(activeCard.id)}`
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      height: 54,
+                      borderRadius: 20,
+                      border: "none",
+                      background: "#18181b",
+                      color: "#fff",
+                      fontSize: 15,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      boxShadow: "0 12px 28px rgba(24,24,27,0.22)",
+                    }}
+                  >
+                    {t("openCard")}
+                  </button>
+
+                  <button
+                    onClick={handleMoveActiveCard}
+                    disabled={moving || customWallets.length === 0}
+                    style={{
+                      width: "100%",
+                      height: 50,
+                      borderRadius: 18,
+                      border: "1px solid #d4d4d8",
+                      background: "#ffffff",
+                      color: "#18181b",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      cursor:
+                        moving || customWallets.length === 0
+                          ? "default"
+                          : "pointer",
+                      opacity: moving || customWallets.length === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    {moveTexts.moveButton}
+                  </button>
+
+                  {walletId !== DEFAULT_WALLET_ID ? (
+                    <button
+                      onClick={handleMoveBackToMain}
+                      disabled={moving}
+                      style={{
+                        width: "100%",
+                        height: 50,
+                        borderRadius: 18,
+                        border: "1px solid #d4d4d8",
+                        background: "#ffffff",
+                        color: "#18181b",
+                        fontSize: 14,
+                        fontWeight: 800,
+                        cursor: moving ? "default" : "pointer",
+                        opacity: moving ? 0.5 : 1,
+                      }}
+                    >
+                      {moveTexts.moveBackButton}
+                    </button>
+                  ) : null}
+                </section>
+              </>
             ) : null}
           </>
         )}

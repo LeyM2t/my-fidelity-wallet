@@ -9,6 +9,21 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
+import {
+  DEFAULT_CUSTOM_WALLET_COLOR,
+  DEFAULT_MAIN_WALLET_COLOR,
+  DEFAULT_WALLET_ID,
+  addLocalWallet,
+  clearAllWalletLocalData,
+  deleteLocalWallet,
+  getCardsForWallet,
+  getWalletColorChoices,
+  loadLocalWallets,
+  loadMainWalletConfig,
+  saveMainWalletConfig,
+  updateLocalWallet,
+  type LocalWallet,
+} from "@/lib/walletLocal";
 
 type FirestoreCard = {
   id: string;
@@ -23,46 +38,10 @@ type FirestoreCard = {
   updatedAt?: any;
 };
 
-type LocalWallet = {
-  id: string;
+type MainWalletState = {
   name: string;
-  createdAt: number;
+  color: string;
 };
-
-const LOCAL_WALLETS_KEY = "fw_custom_wallets_v1";
-const DEFAULT_WALLET_ID = "__all_cards__";
-
-function loadLocalWallets(): LocalWallet[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = window.localStorage.getItem(LOCAL_WALLETS_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item) => ({
-        id: String(item?.id || ""),
-        name: String(item?.name || "").trim(),
-        createdAt: Number(item?.createdAt || Date.now()),
-      }))
-      .filter((item) => item.id && item.name);
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalWallets(wallets: LocalWallet[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(LOCAL_WALLETS_KEY, JSON.stringify(wallets));
-}
-
-function clearLocalWallets() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(LOCAL_WALLETS_KEY);
-}
 
 function getDeleteTexts(locale: string) {
   if (locale === "fr") {
@@ -112,15 +91,75 @@ function getDeleteTexts(locale: string) {
   };
 }
 
+function getWalletEditorTexts(locale: string) {
+  if (locale === "fr") {
+    return {
+      createNamePrompt: "Nom du wallet",
+      createColorPrompt:
+        "Couleur du wallet (hex, exemple #1d4ed8). Laisse vide pour la couleur par défaut.",
+      editNamePrompt: "Nouveau nom du wallet",
+      editColorPrompt:
+        "Nouvelle couleur du wallet (hex, exemple #7c3aed). Laisse vide pour garder la couleur actuelle.",
+      mainEditButton: "Modifier",
+      customEditButton: "Modifier",
+      confirmDeleteWallet: "Supprimer ce wallet ?",
+      invalidName: "Nom de wallet invalide.",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      createNamePrompt: "Nombre del wallet",
+      createColorPrompt:
+        "Color del wallet (hex, ejemplo #1d4ed8). Déjalo vacío para usar el color por defecto.",
+      editNamePrompt: "Nuevo nombre del wallet",
+      editColorPrompt:
+        "Nuevo color del wallet (hex, ejemplo #7c3aed). Déjalo vacío para mantener el color actual.",
+      mainEditButton: "Editar",
+      customEditButton: "Editar",
+      confirmDeleteWallet: "¿Eliminar este wallet?",
+      invalidName: "Nombre de wallet no válido.",
+    };
+  }
+
+  return {
+    createNamePrompt: "Wallet name",
+    createColorPrompt:
+      "Wallet color (hex, example #1d4ed8). Leave empty for the default color.",
+    editNamePrompt: "New wallet name",
+    editColorPrompt:
+      "New wallet color (hex, example #7c3aed). Leave empty to keep the current color.",
+    mainEditButton: "Edit",
+    customEditButton: "Edit",
+    confirmDeleteWallet: "Delete this wallet?",
+    invalidName: "Invalid wallet name.",
+  };
+}
+
+function buildWalletBackground(color: string, isDefault: boolean) {
+  const base = color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
+
+  return isDefault
+    ? `linear-gradient(135deg, ${base} 0%, #18181b 100%)`
+    : `linear-gradient(135deg, ${base} 0%, #854d0e 100%)`;
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("wallet");
   const deleteTexts = useMemo(() => getDeleteTexts(locale), [locale]);
+  const walletEditorTexts = useMemo(() => getWalletEditorTexts(locale), [locale]);
+  const colorChoices = useMemo(() => getWalletColorChoices(), []);
 
   const [cards, setCards] = useState<FirestoreCard[]>([]);
   const [customWallets, setCustomWallets] = useState<LocalWallet[]>([]);
+  const [mainWallet, setMainWallet] = useState<MainWalletState>({
+    name: t("main"),
+    color: DEFAULT_MAIN_WALLET_COLOR,
+  });
+
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [creatingWallet, setCreatingWallet] = useState(false);
@@ -130,6 +169,16 @@ export default function WalletPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteInfo, setDeleteInfo] = useState("");
+
+  const refreshWalletLocalState = useCallback(() => {
+    setCustomWallets(loadLocalWallets());
+
+    const mainCfg = loadMainWalletConfig();
+    setMainWallet({
+      name: mainCfg.name || t("main"),
+      color: mainCfg.color || DEFAULT_MAIN_WALLET_COLOR,
+    });
+  }, [t]);
 
   function formatWalletSubtitle(cardCount: number) {
     if (cardCount <= 0) return t("cards.zero");
@@ -207,15 +256,22 @@ export default function WalletPage() {
   }, [locale, router]);
 
   useEffect(() => {
-    setCustomWallets(loadLocalWallets());
-  }, []);
+    refreshWalletLocalState();
+  }, [refreshWalletLocalState]);
 
   useEffect(() => {
     fetchCards();
 
-    const onFocus = () => fetchCards();
+    const onFocus = () => {
+      refreshWalletLocalState();
+      fetchCards();
+    };
+
     const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchCards();
+      if (document.visibilityState === "visible") {
+        refreshWalletLocalState();
+        fetchCards();
+      }
     };
 
     window.addEventListener("focus", onFocus);
@@ -225,7 +281,7 @@ export default function WalletPage() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [fetchCards]);
+  }, [fetchCards, refreshWalletLocalState]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -293,8 +349,12 @@ export default function WalletPage() {
         method: "POST",
       }).catch(() => null);
 
-      clearLocalWallets();
+      clearAllWalletLocalData();
       setCustomWallets([]);
+      setMainWallet({
+        name: t("main"),
+        color: DEFAULT_MAIN_WALLET_COLOR,
+      });
       setDeletePassword("");
       setDeleteInfo(deleteTexts.successRedirect);
 
@@ -308,64 +368,138 @@ export default function WalletPage() {
     }
   }
 
+  function promptForColor(
+    currentColor: string,
+    fallbackColor: string
+  ): string {
+    const suggested = currentColor || fallbackColor;
+    const entered = window.prompt(
+      `${walletEditorTexts.editColorPrompt}\n\n${colorChoices.join("  ")}`,
+      suggested
+    );
+
+    return (entered || "").trim() || suggested;
+  }
+
   function handleCreateWallet() {
     setCreatingWallet(true);
     setError("");
 
     try {
-      const name = window.prompt(t("prompt.createWallet"));
+      const name = window.prompt(walletEditorTexts.createNamePrompt, "");
       const trimmed = (name || "").trim();
 
-      if (!trimmed) return;
+      if (!trimmed) {
+        setCreatingWallet(false);
+        return;
+      }
 
-      const nextWallet: LocalWallet = {
-        id: `local_${Date.now()}`,
+      const colorInput = window.prompt(
+        `${walletEditorTexts.createColorPrompt}\n\n${colorChoices.join("  ")}`,
+        DEFAULT_CUSTOM_WALLET_COLOR
+      );
+
+      const nextWallet = addLocalWallet({
         name: trimmed,
-        createdAt: Date.now(),
-      };
+        color: (colorInput || "").trim() || DEFAULT_CUSTOM_WALLET_COLOR,
+      });
 
-      const next = [...customWallets, nextWallet];
-      setCustomWallets(next);
-      saveLocalWallets(next);
-
+      refreshWalletLocalState();
       router.push(`/${locale}/wallet/${encodeURIComponent(nextWallet.id)}`);
     } catch (e: any) {
-      setError(e?.message ?? "Could not create wallet");
+      setError(e?.message ?? walletEditorTexts.invalidName);
     } finally {
       setCreatingWallet(false);
     }
   }
 
+  function handleEditMainWallet() {
+    const nextName = window.prompt(
+      walletEditorTexts.editNamePrompt,
+      mainWallet.name
+    );
+    if (nextName === null) return;
+
+    const trimmedName = nextName.trim();
+    if (!trimmedName) {
+      setError(walletEditorTexts.invalidName);
+      return;
+    }
+
+    const nextColor = promptForColor(
+      mainWallet.color,
+      DEFAULT_MAIN_WALLET_COLOR
+    );
+
+    const saved = saveMainWalletConfig({
+      name: trimmedName,
+      color: nextColor,
+    });
+
+    setMainWallet(saved);
+  }
+
+  function handleEditCustomWallet(wallet: LocalWallet) {
+    const nextName = window.prompt(
+      walletEditorTexts.editNamePrompt,
+      wallet.name
+    );
+    if (nextName === null) return;
+
+    const trimmedName = nextName.trim();
+    if (!trimmedName) {
+      setError(walletEditorTexts.invalidName);
+      return;
+    }
+
+    const nextColor = promptForColor(
+      wallet.color,
+      DEFAULT_CUSTOM_WALLET_COLOR
+    );
+
+    const next = updateLocalWallet(wallet.id, {
+      name: trimmedName,
+      color: nextColor,
+    });
+
+    setCustomWallets(next);
+  }
+
   function handleDeleteCustomWallet(walletId: string) {
-    const confirmed = window.confirm(t("confirm.deleteWallet"));
+    const confirmed = window.confirm(walletEditorTexts.confirmDeleteWallet);
     if (!confirmed) return;
 
-    const next = customWallets.filter((w) => w.id !== walletId);
+    const next = deleteLocalWallet(walletId);
     setCustomWallets(next);
-    saveLocalWallets(next);
   }
 
   const walletEntries = useMemo(() => {
     const base = [
       {
         id: DEFAULT_WALLET_ID,
-        name: t("main"),
+        name: mainWallet.name || t("main"),
+        color: mainWallet.color || DEFAULT_MAIN_WALLET_COLOR,
         subtitle: formatWalletSubtitle(cards.length),
         cardCount: cards.length,
         isDefault: true,
       },
     ];
 
-    const customs = customWallets.map((wallet) => ({
-      id: wallet.id,
-      name: wallet.name,
-      subtitle: t("custom"),
-      cardCount: 0,
-      isDefault: false,
-    }));
+    const customs = customWallets.map((wallet) => {
+      const cardCount = getCardsForWallet(cards, wallet.id).length;
+
+      return {
+        id: wallet.id,
+        name: wallet.name,
+        color: wallet.color || DEFAULT_CUSTOM_WALLET_COLOR,
+        subtitle: formatWalletSubtitle(cardCount),
+        cardCount,
+        isDefault: false,
+      };
+    });
 
     return [...base, ...customs];
-  }, [cards.length, customWallets, t]);
+  }, [cards, customWallets, mainWallet, t]);
 
   const deletePanel = (
     <section
@@ -644,9 +778,7 @@ export default function WalletPage() {
                   borderRadius: 28,
                   padding: 22,
                   cursor: "pointer",
-                  background: wallet.isDefault
-                    ? "linear-gradient(135deg, #3f3f46 0%, #18181b 100%)"
-                    : "linear-gradient(135deg, #a16207 0%, #854d0e 100%)",
+                  background: buildWalletBackground(wallet.color, wallet.isDefault),
                   boxShadow: wallet.isDefault
                     ? "0 18px 40px rgba(24,24,27,0.28)"
                     : "0 14px 32px rgba(133,77,14,0.22)",
@@ -726,16 +858,27 @@ export default function WalletPage() {
                   </div>
                 </div>
 
-                {isCustom ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    right: isCustom ? 102 : 14,
+                    display: "flex",
+                    gap: 8,
+                  }}
+                >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteCustomWallet(wallet.id);
+
+                      if (wallet.isDefault) {
+                        handleEditMainWallet();
+                      } else {
+                        const found = customWallets.find((w) => w.id === wallet.id);
+                        if (found) handleEditCustomWallet(found);
+                      }
                     }}
                     style={{
-                      position: "absolute",
-                      top: 14,
-                      right: 14,
                       height: 34,
                       borderRadius: 12,
                       border: "1px solid rgba(255,255,255,0.24)",
@@ -747,9 +890,31 @@ export default function WalletPage() {
                       cursor: "pointer",
                     }}
                   >
-                    {t("buttons.delete")}
+                    {walletEditorTexts.mainEditButton}
                   </button>
-                ) : null}
+
+                  {isCustom ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCustomWallet(wallet.id);
+                      }}
+                      style={{
+                        height: 34,
+                        borderRadius: 12,
+                        border: "1px solid rgba(255,255,255,0.24)",
+                        background: "rgba(255,255,255,0.08)",
+                        color: "#fff",
+                        padding: "0 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t("buttons.delete")}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             );
           })}

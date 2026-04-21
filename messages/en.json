@@ -114,6 +114,8 @@
     "openCard": "Open card",
     "rewardReady": "Reward ready",
     "active": "Active",
+    "moveCard": "Move card",
+    "moveBackToMain": "Move back to main wallet",
     "empty": {
       "title": "No card in this wallet",
       "description": "This is normal for now. Custom wallets are already visible in the interface, but real card association will be added when we create the Firestore wallet model."
@@ -130,6 +132,8 @@
     "store": "Store",
     "rewardReady": "Reward ready",
     "active": "Active card",
+    "moveCard": "Move card",
+    "moveBackToMain": "Move back to main wallet",
     "delete": "Delete card",
     "deleting": "Deleting...",
     "confirmDelete": "Delete this card?",

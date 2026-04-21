@@ -114,6 +114,8 @@
     "openCard": "Abrir tarjeta",
     "rewardReady": "Recompensa lista",
     "active": "Activa",
+    "moveCard": "Mover la tarjeta",
+    "moveBackToMain": "Volver al wallet principal",
     "empty": {
       "title": "No hay tarjetas en este wallet",
       "description": "Esto es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asociación real de las tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
@@ -130,6 +132,8 @@
     "store": "Comercio",
     "rewardReady": "Recompensa lista",
     "active": "Tarjeta activa",
+    "moveCard": "Mover la tarjeta",
+    "moveBackToMain": "Volver al wallet principal",
     "delete": "Eliminar tarjeta",
     "deleting": "Eliminando...",
     "confirmDelete": "¿Eliminar esta tarjeta?",
