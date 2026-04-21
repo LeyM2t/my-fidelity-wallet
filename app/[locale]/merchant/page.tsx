@@ -12,8 +12,11 @@ import {
 } from "firebase/auth";
 
 type MerchantStore = {
-  storeId: string;
-  name: string;
+  storeId?: string;
+  name?: string;
+  cardTemplate?: {
+    title?: string;
+  };
 };
 
 function getDeleteTexts(locale: string) {
@@ -62,6 +65,22 @@ function getDeleteTexts(locale: string) {
     deleteAuthFailed: "Could not delete merchant account.",
     successRedirect: "Account deleted. Redirecting...",
   };
+}
+
+function getDisplayStoreName(
+  store: MerchantStore | null,
+  fallback: string
+): string {
+  const name = String(store?.name ?? "").trim();
+  if (name) return name;
+
+  const templateTitle = String(store?.cardTemplate?.title ?? "").trim();
+  if (templateTitle) return templateTitle;
+
+  const storeId = String(store?.storeId ?? "").trim();
+  if (storeId) return storeId;
+
+  return fallback;
 }
 
 export default function MerchantPage() {
@@ -286,8 +305,10 @@ export default function MerchantPage() {
   }, []);
 
   useEffect(() => {
-    if (store?.storeId) {
-      generateToken(store.storeId);
+    const storeId = String(store?.storeId ?? "").trim();
+
+    if (storeId) {
+      generateToken(storeId);
     } else {
       setToken("");
     }
@@ -298,6 +319,11 @@ export default function MerchantPage() {
     if (typeof window === "undefined") return "";
     return `${window.location.origin}/${locale}/add?token=${encodeURIComponent(token)}`;
   }, [locale, token]);
+
+  const displayStoreName = useMemo(
+    () => getDisplayStoreName(store, t("placeholder")),
+    [store, t]
+  );
 
   const deletePanel = (
     <section
@@ -704,6 +730,8 @@ export default function MerchantPage() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        fontFamily:
+          'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
       <div
@@ -714,10 +742,18 @@ export default function MerchantPage() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 20,
+          gap: 12,
         }}
       >
-        <strong style={{ color: "#111827", fontSize: 16 }}>
-          {store.name}
+        <strong
+          style={{
+            color: "#111827",
+            fontSize: 16,
+            lineHeight: 1.2,
+            wordBreak: "break-word",
+          }}
+        >
+          {displayStoreName}
         </strong>
 
         <button
@@ -731,6 +767,7 @@ export default function MerchantPage() {
             color: "#111827",
             fontWeight: 600,
             cursor: logoutLoading ? "not-allowed" : "pointer",
+            flexShrink: 0,
           }}
         >
           {logoutLoading ? `⏳ ${t("logoutLoading")}` : t("logout")}
@@ -748,9 +785,7 @@ export default function MerchantPage() {
           textAlign: "center",
         }}
       >
-        <h1>{store.name}</h1>
-
-        <p style={{ color: "#6b7280" }}>{t("qrDescription")}</p>
+        <p style={{ color: "#6b7280", marginTop: 0 }}>{t("qrDescription")}</p>
 
         {tokenError ? <div style={{ color: "red" }}>{tokenError}</div> : null}
 
@@ -759,7 +794,10 @@ export default function MerchantPage() {
         </div>
 
         <button
-          onClick={() => generateToken(store.storeId)}
+          onClick={() => {
+            const storeId = String(store.storeId ?? "").trim();
+            if (storeId) generateToken(storeId);
+          }}
           disabled={tokenLoading}
           style={{
             width: "100%",
@@ -799,7 +837,9 @@ export default function MerchantPage() {
           </a>
 
           <a
-            href={`/${locale}/merchant/template?storeId=${store.storeId}`}
+            href={`/${locale}/merchant/template?storeId=${encodeURIComponent(
+              String(store.storeId ?? "")
+            )}`}
             style={{
               display: "block",
               padding: 12,
