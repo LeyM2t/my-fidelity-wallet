@@ -25,6 +25,11 @@ import {
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
 
+const LOGO_SAFE_MARGIN = 12;
+const LOGO_MIN_SIZE = 36;
+const LOGO_MAX_WIDTH = 160;
+const LOGO_MAX_HEIGHT = 160;
+
 type BgType = "color" | "gradient" | "image";
 
 type Gradient = {
@@ -70,8 +75,14 @@ declare global {
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
-const playfair = Playfair_Display({ subsets: ["latin"], weight: ["400", "600", "800"] });
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "600", "800"] });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "800"],
+});
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "600", "800"],
+});
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "700", "900"] });
 const lora = Lora({ subsets: ["latin"], weight: ["400", "600", "700"] });
 const oswald = Oswald({ subsets: ["latin"], weight: ["400", "600", "700"] });
@@ -167,13 +178,39 @@ function normalizeBox(b: unknown, fallback: Box): Box {
   };
 }
 
-function clampBoxInsideCard(box: Box, cardWidth: number, cardHeight: number): Box {
-  const width = Math.min(box.width, cardWidth);
-  const height = Math.min(box.height, cardHeight);
+function clampBoxInsideArea(
+  box: Box,
+  cardWidth: number,
+  cardHeight: number,
+  options?: {
+    margin?: number;
+    minWidth?: number;
+    minHeight?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  }
+): Box {
+  const margin = options?.margin ?? 0;
+  const minWidth = options?.minWidth ?? 10;
+  const minHeight = options?.minHeight ?? 10;
+  const maxWidth = Math.max(
+    minWidth,
+    Math.min(options?.maxWidth ?? cardWidth, cardWidth - margin * 2)
+  );
+  const maxHeight = Math.max(
+    minHeight,
+    Math.min(options?.maxHeight ?? cardHeight, cardHeight - margin * 2)
+  );
+
+  const width = clampNumber(box.width, minWidth, maxWidth, minWidth);
+  const height = clampNumber(box.height, minHeight, maxHeight, minHeight);
+
+  const maxX = Math.max(margin, cardWidth - margin - width);
+  const maxY = Math.max(margin, cardHeight - margin - height);
 
   return {
-    x: Math.max(0, Math.min(box.x, cardWidth - width)),
-    y: Math.max(0, Math.min(box.y, cardHeight - height)),
+    x: clampNumber(box.x, margin, maxX, margin),
+    y: clampNumber(box.y, margin, maxY, margin),
     width,
     height,
   };
@@ -182,27 +219,32 @@ function clampBoxInsideCard(box: Box, cardWidth: number, cardHeight: number): Bo
 function sanitizeTemplateBoxes(template: CardTemplate): CardTemplate {
   return {
     ...template,
-    logoBox: clampBoxInsideCard(
+    logoBox: clampBoxInsideArea(
       normalizeBox(template.logoBox, DEFAULT.logoBox),
       CARD_WIDTH,
-      CARD_HEIGHT
+      CARD_HEIGHT,
+      {
+        margin: LOGO_SAFE_MARGIN,
+        minWidth: LOGO_MIN_SIZE,
+        minHeight: LOGO_MIN_SIZE,
+        maxWidth: LOGO_MAX_WIDTH,
+        maxHeight: LOGO_MAX_HEIGHT,
+      }
     ),
-    bgImageBox: clampBoxInsideCard(
+    bgImageBox: clampBoxInsideArea(
       normalizeBox(template.bgImageBox, DEFAULT.bgImageBox),
       CARD_WIDTH,
-      CARD_HEIGHT
+      CARD_HEIGHT,
+      {
+        margin: 0,
+        minWidth: 40,
+        minHeight: 40,
+        maxWidth: CARD_WIDTH,
+        maxHeight: CARD_HEIGHT,
+      }
     ),
   };
 }
-
-const HANDLE_STYLE: React.CSSProperties = {
-  width: 12,
-  height: 12,
-  borderRadius: 4,
-  background: "rgba(255,255,255,0.95)",
-  border: "1px solid rgba(0,0,0,0.35)",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
-};
 
 const panelStyle: React.CSSProperties = {
   border: "1px solid #e4e4e7",
@@ -280,7 +322,9 @@ export default function MerchantTemplatePage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"themes" | "colors" | "fonts" | "images">("themes");
+  const [activeTab, setActiveTab] = useState<
+    "themes" | "colors" | "fonts" | "images"
+  >("themes");
   const [colorSubTab, setColorSubTab] = useState<"color" | "gradient">("color");
 
   const [editLogo, setEditLogo] = useState(true);
@@ -294,6 +338,20 @@ export default function MerchantTemplatePage() {
 
   const hasBgImg = !!(tpl.bgImageUrl && tpl.bgImageUrl.trim());
   const showBgImg = tpl.bgImageEnabled && hasBgImg;
+
+  const handleStyle = useMemo<React.CSSProperties>(() => {
+    const size = isMobile ? 18 : 12;
+    const radius = isMobile ? 6 : 4;
+
+    return {
+      width: size,
+      height: size,
+      borderRadius: radius,
+      background: "rgba(255,255,255,0.98)",
+      border: "1px solid rgba(0,0,0,0.35)",
+      boxShadow: "0 2px 10px rgba(0,0,0,0.35)",
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     const checkViewport = () => {
@@ -361,11 +419,13 @@ export default function MerchantTemplatePage() {
   }, [tpl.textColor, fontFamily, baseBackground]);
 
   function resetLayout() {
-    setTpl((prev) => ({
-      ...prev,
-      logoBox: DEFAULT.logoBox,
-      bgImageBox: DEFAULT.bgImageBox,
-    }));
+    setTpl((prev) =>
+      sanitizeTemplateBoxes({
+        ...prev,
+        logoBox: DEFAULT.logoBox,
+        bgImageBox: DEFAULT.bgImageBox,
+      })
+    );
   }
 
   function openLogoUpload() {
@@ -480,13 +540,16 @@ export default function MerchantTemplatePage() {
       const compatBgImageEnabled =
         typeof raw?.bgImageEnabled === "boolean"
           ? raw.bgImageEnabled
-          : raw?.bgType === "image" || !!(raw?.bgImageUrl && String(raw.bgImageUrl).trim());
+          : raw?.bgType === "image" ||
+            !!(raw?.bgImageUrl && String(raw.bgImageUrl).trim());
 
       const merged: CardTemplate = {
         ...DEFAULT,
         ...raw,
         bgType:
-          raw.bgType === "color" || raw.bgType === "gradient" || raw.bgType === "image"
+          raw.bgType === "color" ||
+          raw.bgType === "gradient" ||
+          raw.bgType === "image"
             ? raw.bgType
             : "color",
         gradient: {
@@ -497,7 +560,12 @@ export default function MerchantTemplatePage() {
         logoBox: normalizeBox(raw?.logoBox, DEFAULT.logoBox),
         bgImageBox: normalizeBox(raw?.bgImageBox, DEFAULT.bgImageBox),
         bgImageEnabled: compatBgImageEnabled,
-        bgImageOpacity: clampNumber(raw?.bgImageOpacity, 0, 1, DEFAULT.bgImageOpacity),
+        bgImageOpacity: clampNumber(
+          raw?.bgImageOpacity,
+          0,
+          1,
+          DEFAULT.bgImageOpacity
+        ),
       };
 
       if (!FONT_OPTIONS.some((f) => f.key === merged.font)) merged.font = "inter";
@@ -552,12 +620,22 @@ export default function MerchantTemplatePage() {
         gradient: {
           from: clampHex(tpl.gradient.from) || DEFAULT.gradient.from,
           to: clampHex(tpl.gradient.to) || DEFAULT.gradient.to,
-          angle: clampNumber(tpl.gradient.angle, 0, 360, DEFAULT.gradient.angle),
+          angle: clampNumber(
+            tpl.gradient.angle,
+            0,
+            360,
+            DEFAULT.gradient.angle
+          ),
         },
         logoUrl: (tpl.logoUrl || "").slice(0, 500),
         bgImageUrl: (tpl.bgImageUrl || "").slice(0, 500),
         bgImageEnabled: !!tpl.bgImageEnabled,
-        bgImageOpacity: clampNumber(tpl.bgImageOpacity, 0, 1, DEFAULT.bgImageOpacity),
+        bgImageOpacity: clampNumber(
+          tpl.bgImageOpacity,
+          0,
+          1,
+          DEFAULT.bgImageOpacity
+        ),
         logoBox: normalizeBox(tpl.logoBox, DEFAULT.logoBox),
         bgImageBox: normalizeBox(tpl.bgImageBox, DEFAULT.bgImageBox),
       });
@@ -591,6 +669,7 @@ export default function MerchantTemplatePage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
   const controlsPanel = (
@@ -733,7 +812,13 @@ export default function MerchantTemplatePage() {
                   />
                   <span style={{ fontSize: 12, opacity: 0.9 }}>{p.name}</span>
                 </div>
-                <div style={{ fontFamily: getFontFamily(p.font), fontWeight: 900, fontSize: 14 }}>
+                <div
+                  style={{
+                    fontFamily: getFontFamily(p.font),
+                    fontWeight: 900,
+                    fontSize: 14,
+                  }}
+                >
                   {FONT_OPTIONS.find((f) => f.key === p.font)?.label.split(" ")[0] ||
                     t("fontFallback")}
                 </div>
@@ -982,7 +1067,11 @@ export default function MerchantTemplatePage() {
             {!!tpl.logoUrl && (
               <button
                 type="button"
-                onClick={() => setTpl((prev) => ({ ...prev, logoUrl: "" }))}
+                onClick={() =>
+                  setTpl((prev) =>
+                    sanitizeTemplateBoxes({ ...prev, logoUrl: "" })
+                  )
+                }
                 style={{
                   padding: "10px 12px",
                   borderRadius: 12,
@@ -1073,7 +1162,9 @@ export default function MerchantTemplatePage() {
             min={0}
             max={100}
             value={Math.round(tpl.bgImageOpacity * 100)}
-            onChange={(e) => setTpl({ ...tpl, bgImageOpacity: Number(e.target.value) / 100 })}
+            onChange={(e) =>
+              setTpl({ ...tpl, bgImageOpacity: Number(e.target.value) / 100 })
+            }
             style={{ width: "100%" }}
           />
 
@@ -1209,14 +1300,21 @@ export default function MerchantTemplatePage() {
               onDragStop={(_, d) => {
                 setTpl((p) => ({
                   ...p,
-                  bgImageBox: clampBoxInsideCard(
+                  bgImageBox: clampBoxInsideArea(
                     {
                       ...p.bgImageBox,
                       x: d.x / cardScale,
                       y: d.y / cardScale,
                     },
                     CARD_WIDTH,
-                    CARD_HEIGHT
+                    CARD_HEIGHT,
+                    {
+                      margin: 0,
+                      minWidth: 40,
+                      minHeight: 40,
+                      maxWidth: CARD_WIDTH,
+                      maxHeight: CARD_HEIGHT,
+                    }
                   ),
                 }));
               }}
@@ -1225,7 +1323,7 @@ export default function MerchantTemplatePage() {
                 const h = ref.offsetHeight / cardScale;
                 setTpl((p) => ({
                   ...p,
-                  bgImageBox: clampBoxInsideCard(
+                  bgImageBox: clampBoxInsideArea(
                     {
                       x: position.x / cardScale,
                       y: position.y / cardScale,
@@ -1233,15 +1331,26 @@ export default function MerchantTemplatePage() {
                       height: h,
                     },
                     CARD_WIDTH,
-                    CARD_HEIGHT
+                    CARD_HEIGHT,
+                    {
+                      margin: 0,
+                      minWidth: 40,
+                      minHeight: 40,
+                      maxWidth: CARD_WIDTH,
+                      maxHeight: CARD_HEIGHT,
+                    }
                   ),
                 }));
               }}
+              minWidth={40 * cardScale}
+              minHeight={40 * cardScale}
+              maxWidth={CARD_WIDTH * cardScale}
+              maxHeight={CARD_HEIGHT * cardScale}
               resizeHandleStyles={{
-                topLeft: HANDLE_STYLE,
-                topRight: HANDLE_STYLE,
-                bottomLeft: HANDLE_STYLE,
-                bottomRight: HANDLE_STYLE,
+                topLeft: handleStyle,
+                topRight: handleStyle,
+                bottomLeft: handleStyle,
+                bottomRight: handleStyle,
               }}
               style={{
                 zIndex: editBg ? 50 : 1,
@@ -1327,7 +1436,8 @@ export default function MerchantTemplatePage() {
                 }}
               >
                 {t("loyaltyProgram")} •{" "}
-                {FONT_OPTIONS.find((f) => f.key === tpl.font)?.label || t("fontDefault")}
+                {FONT_OPTIONS.find((f) => f.key === tpl.font)?.label ||
+                  t("fontDefault")}
               </div>
             </div>
 
@@ -1360,14 +1470,21 @@ export default function MerchantTemplatePage() {
             onDragStop={(_, d) => {
               setTpl((p) => ({
                 ...p,
-                logoBox: clampBoxInsideCard(
+                logoBox: clampBoxInsideArea(
                   {
                     ...p.logoBox,
                     x: d.x / cardScale,
                     y: d.y / cardScale,
                   },
                   CARD_WIDTH,
-                  CARD_HEIGHT
+                  CARD_HEIGHT,
+                  {
+                    margin: LOGO_SAFE_MARGIN,
+                    minWidth: LOGO_MIN_SIZE,
+                    minHeight: LOGO_MIN_SIZE,
+                    maxWidth: LOGO_MAX_WIDTH,
+                    maxHeight: LOGO_MAX_HEIGHT,
+                  }
                 ),
               }));
             }}
@@ -1376,7 +1493,7 @@ export default function MerchantTemplatePage() {
               const h = ref.offsetHeight / cardScale;
               setTpl((p) => ({
                 ...p,
-                logoBox: clampBoxInsideCard(
+                logoBox: clampBoxInsideArea(
                   {
                     x: position.x / cardScale,
                     y: position.y / cardScale,
@@ -1384,15 +1501,26 @@ export default function MerchantTemplatePage() {
                     height: h,
                   },
                   CARD_WIDTH,
-                  CARD_HEIGHT
+                  CARD_HEIGHT,
+                  {
+                    margin: LOGO_SAFE_MARGIN,
+                    minWidth: LOGO_MIN_SIZE,
+                    minHeight: LOGO_MIN_SIZE,
+                    maxWidth: LOGO_MAX_WIDTH,
+                    maxHeight: LOGO_MAX_HEIGHT,
+                  }
                 ),
               }));
             }}
+            minWidth={LOGO_MIN_SIZE * cardScale}
+            minHeight={LOGO_MIN_SIZE * cardScale}
+            maxWidth={LOGO_MAX_WIDTH * cardScale}
+            maxHeight={LOGO_MAX_HEIGHT * cardScale}
             resizeHandleStyles={{
-              topLeft: HANDLE_STYLE,
-              topRight: HANDLE_STYLE,
-              bottomLeft: HANDLE_STYLE,
-              bottomRight: HANDLE_STYLE,
+              topLeft: handleStyle,
+              topRight: handleStyle,
+              bottomLeft: handleStyle,
+              bottomRight: handleStyle,
             }}
             style={{
               zIndex: editLogo ? 60 : 30,
@@ -1600,7 +1728,9 @@ export default function MerchantTemplatePage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "minmax(360px, 440px) minmax(0, 1fr)",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : "minmax(360px, 440px) minmax(0, 1fr)",
             gap: 16,
             alignItems: "start",
           }}

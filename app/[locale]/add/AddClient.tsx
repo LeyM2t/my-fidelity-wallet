@@ -19,6 +19,18 @@ export default function AddClient() {
   const [message, setMessage] = useState("");
 
   const startedRef = useRef(false);
+  const timeoutRef = useRef<number | null>(null);
+  const unmountedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     async function run() {
@@ -64,6 +76,8 @@ export default function AddClient() {
           return;
         }
 
+        if (unmountedRef.current) return;
+
         setMessage(t("addingCard"));
 
         const res = await fetch("/api/cards/claim", {
@@ -84,6 +98,7 @@ export default function AddClient() {
         }
 
         if (!res.ok) {
+          if (unmountedRef.current) return;
           setStatus("error");
           setMessage(data?.error ?? `${t("errors.http")} ${res.status}`);
           return;
@@ -92,18 +107,22 @@ export default function AddClient() {
         const cardId = data?.cardId;
 
         if (!cardId || typeof cardId !== "string") {
+          if (unmountedRef.current) return;
           setStatus("error");
           setMessage(t("errors.missingCardId"));
           return;
         }
 
+        if (unmountedRef.current) return;
+
         setStatus("ok");
         setMessage(t("success"));
 
-        window.setTimeout(() => {
+        timeoutRef.current = window.setTimeout(() => {
           router.replace(`/${locale}/wallet/card/${encodeURIComponent(cardId)}`);
         }, 900);
       } catch (err: any) {
+        if (unmountedRef.current) return;
         setStatus("error");
         setMessage(String(err?.message ?? err ?? t("errors.network")));
       }

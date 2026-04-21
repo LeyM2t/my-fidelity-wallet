@@ -51,10 +51,22 @@ type CardTemplate = {
 const BASE_W = 420;
 const BASE_H = 220;
 
+const CARD_PADDING = 18;
+const LOGO_SAFE_MARGIN = 12;
+const LOGO_MIN_SIZE = 28;
+const LOGO_MAX_WIDTH = 160;
+const LOGO_MAX_HEIGHT = 160;
+
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
-const playfair = Playfair_Display({ subsets: ["latin"], weight: ["400", "600", "800"] });
-const montserrat = Montserrat({ subsets: ["latin"], weight: ["400", "600", "800"] });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "800"],
+});
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "600", "800"],
+});
 const roboto = Roboto({ subsets: ["latin"], weight: ["400", "700", "900"] });
 const lora = Lora({ subsets: ["latin"], weight: ["400", "600", "700"] });
 const oswald = Oswald({ subsets: ["latin"], weight: ["400", "600", "700"] });
@@ -93,17 +105,48 @@ function clampNumber(
   max: number,
   fallback: number
 ) {
-  const n = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  const n =
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
   return Math.max(min, Math.min(max, n));
 }
 
-function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<Box> {
+function normalizeBox(
+  box: Box | undefined,
+  fallback: Required<Box>
+): Required<Box> {
   return {
     x: clampNumber(box?.x, -999, 999, fallback.x),
     y: clampNumber(box?.y, -999, 999, fallback.y),
     width: clampNumber(box?.width, 10, 9999, fallback.width),
     height: clampNumber(box?.height, 10, 9999, fallback.height),
   };
+}
+
+function constrainBox(
+  box: Required<Box>,
+  bounds: { width: number; height: number; margin: number },
+  options?: {
+    minWidth?: number;
+    minHeight?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  }
+): Required<Box> {
+  const minWidth = options?.minWidth ?? 10;
+  const minHeight = options?.minHeight ?? 10;
+  const maxWidth = options?.maxWidth ?? bounds.width - bounds.margin * 2;
+  const maxHeight = options?.maxHeight ?? bounds.height - bounds.margin * 2;
+
+  let width = clampNumber(box.width, minWidth, maxWidth, minWidth);
+  let height = clampNumber(box.height, minHeight, maxHeight, minHeight);
+
+  const maxX = bounds.width - bounds.margin - width;
+  const maxY = bounds.height - bounds.margin - height;
+
+  const x = clampNumber(box.x, bounds.margin, maxX, bounds.margin);
+  const y = clampNumber(box.y, bounds.margin, maxY, bounds.margin);
+
+  return { x, y, width, height };
 }
 
 function safeImageSrc(url?: string) {
@@ -122,21 +165,52 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
   const [titlePx, setTitlePx] = useState<number>(38);
 
   const textColor = template.textColor || "#ffffff";
-  const fontFamily = useMemo(() => getFontFamily(template.font), [template.font]);
+  const fontFamily = useMemo(
+    () => getFontFamily(template.font),
+    [template.font]
+  );
 
-  const logoBox = normalizeBox(template.logoBox, {
+  const rawLogoBox = normalizeBox(template.logoBox, {
     x: 18,
     y: 18,
     width: 56,
     height: 56,
   });
 
-  const bgImageBox = normalizeBox(template.bgImageBox, {
+  const logoBox = useMemo(
+    () =>
+      constrainBox(
+        rawLogoBox,
+        {
+          width: BASE_W,
+          height: BASE_H,
+          margin: LOGO_SAFE_MARGIN,
+        },
+        {
+          minWidth: LOGO_MIN_SIZE,
+          minHeight: LOGO_MIN_SIZE,
+          maxWidth: LOGO_MAX_WIDTH,
+          maxHeight: LOGO_MAX_HEIGHT,
+        }
+      ),
+    [rawLogoBox]
+  );
+
+  const rawBgImageBox = normalizeBox(template.bgImageBox, {
     x: 0,
     y: 0,
     width: BASE_W,
     height: BASE_H,
   });
+
+  const bgImageBox = useMemo(() => {
+    const width = clampNumber(rawBgImageBox.width, 40, BASE_W * 3, BASE_W);
+    const height = clampNumber(rawBgImageBox.height, 40, BASE_H * 3, BASE_H);
+    const x = clampNumber(rawBgImageBox.x, -BASE_W * 2, BASE_W * 2, 0);
+    const y = clampNumber(rawBgImageBox.y, -BASE_H * 2, BASE_H * 2, 0);
+
+    return { x, y, width, height };
+  }, [rawBgImageBox]);
 
   const background = useMemo(() => {
     if (template.bgGradient) return template.bgGradient;
@@ -147,7 +221,9 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
       template.gradient?.to
     ) {
       const angle =
-        typeof template.gradient.angle === "number" ? template.gradient.angle : 45;
+        typeof template.gradient.angle === "number"
+          ? template.gradient.angle
+          : 45;
       return `linear-gradient(${angle}deg, ${template.gradient.from}, ${template.gradient.to})`;
     }
 
@@ -256,14 +332,14 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             style={{
               position: "absolute",
               inset: 0,
-              padding: `calc(18px * var(--s))`,
+              padding: `calc(${CARD_PADDING}px * var(--s))`,
             }}
           >
             <div
               style={{
                 position: "absolute",
-                top: `calc(18px * var(--s))`,
-                right: `calc(18px * var(--s))`,
+                top: `calc(${CARD_PADDING}px * var(--s))`,
+                right: `calc(${CARD_PADDING}px * var(--s))`,
                 fontSize: `calc(18px * var(--s))`,
                 fontWeight: 900,
                 opacity: 0.95,
@@ -276,8 +352,8 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             <div
               style={{
                 position: "absolute",
-                top: `calc(18px * var(--s))`,
-                left: `calc(18px * var(--s))`,
+                top: `calc(${CARD_PADDING}px * var(--s))`,
+                left: `calc(${CARD_PADDING}px * var(--s))`,
                 right: `calc(90px * var(--s))`,
               }}
             >

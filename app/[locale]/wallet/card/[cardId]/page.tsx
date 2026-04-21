@@ -258,6 +258,10 @@ export default function CardPage() {
     }
   }
 
+  function handleBackToWallet() {
+    router.replace(`/${locale}/wallet`);
+  }
+
   const qrPayload = useMemo(() => {
     if (!card) return "";
     return JSON.stringify({
@@ -346,7 +350,7 @@ export default function CardPage() {
         }}
       >
         <button
-          onClick={() => router.back()}
+          onClick={handleBackToWallet}
           style={{
             justifySelf: "start",
             padding: "8px 12px",
