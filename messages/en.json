@@ -7,7 +7,7 @@
   "clientLogin": {
     "title": {
       "login": "Client login",
-      "signup": "Create client account"
+      "signup": "Create a client account"
     },
     "placeholders": {
       "email": "Email",
@@ -15,7 +15,7 @@
     },
     "buttons": {
       "loading": "Loading...",
-      "login": "Log in",
+      "login": "Sign in",
       "signup": "Create my account",
       "switchToSignup": "Create an account",
       "switchToLogin": "I already have an account",
@@ -25,11 +25,11 @@
       "button": "Forgot password?",
       "emailRequired": "Enter your email to reset your password.",
       "resetSent": "Password reset email sent. Check your inbox.",
-      "resetFailed": "Could not send password reset email."
+      "resetFailed": "Could not send the password reset email."
     },
     "errors": {
       "requiredFields": "Email and password are required",
-      "sessionCreationFailed": "Failed to create session",
+      "sessionCreationFailed": "Could not create the session",
       "generic": "An error occurred"
     }
   },
@@ -41,7 +41,8 @@
     "main": "My main wallet",
     "custom": "Custom wallet",
     "create": "+ Create a wallet",
-    "scan": "Scan a QR code",
+    "creating": "Creating...",
+    "scan": "Scan a QR",
     "refresh": "Refresh",
     "refreshing": "Refreshing...",
     "logout": "Log out",
@@ -66,34 +67,34 @@
   "scan": {
     "checkingSession": "Checking client session...",
     "back": "Back",
-    "title": "Scan the client QR code",
+    "title": "Scan the client's QR code",
     "description": "Scan the client QR code to add stamps or validate a reward.",
     "errorTitle": "Error",
     "startingCamera": "Starting camera...",
     "cameraUnavailable": "Camera unavailable",
     "earn": "+1 stamp",
     "reward": "Reward",
-    "quantity": "Stamp quantity",
+    "quantity": "Number of stamps",
     "scanAnother": "Scan another client",
     "addStamps": "Add stamps",
-    "detectedCard": "Detected card",
-    "scannerActive": "Scanner active. Once a client is detected, the card stays selected until you choose to scan another client.",
+    "detectedCard": "Card detected",
+    "scannerActive": "Scanner active. Once the client is detected, the card stays selected until you choose to scan another client.",
     "scannerPaused": "Scanner paused.",
     "status": {
       "pending": "Waiting for scan...",
-      "invalid": "Unrecognized QR",
+      "invalid": "Unrecognized QR code",
       "detected": "Client detected",
       "cameraError": "Camera error",
       "adding": "Adding stamp...",
       "added": "Stamp added",
-      "addError": "Failed to add stamp",
+      "addError": "Could not add the stamp",
       "validating": "Validating reward...",
       "validated": "Reward validated",
       "rewardError": "Reward error"
     },
     "errors": {
-      "invalidQR": "Unrecognized QR. Scan the QR shown by the merchant.",
-      "sessionCheckFailed": "Failed to verify client session.",
+      "invalidQR": "Unrecognized QR code. Scan the QR code shown by the merchant.",
+      "sessionCheckFailed": "Could not verify the client session.",
       "sessionError": "Session verification error.",
       "cameraUnavailable": "The camera cannot be used. Use HTTPS or allow camera access.",
       "cameraError": "Camera / permission error."
@@ -108,14 +109,14 @@
     "headerLabel": "Wallet",
     "realCards_one": "1 real loyalty card",
     "realCards_other": "{count} real loyalty cards",
-    "customWalletReady": "Custom wallet ready. Real card assignment will come later.",
+    "customWalletReady": "Custom wallet ready. Real card association will come next.",
     "errorTitle": "Error",
     "openCard": "Open card",
     "rewardReady": "Reward ready",
     "active": "Active",
     "empty": {
-      "title": "No cards in this wallet",
-      "description": "That is normal for now. Custom wallets are already visible in the interface, but real card assignment will be added when we create the wallet Firestore model."
+      "title": "No card in this wallet",
+      "description": "This is normal for now. Custom wallets are already visible in the interface, but real card association will be added when we create the Firestore wallet model."
     },
     "errors": {
       "unknown": "Unknown error"
@@ -124,7 +125,7 @@
   "card": {
     "back": "Back",
     "loading": "Loading...",
-    "showQR": "Show this QR to the merchant",
+    "showQR": "Show this QR code to the merchant",
     "progress": "Progress",
     "store": "Store",
     "rewardReady": "Reward ready",
@@ -133,8 +134,8 @@
     "deleting": "Deleting...",
     "confirmDelete": "Delete this card?",
     "errors": {
-      "loadCards": "Failed to load cards",
-      "loadCard": "Failed to load card",
+      "loadCards": "Error loading cards",
+      "loadCard": "Error loading the card",
       "notFound": "Card not found",
       "invalidId": "Invalid card ID",
       "deleteFailed": "Delete failed"
@@ -148,19 +149,19 @@
     "logoutLoading": "Logging out...",
     "logout": "Log out",
     "createTitle": "Create my store",
-    "createDescription": "Start by creating your store to get a QR code your clients can scan.",
+    "createDescription": "Start by creating your store to get a QR code that clients can scan.",
     "placeholder": "Store name",
     "creating": "Creating...",
     "createButton": "Create my store",
-    "qrDescription": "Show this QR to the client so they can add your card to their wallet.",
+    "qrDescription": "Show this QR code to the client so they can add your card to their wallet.",
     "regenerating": "Regenerating...",
     "regenerate": "Regenerate QR",
     "qrLoading": "Loading QR...",
     "qrUnavailable": "QR unavailable",
-    "openScan": "Open merchant scanner",
-    "customize": "Customize card",
+    "openScan": "Open merchant scan",
+    "customize": "Customize the card",
     "errors": {
-      "loadStore": "Store load error",
+      "loadStore": "Store loading error",
       "network": "Network error",
       "nameRequired": "Enter a store name",
       "createStore": "Creation error",
@@ -174,8 +175,8 @@
       "signup": "Create a merchant account"
     },
     "subtitle": {
-      "login": "Log in to access your merchant area",
-      "signup": "Create your account to manage your business"
+      "login": "Sign in to access your merchant area",
+      "signup": "Create your account to manage your store"
     },
     "placeholders": {
       "email": "Email",
@@ -183,7 +184,7 @@
     },
     "buttons": {
       "loading": "Loading...",
-      "login": "Log in",
+      "login": "Sign in",
       "signup": "Create my account",
       "switchToSignup": "Create a merchant account",
       "switchToLogin": "I already have a merchant account",
@@ -193,7 +194,7 @@
       "button": "Forgot password?",
       "emailRequired": "Enter your email to reset your password.",
       "resetSent": "Password reset email sent. Check your inbox.",
-      "resetFailed": "Could not send password reset email."
+      "resetFailed": "Could not send the password reset email."
     },
     "errors": {
       "requiredFields": "Email and password are required",
@@ -202,22 +203,22 @@
     }
   },
   "merchantQr": {
-    "title": "Merchant QR code",
+    "title": "Merchant QR",
     "merchantId": "Merchant ID (unique)",
     "merchantIdHelp": "Tip: letters/numbers/underscore. Example: GETYOURCREPE",
-    "merchantName": "Name shown on the card",
+    "merchantName": "Name displayed on the card",
     "goal": "Goal (stamps)",
     "defaultName": "Store",
     "copy": "Copy link",
     "open": "Open (test)",
-    "loadingQR": "Loading QR…",
+    "loadingQR": "Loading QR...",
     "copySuccess": "Link copied ✅",
     "copyFail": "Could not copy automatically. Manual copy: ",
     "note": "Note: locally, the QR will contain your IP/port. In production, it will be your domain."
   },
   "merchantTemplate": {
     "pageTitle": "Card builder",
-    "pageDescription": "Customize the style, colors, logo and layout.",
+    "pageDescription": "Customize the style, colors, logo, and layout.",
     "merchantTemplate": "Merchant template",
     "back": "Back",
     "save": "Save",
@@ -227,10 +228,10 @@
     "saved": "Template saved ✅",
     "error": "Error",
     "confirmPassword": "Confirm password",
-    "confirmPasswordPlaceholder": "Re-enter the merchant account password",
+    "confirmPasswordPlaceholder": "Retype the merchant account password",
     "resetLayout": "Reset layout",
     "titleLabel": "Card title",
-    "presets": "Presets",
+    "presets": "Preset styles",
     "background": "Background",
     "textColor": "Text color",
     "palette": "Palette",
@@ -241,15 +242,21 @@
     "angle": "Angle",
     "logoUrl": "Logo URL",
     "logoUrlPlaceholder": "https://.../logo.png",
+    "backgroundImageUrl": "Background image URL",
+    "backgroundImagePlaceholder": "https://.../background.jpg",
+    "showBackgroundImage": "Show background image",
+    "imageOpacity": "Image opacity",
+    "imagesHelp": "You can add a logo and a background image. Then move and resize them directly in the preview.",
     "preview": "Preview",
     "previewHelp": "The preview shows the final card rendering. You can move and resize the logo directly on it.",
     "previewScore": "Score",
     "previewTitleExample": "Loyalty card",
     "loyaltyCard": "Loyalty card",
     "loyaltyProgram": "Loyalty program",
-    "ownerPreview": "Customer preview",
+    "ownerPreview": "Client preview",
     "live": "Live",
     "editLogo": "Edit logo",
+    "editBackground": "Edit background",
     "fontDefault": "Default font",
     "fontFallback": "Font",
     "tabs": {
@@ -266,19 +273,19 @@
       "browseLogo": "Browse logo",
       "removeLogo": "Remove logo",
       "uploadingLogo": "Uploading logo...",
-      "loadingUploader": "Loading uploader..."
+      "loadingUploader": "Loading tool..."
     },
     "cloudinaryHelp": {
-      "logoOnly": "Use the button above to upload a public logo with Cloudinary, or paste a logo URL manually."
+      "logoOnly": "Use the button above to upload a public logo with Cloudinary, or paste the logo URL manually."
     },
     "cloudinarySuccess": {
       "logoUploaded": "Logo uploaded successfully."
     },
     "cloudinaryErrors": {
-      "loadWidgetFailed": "Failed to load Cloudinary widget.",
-      "missingStoreId": "Missing storeId in URL.",
+      "loadWidgetFailed": "Could not load the Cloudinary widget.",
+      "missingStoreId": "Missing storeId in the URL.",
       "missingEnv": "Missing Cloudinary environment variables.",
-      "widgetNotReady": "Cloudinary widget not ready yet.",
+      "widgetNotReady": "The Cloudinary widget is not ready yet.",
       "uploadFailed": "Logo upload failed.",
       "missingImageUrl": "Cloudinary did not return an image URL."
     },
@@ -286,8 +293,8 @@
       "logo": "logo"
     },
     "errors": {
-      "load": "Unable to load template.",
-      "save": "Unable to save template.",
+      "load": "Could not load the template.",
+      "save": "Could not save the template.",
       "network": "Network error.",
       "passwordRequired": "Enter the password to confirm the change.",
       "notAuthenticated": "Merchant account not signed in.",
@@ -301,10 +308,10 @@
     "status": "Status",
     "checkingSession": "Checking session...",
     "addingCard": "Adding card...",
-    "success": "Card ready ✅ Opening…",
+    "success": "Card ready ✅ Opening...",
     "errors": {
       "missingToken": "Missing token (example: /add?token=XXXX)",
-      "sessionCheck": "Failed to verify client session",
+      "sessionCheck": "Client session check failed",
       "missingCardId": "Missing cardId in server response",
       "http": "HTTP error",
       "network": "Network error"

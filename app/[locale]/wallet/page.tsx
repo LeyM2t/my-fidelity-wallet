@@ -601,7 +601,7 @@ export default function WalletPage() {
               cursor: creatingWallet ? "default" : "pointer",
             }}
           >
-            {t("create")}
+            {creatingWallet ? t("creating", { defaultValue: "..." }) : t("create")}
           </button>
         </section>
 

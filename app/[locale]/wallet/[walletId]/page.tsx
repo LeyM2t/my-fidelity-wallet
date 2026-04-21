@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type TouchEvent,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 import CardCanvas from "@/components/CardCanvas";
 import { useTranslations } from "next-intl";
@@ -48,6 +55,8 @@ type LocalWallet = {
 
 const LOCAL_WALLETS_KEY = "fw_custom_wallets_v1";
 const DEFAULT_WALLET_ID = "__all_cards__";
+const MAX_VISIBLE_DISTANCE = 3;
+const SWIPE_THRESHOLD = 42;
 
 function safeCssUrl(url: string): string {
   const u = (url || "").trim();
@@ -57,7 +66,10 @@ function safeCssUrl(url: string): string {
   return "";
 }
 
-function normalizeBox(box: Box | undefined, fallback: Required<Box>): Required<Box> {
+function normalizeBox(
+  box: Box | undefined,
+  fallback: Required<Box>
+): Required<Box> {
   const x =
     typeof box?.x === "number" && Number.isFinite(box.x) ? box.x : fallback.x;
   const y =
@@ -167,6 +179,10 @@ export default function WalletDetailPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isCompact, setIsCompact] = useState(false);
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchDeltaXRef = useRef(0);
 
   const fetchTemplatesForStores = useCallback(async (storeIds: string[]) => {
     const uniq = Array.from(new Set(storeIds.filter(Boolean)));
@@ -175,10 +191,9 @@ export default function WalletDetailPage() {
     const entries = await Promise.all(
       uniq.map(async (storeId) => {
         try {
-          const res = await fetch(
-            `/api/stores/${encodeURIComponent(storeId)}`,
-            { cache: "no-store" }
-          );
+          const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}`, {
+            cache: "no-store",
+          });
           if (!res.ok) return [storeId, null] as const;
           const data = await res.json();
           const tpl =
@@ -214,7 +229,9 @@ export default function WalletDetailPage() {
 
       if (res.status === 401) {
         router.replace(
-          `/${locale}/client/login?next=${encodeURIComponent(`/${locale}/wallet/${walletId}`)}`
+          `/${locale}/client/login?next=${encodeURIComponent(
+            `/${locale}/wallet/${walletId}`
+          )}`
         );
         return;
       }
@@ -270,6 +287,17 @@ export default function WalletDetailPage() {
   }, []);
 
   useEffect(() => {
+    const updateViewportMode = () => {
+      if (typeof window === "undefined") return;
+      setIsCompact(window.innerWidth < 700);
+    };
+
+    updateViewportMode();
+    window.addEventListener("resize", updateViewportMode);
+    return () => window.removeEventListener("resize", updateViewportMode);
+  }, []);
+
+  useEffect(() => {
     fetchCards();
 
     const onFocus = () => fetchCards();
@@ -301,10 +329,51 @@ export default function WalletDetailPage() {
     setActiveIndex(0);
   }, [walletId, visibleCards.length]);
 
+  useEffect(() => {
+    setActiveIndex((prev) =>
+      Math.max(0, Math.min(prev, Math.max(visibleCards.length - 1, 0)))
+    );
+  }, [visibleCards.length]);
+
   const activeCard =
     visibleCards.length > 0
       ? visibleCards[Math.max(0, Math.min(activeIndex, visibleCards.length - 1))]
       : null;
+
+  const goPrev = useCallback(() => {
+    setActiveIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const goNext = useCallback(() => {
+    setActiveIndex((prev) => Math.min(prev + 1, visibleCards.length - 1));
+  }, [visibleCards.length]);
+
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+    touchDeltaXRef.current = 0;
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const startX = touchStartXRef.current;
+    if (startX == null) return;
+    const currentX = e.touches[0]?.clientX ?? startX;
+    touchDeltaXRef.current = currentX - startX;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const deltaX = touchDeltaXRef.current;
+
+    if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+      if (deltaX < 0) {
+        goNext();
+      } else {
+        goPrev();
+      }
+    }
+
+    touchStartXRef.current = null;
+    touchDeltaXRef.current = 0;
+  }, [goNext, goPrev]);
 
   return (
     <main
@@ -319,7 +388,7 @@ export default function WalletDetailPage() {
     >
       <div
         style={{
-          maxWidth: 720,
+          maxWidth: 900,
           margin: "0 auto",
           display: "grid",
           gap: 18,
@@ -470,21 +539,52 @@ export default function WalletDetailPage() {
         ) : (
           <>
             <section
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               style={{
                 position: "relative",
-                height: 430,
+                height: isCompact ? 360 : 430,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
+                touchAction: "pan-y",
+                userSelect: "none",
               }}
             >
               {visibleCards.map((card, index) => {
                 const offset = index - activeIndex;
+
+                if (Math.abs(offset) > MAX_VISIBLE_DISTANCE) {
+                  return null;
+                }
+
                 const tpl = templatesByStore[card.storeId];
                 const css = templateToCss(tpl);
                 const canvasTpl = templateToCardCanvasTemplate(css);
                 const titleToShow = canvasTpl.title || card.storeId;
                 const isActive = offset === 0;
+
+                const absOffset = Math.abs(offset);
+                const direction = offset < 0 ? -1 : 1;
+
+                const translateX = offset * (isCompact ? 78 : 108);
+                const translateY = absOffset * (isCompact ? 22 : 18);
+                const scale = isActive
+                  ? 1
+                  : absOffset === 1
+                    ? 0.92
+                    : absOffset === 2
+                      ? 0.86
+                      : 0.8;
+                const opacity = isActive
+                  ? 1
+                  : absOffset === 1
+                    ? 0.72
+                    : absOffset === 2
+                      ? 0.44
+                      : 0.22;
 
                 return (
                   <div
@@ -500,11 +600,11 @@ export default function WalletDetailPage() {
                     }}
                     style={{
                       position: "absolute",
-                      width: "min(100%, 320px)",
+                      width: isCompact ? "min(88vw, 320px)" : "min(100%, 360px)",
                       cursor: "pointer",
-                      transform: `translateY(${offset * 126}px) scale(${isActive ? 1 : 0.92}) rotate(${offset * 4}deg)`,
-                      opacity: isActive ? 1 : 0.58,
-                      zIndex: 100 - Math.abs(offset),
+                      transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`,
+                      opacity,
+                      zIndex: 100 - absOffset,
                       transition:
                         "transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease",
                       boxShadow: isActive
@@ -512,15 +612,26 @@ export default function WalletDetailPage() {
                         : "0 10px 22px rgba(0,0,0,0.10)",
                       borderRadius: 24,
                       overflow: "hidden",
+                      pointerEvents: opacity < 0.08 ? "none" : "auto",
+                      filter:
+                        !isActive && absOffset >= 2
+                          ? "saturate(0.9)"
+                          : "none",
                     }}
                   >
-                    <CardCanvas
-                      template={{
-                        ...canvasTpl,
-                        title: titleToShow,
-                        scoreText: `${card.stamps}/${card.goal}`,
+                    <div
+                      style={{
+                        transform: `translateX(${direction * absOffset * 0}px)`,
                       }}
-                    />
+                    >
+                      <CardCanvas
+                        template={{
+                          ...canvasTpl,
+                          title: titleToShow,
+                          scoreText: `${card.stamps}/${card.goal}`,
+                        }}
+                      />
+                    </div>
 
                     <div
                       style={{
@@ -582,12 +693,11 @@ export default function WalletDetailPage() {
                 justifyContent: "center",
                 gap: 12,
                 flexWrap: "wrap",
+                alignItems: "center",
               }}
             >
               <button
-                onClick={() =>
-                  setActiveIndex((prev) => Math.max(prev - 1, 0))
-                }
+                onClick={goPrev}
                 disabled={activeIndex <= 0}
                 style={{
                   height: 46,
@@ -603,15 +713,25 @@ export default function WalletDetailPage() {
                   opacity: activeIndex <= 0 ? 0.5 : 1,
                 }}
               >
-                ↑
+                ←
               </button>
 
+              <div
+                style={{
+                  minWidth: 90,
+                  textAlign: "center",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#52525b",
+                }}
+              >
+                {visibleCards.length > 0
+                  ? `${activeIndex + 1} / ${visibleCards.length}`
+                  : "0 / 0"}
+              </div>
+
               <button
-                onClick={() =>
-                  setActiveIndex((prev) =>
-                    Math.min(prev + 1, visibleCards.length - 1)
-                  )
-                }
+                onClick={goNext}
                 disabled={activeIndex >= visibleCards.length - 1}
                 style={{
                   height: 46,
@@ -630,7 +750,7 @@ export default function WalletDetailPage() {
                   opacity: activeIndex >= visibleCards.length - 1 ? 0.5 : 1,
                 }}
               >
-                ↓
+                →
               </button>
             </section>
 

@@ -7,7 +7,7 @@
   "clientLogin": {
     "title": {
       "login": "Inicio de sesión cliente",
-      "signup": "Crear cuenta de cliente"
+      "signup": "Crear una cuenta de cliente"
     },
     "placeholders": {
       "email": "Correo electrónico",
@@ -28,7 +28,7 @@
       "resetFailed": "No se pudo enviar el correo de restablecimiento."
     },
     "errors": {
-      "requiredFields": "El correo y la contraseña son obligatorios",
+      "requiredFields": "Correo y contraseña obligatorios",
       "sessionCreationFailed": "No se pudo crear la sesión",
       "generic": "Ocurrió un error"
     }
@@ -39,17 +39,18 @@
     "title": "Mis wallets",
     "subtitle": "Crea y organiza tus tarjetas de fidelidad",
     "main": "Mi wallet principal",
-    "custom": "Wallet personalizado",
-    "create": "+ Crear wallet",
-    "scan": "Escanear QR del comercio",
+    "custom": "Wallet personalizada",
+    "create": "+ Crear un wallet",
+    "creating": "Creación...",
+    "scan": "Escanear un QR",
     "refresh": "Actualizar",
     "refreshing": "Actualizando...",
     "logout": "Cerrar sesión",
     "logoutLoading": "Cerrando sesión...",
-    "noWallet": "Aún no hay wallets",
+    "noWallet": "Ningún wallet",
     "noWalletDesc": "Crea tu primer wallet para empezar",
     "cards": {
-      "zero": "Sin tarjetas",
+      "zero": "Ninguna tarjeta",
       "one": "1 tarjeta de fidelidad",
       "many": "{count} tarjetas de fidelidad"
     },
@@ -66,8 +67,8 @@
   "scan": {
     "checkingSession": "Verificando la sesión del cliente...",
     "back": "Volver",
-    "title": "Escanear QR del cliente",
-    "description": "Escanea el código QR del cliente para añadir puntos o validar una recompensa.",
+    "title": "Escanear el QR del cliente",
+    "description": "Escanea el QR del cliente para añadir sellos o validar una recompensa.",
     "errorTitle": "Error",
     "startingCamera": "Iniciando cámara...",
     "cameraUnavailable": "Cámara no disponible",
@@ -80,23 +81,23 @@
     "scannerActive": "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente.",
     "scannerPaused": "Escáner en pausa.",
     "status": {
-      "pending": "Escaneo pendiente...",
+      "pending": "Esperando el escaneo...",
       "invalid": "QR no reconocido",
       "detected": "Cliente detectado",
       "cameraError": "Error de cámara",
       "adding": "Añadiendo sello...",
       "added": "Sello añadido",
-      "addError": "Error al añadir",
+      "addError": "No se pudo añadir el sello",
       "validating": "Validando recompensa...",
       "validated": "Recompensa validada",
       "rewardError": "Error de recompensa"
     },
     "errors": {
       "invalidQR": "QR no reconocido. Escanea el QR mostrado por el comerciante.",
-      "sessionCheckFailed": "Error al verificar la sesión del cliente.",
-      "sessionError": "Error de verificación de sesión.",
-      "cameraUnavailable": "No se puede usar la cámara. Usa HTTPS o permite el acceso a la cámara.",
-      "cameraError": "Error de cámara / permisos."
+      "sessionCheckFailed": "No se pudo verificar la sesión del cliente.",
+      "sessionError": "Error al verificar la sesión.",
+      "cameraUnavailable": "La cámara no puede usarse. Usa HTTPS o permite el acceso a la cámara.",
+      "cameraError": "Error de cámara / permiso."
     }
   },
   "walletDetail": {
@@ -108,14 +109,14 @@
     "headerLabel": "Wallet",
     "realCards_one": "1 tarjeta de fidelidad real",
     "realCards_other": "{count} tarjetas de fidelidad reales",
-    "customWalletReady": "Wallet personalizado listo. La asignación real de tarjetas llegará después.",
+    "customWalletReady": "Wallet personalizada lista. La asociación real de tarjetas llegará después.",
     "errorTitle": "Error",
     "openCard": "Abrir tarjeta",
     "rewardReady": "Recompensa lista",
     "active": "Activa",
     "empty": {
-      "title": "Aún no hay tarjetas en este wallet",
-      "description": "Es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asignación real de tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
+      "title": "No hay tarjetas en este wallet",
+      "description": "Esto es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asociación real de las tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
     },
     "errors": {
       "unknown": "Error desconocido"
@@ -143,7 +144,7 @@
   "merchant": {
     "brand": "FIDELITY WALLET",
     "setupLabel": "Comerciante",
-    "setupPreviewLabel": "Configuración merchant",
+    "setupPreviewLabel": "Configuración comerciante",
     "loading": "Cargando...",
     "logoutLoading": "Cerrando sesión...",
     "logout": "Cerrar sesión",
@@ -157,13 +158,13 @@
     "regenerate": "Regenerar QR",
     "qrLoading": "Cargando QR...",
     "qrUnavailable": "QR no disponible",
-    "openScan": "Abrir escáner del comerciante",
-    "customize": "Personalizar tarjeta",
+    "openScan": "Abrir escáner comerciante",
+    "customize": "Personalizar la tarjeta",
     "errors": {
       "loadStore": "Error al cargar el comercio",
       "network": "Error de red",
       "nameRequired": "Introduce un nombre de comercio",
-      "createStore": "Error al crear",
+      "createStore": "Error de creación",
       "token": "Error de token",
       "logout": "Error al cerrar sesión"
     }
@@ -175,7 +176,7 @@
     },
     "subtitle": {
       "login": "Inicia sesión para acceder a tu espacio de comerciante",
-      "signup": "Crea tu cuenta para gestionar tu negocio"
+      "signup": "Crea tu cuenta para gestionar tu comercio"
     },
     "placeholders": {
       "email": "Correo electrónico",
@@ -196,7 +197,7 @@
       "resetFailed": "No se pudo enviar el correo de restablecimiento."
     },
     "errors": {
-      "requiredFields": "El correo y la contraseña son obligatorios",
+      "requiredFields": "Correo y contraseña obligatorios",
       "sessionLogin": "Error de sesión",
       "login": "Error de inicio de sesión"
     }
@@ -210,24 +211,24 @@
     "defaultName": "Comercio",
     "copy": "Copiar enlace",
     "open": "Abrir (prueba)",
-    "loadingQR": "Cargando QR…",
+    "loadingQR": "Cargando QR...",
     "copySuccess": "Enlace copiado ✅",
     "copyFail": "No se pudo copiar automáticamente. Copia manual: ",
     "note": "Nota: en local, el QR contendrá tu IP/puerto. En producción, será tu dominio."
   },
   "merchantTemplate": {
-    "pageTitle": "Creador de tarjeta",
+    "pageTitle": "Creador de tarjetas",
     "pageDescription": "Personaliza el estilo, los colores, el logo y la disposición.",
-    "merchantTemplate": "Plantilla comerciante",
+    "merchantTemplate": "Template merchant",
     "back": "Volver",
     "save": "Guardar",
     "saving": "Guardando...",
     "refresh": "Actualizar",
     "loading": "Cargando...",
-    "saved": "Plantilla guardada ✅",
+    "saved": "Template guardado ✅",
     "error": "Error",
     "confirmPassword": "Confirmar contraseña",
-    "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta comerciante",
+    "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta merchant",
     "resetLayout": "Restablecer diseño",
     "titleLabel": "Título de la tarjeta",
     "presets": "Estilos predefinidos",
@@ -241,16 +242,22 @@
     "angle": "Ángulo",
     "logoUrl": "URL del logo",
     "logoUrlPlaceholder": "https://.../logo.png",
+    "backgroundImageUrl": "URL de la imagen de fondo",
+    "backgroundImagePlaceholder": "https://.../background.jpg",
+    "showBackgroundImage": "Mostrar imagen de fondo",
+    "imageOpacity": "Opacidad de la imagen",
+    "imagesHelp": "Puedes añadir un logo y una imagen de fondo. Luego muévelos y redimensiónalos directamente en la vista previa.",
     "preview": "Vista previa",
     "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar el logo directamente sobre ella.",
     "previewScore": "Puntuación",
     "previewTitleExample": "Tarjeta de fidelidad",
     "loyaltyCard": "Tarjeta de fidelidad",
     "loyaltyProgram": "Programa de fidelidad",
-    "ownerPreview": "Vista previa cliente",
+    "ownerPreview": "Vista previa del cliente",
     "live": "En directo",
     "editLogo": "Editar logo",
-    "fontDefault": "Fuente por defecto",
+    "editBackground": "Editar fondo",
+    "fontDefault": "Fuente predeterminada",
     "fontFallback": "Fuente",
     "tabs": {
       "themes": "Estilos",
@@ -263,10 +270,10 @@
       "gradient": "Degradado"
     },
     "cloudinaryButtons": {
-      "browseLogo": "Examinar logo",
+      "browseLogo": "Buscar logo",
       "removeLogo": "Eliminar logo",
       "uploadingLogo": "Subiendo logo...",
-      "loadingUploader": "Cargando cargador..."
+      "loadingUploader": "Cargando herramienta..."
     },
     "cloudinaryHelp": {
       "logoOnly": "Usa el botón de arriba para subir un logo público con Cloudinary, o pega manualmente la URL del logo."
@@ -279,18 +286,18 @@
       "missingStoreId": "Falta storeId en la URL.",
       "missingEnv": "Faltan variables de entorno de Cloudinary.",
       "widgetNotReady": "El widget de Cloudinary aún no está listo.",
-      "uploadFailed": "Error al subir el logo.",
+      "uploadFailed": "Falló la subida del logo.",
       "missingImageUrl": "Cloudinary no devolvió una URL de imagen."
     },
     "cloudinaryAlt": {
       "logo": "logo"
     },
     "errors": {
-      "load": "No se pudo cargar la plantilla.",
-      "save": "No se pudo guardar la plantilla.",
+      "load": "No se pudo cargar el template.",
+      "save": "No se pudo guardar el template.",
       "network": "Error de red.",
       "passwordRequired": "Introduce la contraseña para confirmar el cambio.",
-      "notAuthenticated": "La cuenta comerciante no ha iniciado sesión.",
+      "notAuthenticated": "Cuenta merchant no conectada.",
       "reauthFailed": "Contraseña incorrecta o no se pudo confirmar."
     }
   },
@@ -301,9 +308,9 @@
     "status": "Estado",
     "checkingSession": "Verificando la sesión...",
     "addingCard": "Añadiendo tarjeta...",
-    "success": "Tarjeta lista ✅ Abriendo…",
+    "success": "Tarjeta lista ✅ Abriendo...",
     "errors": {
-      "missingToken": "Falta el token (ej: /add?token=XXXX)",
+      "missingToken": "Falta el token (ejemplo: /add?token=XXXX)",
       "sessionCheck": "Error al verificar la sesión del cliente",
       "missingCardId": "Falta cardId en la respuesta del servidor",
       "http": "Error HTTP",
