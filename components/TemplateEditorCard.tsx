@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 
 const CARD_WIDTH = 420;
@@ -141,6 +141,34 @@ export default function TemplateEditorCard({
   ownerPreviewText,
   fontDefaultLabel,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const [renderWidth, setRenderWidth] = useState(CARD_WIDTH);
+  const [renderHeight, setRenderHeight] = useState(CARD_HEIGHT);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      setRenderWidth(rect.width);
+      setRenderHeight(rect.height);
+    };
+
+    updateSize();
+
+    const ro = new ResizeObserver(() => updateSize());
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
+
+  const actualScaleX = renderWidth / CARD_WIDTH;
+  const actualScaleY = renderHeight / CARD_HEIGHT;
+  const actualScale = Math.min(actualScaleX, actualScaleY) || cardScale || 1;
+
   const handleStyle = buildHandleStyle(
     isMobile ? HANDLE_SIZE_MOBILE : HANDLE_SIZE_DESKTOP
   );
@@ -151,6 +179,7 @@ export default function TemplateEditorCard({
 
   return (
     <div
+      ref={rootRef}
       style={{
         ...cardBaseStyle,
         width: "100%",
@@ -167,14 +196,13 @@ export default function TemplateEditorCard({
           bounds="parent"
           disableDragging={!editBg}
           enableResizing={editBg}
-          scale={cardScale}
           size={{
-            width: tpl.bgImageBox.width * cardScale,
-            height: tpl.bgImageBox.height * cardScale,
+            width: tpl.bgImageBox.width * actualScaleX,
+            height: tpl.bgImageBox.height * actualScaleY,
           }}
           position={{
-            x: tpl.bgImageBox.x * cardScale,
-            y: tpl.bgImageBox.y * cardScale,
+            x: tpl.bgImageBox.x * actualScaleX,
+            y: tpl.bgImageBox.y * actualScaleY,
           }}
           dragHandleClassName="fw-bg-drag-handle"
           onDragStop={(_, d) => {
@@ -182,20 +210,20 @@ export default function TemplateEditorCard({
               ...prev,
               bgImageBox: clampBgBox({
                 ...prev.bgImageBox,
-                x: d.x / cardScale,
-                y: d.y / cardScale,
+                x: d.x / actualScaleX,
+                y: d.y / actualScaleY,
               }),
             }));
           }}
           onResizeStop={(_, __, ref, ___, position) => {
-            const w = ref.offsetWidth / cardScale;
-            const h = ref.offsetHeight / cardScale;
+            const w = ref.offsetWidth / actualScaleX;
+            const h = ref.offsetHeight / actualScaleY;
 
             onChange((prev) => ({
               ...prev,
               bgImageBox: clampBgBox({
-                x: position.x / cardScale,
-                y: position.y / cardScale,
+                x: position.x / actualScaleX,
+                y: position.y / actualScaleY,
                 width: w,
                 height: h,
               }),
@@ -262,7 +290,7 @@ export default function TemplateEditorCard({
         style={{
           position: "absolute",
           inset: 0,
-          padding: 18 * cardScale,
+          padding: 18 * actualScale,
           zIndex: 20,
           pointerEvents: editBg ? "none" : "auto",
         }}
@@ -270,10 +298,10 @@ export default function TemplateEditorCard({
         <div
           style={{
             position: "absolute",
-            top: 18 * cardScale,
-            right: 18 * cardScale,
+            top: 18 * actualScale,
+            right: 18 * actualScale,
             fontWeight: 900,
-            fontSize: 18 * cardScale,
+            fontSize: 18 * actualScale,
             opacity: 0.95,
             textShadow: showBgImg ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
           }}
@@ -284,14 +312,14 @@ export default function TemplateEditorCard({
         <div
           style={{
             position: "absolute",
-            top: 18 * cardScale,
-            left: 18 * cardScale,
-            right: 90 * cardScale,
+            top: 18 * actualScale,
+            left: 18 * actualScale,
+            right: 90 * actualScale,
           }}
         >
           <div
             style={{
-              fontSize: 26 * cardScale,
+              fontSize: 26 * actualScale,
               fontWeight: 900,
               lineHeight: 1.05,
               wordBreak: "break-word",
@@ -304,8 +332,8 @@ export default function TemplateEditorCard({
           <div
             style={{
               opacity: 0.9,
-              fontSize: 12 * cardScale,
-              marginTop: 4 * cardScale,
+              fontSize: 12 * actualScale,
+              marginTop: 4 * actualScale,
               textShadow: showBgImg ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
             }}
           >
@@ -316,9 +344,9 @@ export default function TemplateEditorCard({
         <div
           style={{
             position: "absolute",
-            left: 18 * cardScale,
-            bottom: 16 * cardScale,
-            fontSize: 13 * cardScale,
+            left: 18 * actualScale,
+            bottom: 16 * actualScale,
+            fontSize: 13 * actualScale,
             opacity: 0.9,
             textShadow: showBgImg ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
           }}
@@ -331,14 +359,14 @@ export default function TemplateEditorCard({
         bounds="parent"
         disableDragging={!editLogo}
         enableResizing={editLogo}
-        scale={cardScale}
+        lockAspectRatio={!!tpl.logoUrl}
         size={{
-          width: tpl.logoBox.width * cardScale,
-          height: tpl.logoBox.height * cardScale,
+          width: tpl.logoBox.width * actualScaleX,
+          height: tpl.logoBox.height * actualScaleY,
         }}
         position={{
-          x: tpl.logoBox.x * cardScale,
-          y: tpl.logoBox.y * cardScale,
+          x: tpl.logoBox.x * actualScaleX,
+          y: tpl.logoBox.y * actualScaleY,
         }}
         dragHandleClassName="fw-logo-drag-handle"
         onDragStop={(_, d) => {
@@ -346,20 +374,20 @@ export default function TemplateEditorCard({
             ...prev,
             logoBox: clampLogoBox({
               ...prev.logoBox,
-              x: d.x / cardScale,
-              y: d.y / cardScale,
+              x: d.x / actualScaleX,
+              y: d.y / actualScaleY,
             }),
           }));
         }}
         onResizeStop={(_, __, ref, ___, position) => {
-          const w = ref.offsetWidth / cardScale;
-          const h = ref.offsetHeight / cardScale;
+          const w = ref.offsetWidth / actualScaleX;
+          const h = ref.offsetHeight / actualScaleY;
 
           onChange((prev) => ({
             ...prev,
             logoBox: clampLogoBox({
-              x: position.x / cardScale,
-              y: position.y / cardScale,
+              x: position.x / actualScaleX,
+              y: position.y / actualScaleY,
               width: w,
               height: h,
             }),
