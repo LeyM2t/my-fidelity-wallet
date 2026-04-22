@@ -48,6 +48,11 @@ const BASE_W = 420;
 const BASE_H = 220;
 const CARD_PADDING = 18;
 
+const LOGO_SAFE_MARGIN = 0;
+const LOGO_MIN_SIZE = 36;
+const LOGO_MAX_WIDTH = 220;
+const LOGO_MAX_HEIGHT = 180;
+
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const playfair = Playfair_Display({
@@ -85,6 +90,10 @@ function getFontFamily(fontKey?: string) {
   }
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function clampNumber(
   value: unknown,
   min: number,
@@ -93,7 +102,7 @@ function clampNumber(
 ) {
   const n =
     typeof value === "number" && Number.isFinite(value) ? value : fallback;
-  return Math.max(min, Math.min(max, n));
+  return clamp(n, min, max);
 }
 
 function clamp01(n: number) {
@@ -101,22 +110,61 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-function normalizeLogoBox(box?: Box) {
-  const width = clampNumber(box?.width, 10, BASE_W, 56);
-  const height = clampNumber(box?.height, 10, BASE_H, 56);
+function normalizeBox(
+  box: Box | undefined,
+  fallback: Required<Box>
+): Required<Box> {
+  return {
+    x: clampNumber(box?.x, -9999, 9999, fallback.x),
+    y: clampNumber(box?.y, -9999, 9999, fallback.y),
+    width: clampNumber(box?.width, 10, 9999, fallback.width),
+    height: clampNumber(box?.height, 10, 9999, fallback.height),
+  };
+}
 
-  const x = clampNumber(box?.x, 0, BASE_W - width, 18);
-  const y = clampNumber(box?.y, 0, BASE_H - height, 18);
+function clampBoxInsideCard(
+  box: Required<Box>,
+  cardWidth: number,
+  cardHeight: number,
+  margin = 0
+): Required<Box> {
+  const maxWidth = Math.max(10, cardWidth - margin * 2);
+  const maxHeight = Math.max(10, cardHeight - margin * 2);
+
+  const width = clamp(box.width, 10, maxWidth);
+  const height = clamp(box.height, 10, maxHeight);
+
+  const maxX = Math.max(margin, cardWidth - margin - width);
+  const maxY = Math.max(margin, cardHeight - margin - height);
+
+  const x = clamp(box.x, margin, maxX);
+  const y = clamp(box.y, margin, maxY);
 
   return { x, y, width, height };
 }
 
-function normalizeBgImageBox(box?: Box) {
+function clampLogoBox(box: Required<Box>): Required<Box> {
+  const width = clamp(box.width, LOGO_MIN_SIZE, LOGO_MAX_WIDTH);
+  const height = clamp(box.height, LOGO_MIN_SIZE, LOGO_MAX_HEIGHT);
+
+  return clampBoxInsideCard(
+    {
+      ...box,
+      width,
+      height,
+    },
+    BASE_W,
+    BASE_H,
+    LOGO_SAFE_MARGIN
+  );
+}
+
+function clampBgBox(box: Required<Box>): Required<Box> {
   return {
-    x: clampNumber(box?.x, -BASE_W * 2, BASE_W * 2, 0),
-    y: clampNumber(box?.y, -BASE_H * 2, BASE_H * 2, 0),
-    width: clampNumber(box?.width, 40, BASE_W * 3, BASE_W),
-    height: clampNumber(box?.height, 40, BASE_H * 3, BASE_H),
+    x: clamp(box.x, -BASE_W * 2, BASE_W * 2),
+    y: clamp(box.y, -BASE_H * 2, BASE_H * 2),
+    width: clamp(box.width, 40, BASE_W * 3),
+    height: clamp(box.height, 40, BASE_H * 3),
   };
 }
 
@@ -134,15 +182,27 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
     [template.font]
   );
 
-  const logoBox = useMemo(
-    () => normalizeLogoBox(template.logoBox),
-    [template.logoBox]
-  );
+  const logoBox = useMemo(() => {
+    const raw = normalizeBox(template.logoBox, {
+      x: 18,
+      y: 18,
+      width: 56,
+      height: 56,
+    });
 
-  const bgImageBox = useMemo(
-    () => normalizeBgImageBox(template.bgImageBox),
-    [template.bgImageBox]
-  );
+    return clampLogoBox(raw);
+  }, [template.logoBox]);
+
+  const bgImageBox = useMemo(() => {
+    const raw = normalizeBox(template.bgImageBox, {
+      x: 0,
+      y: 0,
+      width: BASE_W,
+      height: BASE_H,
+    });
+
+    return clampBgBox(raw);
+  }, [template.bgImageBox]);
 
   const background = useMemo(() => {
     if (template.bgGradient) return template.bgGradient;
