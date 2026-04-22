@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import {
   Inter,
   Poppins,
@@ -46,12 +46,7 @@ type CardTemplate = {
 
 const BASE_W = 420;
 const BASE_H = 220;
-
 const CARD_PADDING = 18;
-const LOGO_SAFE_MARGIN = 0;
-const LOGO_MIN_SIZE = 36;
-const LOGO_MAX_WIDTH = 220;
-const LOGO_MAX_HEIGHT = 180;
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
@@ -90,11 +85,6 @@ function getFontFamily(fontKey?: string) {
   }
 }
 
-function clamp01(n: number) {
-  if (Number.isNaN(n)) return 0;
-  return Math.max(0, Math.min(1, n));
-}
-
 function clampNumber(
   value: unknown,
   min: number,
@@ -106,50 +96,27 @@ function clampNumber(
   return Math.max(min, Math.min(max, n));
 }
 
-function normalizeBox(
-  box: Box | undefined,
-  fallback: Required<Box>
-): Required<Box> {
-  return {
-    x: clampNumber(box?.x, -9999, 9999, fallback.x),
-    y: clampNumber(box?.y, -9999, 9999, fallback.y),
-    width: clampNumber(box?.width, 10, 9999, fallback.width),
-    height: clampNumber(box?.height, 10, 9999, fallback.height),
-  };
+function clamp01(n: number) {
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(1, n));
 }
 
-function constrainLogoBox(box: Required<Box>): Required<Box> {
-  const maxWidth = Math.max(10, BASE_W - LOGO_SAFE_MARGIN * 2);
-  const maxHeight = Math.max(10, BASE_H - LOGO_SAFE_MARGIN * 2);
+function normalizeLogoBox(box?: Box) {
+  const width = clampNumber(box?.width, 10, BASE_W, 56);
+  const height = clampNumber(box?.height, 10, BASE_H, 56);
 
-  const width = clampNumber(
-    box.width,
-    LOGO_MIN_SIZE,
-    Math.min(LOGO_MAX_WIDTH, maxWidth),
-    LOGO_MIN_SIZE
-  );
-  const height = clampNumber(
-    box.height,
-    LOGO_MIN_SIZE,
-    Math.min(LOGO_MAX_HEIGHT, maxHeight),
-    LOGO_MIN_SIZE
-  );
-
-  const maxX = Math.max(LOGO_SAFE_MARGIN, BASE_W - LOGO_SAFE_MARGIN - width);
-  const maxY = Math.max(LOGO_SAFE_MARGIN, BASE_H - LOGO_SAFE_MARGIN - height);
-
-  const x = clampNumber(box.x, LOGO_SAFE_MARGIN, maxX, LOGO_SAFE_MARGIN);
-  const y = clampNumber(box.y, LOGO_SAFE_MARGIN, maxY, LOGO_SAFE_MARGIN);
+  const x = clampNumber(box?.x, 0, BASE_W - width, 18);
+  const y = clampNumber(box?.y, 0, BASE_H - height, 18);
 
   return { x, y, width, height };
 }
 
-function constrainBgImageBox(box: Required<Box>): Required<Box> {
+function normalizeBgImageBox(box?: Box) {
   return {
-    x: clampNumber(box.x, -BASE_W * 2, BASE_W * 2, 0),
-    y: clampNumber(box.y, -BASE_H * 2, BASE_H * 2, 0),
-    width: clampNumber(box.width, 40, BASE_W * 3, BASE_W),
-    height: clampNumber(box.height, 40, BASE_H * 3, BASE_H),
+    x: clampNumber(box?.x, -BASE_W * 2, BASE_W * 2, 0),
+    y: clampNumber(box?.y, -BASE_H * 2, BASE_H * 2, 0),
+    width: clampNumber(box?.width, 40, BASE_W * 3, BASE_W),
+    height: clampNumber(box?.height, 40, BASE_H * 3, BASE_H),
   };
 }
 
@@ -162,37 +129,20 @@ function safeImageSrc(url?: string) {
 }
 
 export default function CardCanvas({ template }: { template: CardTemplate }) {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const titleRef = useRef<HTMLDivElement | null>(null);
-
-  const [scale, setScale] = useState(1);
-  const [titlePx, setTitlePx] = useState<number>(38);
-
-  const textColor = template.textColor || "#ffffff";
   const fontFamily = useMemo(
     () => getFontFamily(template.font),
     [template.font]
   );
 
-  const logoBox = useMemo(() => {
-    const raw = normalizeBox(template.logoBox, {
-      x: 18,
-      y: 18,
-      width: 56,
-      height: 56,
-    });
-    return constrainLogoBox(raw);
-  }, [template.logoBox]);
+  const logoBox = useMemo(
+    () => normalizeLogoBox(template.logoBox),
+    [template.logoBox]
+  );
 
-  const bgImageBox = useMemo(() => {
-    const raw = normalizeBox(template.bgImageBox, {
-      x: 0,
-      y: 0,
-      width: BASE_W,
-      height: BASE_H,
-    });
-    return constrainBgImageBox(raw);
-  }, [template.bgImageBox]);
+  const bgImageBox = useMemo(
+    () => normalizeBgImageBox(template.bgImageBox),
+    [template.bgImageBox]
+  );
 
   const background = useMemo(() => {
     if (template.bgGradient) return template.bgGradient;
@@ -223,47 +173,10 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
       : true);
 
   const bgOpacity = clamp01(template.bgImageOpacity ?? 0.7);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-
-    const ro = new ResizeObserver(() => {
-      const w = el.getBoundingClientRect().width;
-      if (!w || Number.isNaN(w)) return;
-      setScale(w / BASE_W);
-    });
-
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const base = 38 * scale;
-    setTitlePx(base);
-
-    const raf = requestAnimationFrame(() => {
-      const el = titleRef.current;
-      if (!el) return;
-
-      const maxW = el.clientWidth;
-      const sw = el.scrollWidth;
-
-      if (maxW <= 0 || sw <= 0) return;
-
-      if (sw > maxW) {
-        const ratio = (maxW / sw) * 0.98;
-        const minPx = 16 * scale;
-        const next = Math.max(minPx, base * ratio);
-        setTitlePx(next);
-      }
-    });
-
-    return () => cancelAnimationFrame(raf);
-  }, [scale, template.title, fontFamily]);
+  const textColor = template.textColor || "#ffffff";
 
   return (
-    <div ref={wrapRef} style={{ width: "100%" }}>
+    <div style={{ width: "100%" }}>
       <div
         style={{
           position: "relative",
@@ -278,9 +191,9 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             borderRadius: 22,
             overflow: "hidden",
             background,
-            ["--s" as any]: scale,
             color: textColor,
             fontFamily,
+            boxShadow: "0 14px 35px rgba(0,0,0,0.18)",
           }}
         >
           {showBgImage ? (
@@ -290,10 +203,10 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
               aria-hidden="true"
               style={{
                 position: "absolute",
-                left: bgImageBox.x * scale,
-                top: bgImageBox.y * scale,
-                width: bgImageBox.width * scale,
-                height: bgImageBox.height * scale,
+                left: `${(bgImageBox.x / BASE_W) * 100}%`,
+                top: `${(bgImageBox.y / BASE_H) * 100}%`,
+                width: `${(bgImageBox.width / BASE_W) * 100}%`,
+                height: `${(bgImageBox.height / BASE_H) * 100}%`,
                 objectFit: "cover",
                 opacity: bgOpacity,
                 display: "block",
@@ -316,15 +229,15 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             style={{
               position: "absolute",
               inset: 0,
-              padding: `calc(${CARD_PADDING}px * var(--s))`,
+              padding: CARD_PADDING,
             }}
           >
             <div
               style={{
                 position: "absolute",
-                top: `calc(${CARD_PADDING}px * var(--s))`,
-                right: `calc(${CARD_PADDING}px * var(--s))`,
-                fontSize: `calc(18px * var(--s))`,
+                top: CARD_PADDING,
+                right: CARD_PADDING,
+                fontSize: 18,
                 fontWeight: 900,
                 opacity: 0.95,
                 textShadow: showBgImage ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
@@ -336,23 +249,19 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
             <div
               style={{
                 position: "absolute",
-                top: `calc(${CARD_PADDING}px * var(--s))`,
-                left: `calc(${CARD_PADDING}px * var(--s))`,
-                right: `calc(90px * var(--s))`,
+                top: CARD_PADDING,
+                left: CARD_PADDING,
+                right: 90,
               }}
             >
               <div
-                ref={titleRef}
                 style={{
-                  fontSize: `${titlePx}px`,
-                  fontWeight: 800,
-                  lineHeight: 1.12,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  paddingBottom: `calc(4px * var(--s))`,
+                  fontSize: 26,
+                  fontWeight: 900,
+                  lineHeight: 1.05,
+                  wordBreak: "break-word",
                   textShadow: showBgImage ? "0 2px 12px rgba(0,0,0,0.35)" : "none",
                 }}
-                title={template.title || ""}
               >
                 {template.title ?? ""}
               </div>
@@ -362,16 +271,14 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
               <div
                 style={{
                   position: "absolute",
-                  left: logoBox.x * scale,
-                  top: logoBox.y * scale,
-                  width: logoBox.width * scale,
-                  height: logoBox.height * scale,
-                  borderRadius: 16 * scale,
+                  left: `${(logoBox.x / BASE_W) * 100}%`,
+                  top: `${(logoBox.y / BASE_H) * 100}%`,
+                  width: `${(logoBox.width / BASE_W) * 100}%`,
+                  height: `${(logoBox.height / BASE_H) * 100}%`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   overflow: "hidden",
-                  padding: 0,
                   background: "transparent",
                   border: "none",
                 }}
