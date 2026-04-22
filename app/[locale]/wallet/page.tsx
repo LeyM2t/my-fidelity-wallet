@@ -513,14 +513,13 @@ export default function WalletPage() {
         >
           <section
             style={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) auto",
+              alignItems: "start",
               gap: 12,
-              flexWrap: "wrap",
             }}
           >
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div
                 style={{
                   fontSize: 13,
@@ -561,6 +560,9 @@ export default function WalletPage() {
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
+                justifySelf: "end",
+                alignSelf: "start",
+                flexShrink: 0,
               }}
             >
               <LanguageSwitcher />
