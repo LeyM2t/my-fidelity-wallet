@@ -148,29 +148,32 @@
     }
   },
   "walletDetail": {
-    "back": "Back",
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "mainWallet": "My main wallet",
-    "fallbackWallet": "Wallet",
-    "headerLabel": "Wallet",
-    "realCards_one": "1 real loyalty card",
-    "realCards_other": "{count} real loyalty cards",
-    "customWalletReady": "Custom wallet ready. Real card assignment will come next.",
-    "errorTitle": "Error",
-    "openCard": "Open card",
-    "rewardReady": "Reward ready",
-    "active": "Active",
-    "moveCard": "Move card",
-    "moveBackToMain": "Move back to main wallet",
-    "empty": {
-      "title": "No cards in this wallet",
-      "description": "This is normal for now. Custom wallets are already visible in the interface, but the real card assignment will be added when we create the Firestore wallet model."
-    },
-    "errors": {
-      "unknown": "Unknown error"
-    }
+  "back": "Back",
+  "refresh": "Refresh",
+  "refreshing": "Refreshing...",
+  "mainWallet": "My main wallet",
+  "fallbackWallet": "Wallet",
+  "headerLabel": "Wallet",
+  "realCards_one": "1 real loyalty card",
+  "realCards_other": "{count} real loyalty cards",
+  "customWalletReady": "Custom wallet ready. Real card assignment will come next.",
+  "errorTitle": "Error",
+  "openCard": "Open card",
+  "rewardReady": "Reward ready",
+  "active": "Active",
+  "moveCard": "Move card",
+  "moveBackToMain": "Move back to main wallet",
+  "searchPlaceholder": "Search for a card by name...",
+  "searchNoResultTitle": "No card found",
+  "searchNoResultDescription": "No card matches your search in this wallet.",
+  "empty": {
+    "title": "No cards in this wallet",
+    "description": "This is normal for now. Custom wallets are already visible in the interface, but the real card assignment will be added when we create the Firestore wallet model."
   },
+  "errors": {
+    "unknown": "Unknown error"
+  }
+},
   "card": {
     "back": "Back",
     "loading": "Loading...",

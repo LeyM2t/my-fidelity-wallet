@@ -199,6 +199,19 @@ function getMoveTexts(locale: string) {
   };
 }
 
+function normalizeSearchValue(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function getCardDisplayTitle(card: FirestoreCard, tpl?: CardTemplate | null) {
+  const css = templateToCss(tpl);
+  return css.title || card.storeId;
+}
+
 export default function WalletDetailPage() {
   const router = useRouter();
   const params = useParams<{ locale: string; walletId: string }>();
@@ -219,6 +232,7 @@ export default function WalletDetailPage() {
   const [info, setInfo] = useState("");
   const [isCompact, setIsCompact] = useState(false);
   const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef(0);
@@ -381,6 +395,21 @@ export default function WalletDetailPage() {
     return getCardsForWallet(cards, walletId);
   }, [cards, walletId]);
 
+  const normalizedSearch = useMemo(
+    () => normalizeSearchValue(searchTerm),
+    [searchTerm]
+  );
+
+  const filteredVisibleCards = useMemo(() => {
+    if (!normalizedSearch) return visibleCards;
+
+    return visibleCards.filter((card) => {
+      const tpl = templatesByStore[card.storeId];
+      const title = getCardDisplayTitle(card, tpl);
+      return normalizeSearchValue(title).includes(normalizedSearch);
+    });
+  }, [normalizedSearch, templatesByStore, visibleCards]);
+
   const moveWalletOptions = useMemo(
     () =>
       customWallets.map((wallet) => ({
@@ -393,17 +422,19 @@ export default function WalletDetailPage() {
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [walletId, visibleCards.length]);
+  }, [walletId, filteredVisibleCards.length, normalizedSearch]);
 
   useEffect(() => {
     setActiveIndex((prev) =>
-      Math.max(0, Math.min(prev, Math.max(visibleCards.length - 1, 0)))
+      Math.max(0, Math.min(prev, Math.max(filteredVisibleCards.length - 1, 0)))
     );
-  }, [visibleCards.length]);
+  }, [filteredVisibleCards.length]);
 
   const activeCard =
-    visibleCards.length > 0
-      ? visibleCards[Math.max(0, Math.min(activeIndex, visibleCards.length - 1))]
+    filteredVisibleCards.length > 0
+      ? filteredVisibleCards[
+          Math.max(0, Math.min(activeIndex, filteredVisibleCards.length - 1))
+        ]
       : null;
 
   const goPrev = useCallback(() => {
@@ -411,8 +442,10 @@ export default function WalletDetailPage() {
   }, []);
 
   const goNext = useCallback(() => {
-    setActiveIndex((prev) => Math.min(prev + 1, visibleCards.length - 1));
-  }, [visibleCards.length]);
+    setActiveIndex((prev) =>
+      Math.min(prev + 1, filteredVisibleCards.length - 1)
+    );
+  }, [filteredVisibleCards.length]);
 
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
     touchStartXRef.current = e.touches[0]?.clientX ?? null;
@@ -608,6 +641,34 @@ export default function WalletDetailPage() {
             </p>
           </section>
 
+          <section
+            style={{
+              borderRadius: 22,
+              border: "1px solid #e4e4e7",
+              background: "#ffffff",
+              padding: 16,
+            }}
+          >
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              style={{
+                width: "100%",
+                height: 48,
+                borderRadius: 16,
+                border: "1px solid #d4d4d8",
+                background: "#fafafa",
+                color: "#18181b",
+                padding: "0 16px",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </section>
+
           {error ? (
             <section
               style={{
@@ -672,6 +733,37 @@ export default function WalletDetailPage() {
                 {t("empty.description")}
               </div>
             </section>
+          ) : !loading && filteredVisibleCards.length === 0 ? (
+            <section
+              style={{
+                borderRadius: 24,
+                border: "1px dashed #d4d4d8",
+                background: "#fff",
+                padding: 28,
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: "#18181b",
+                  marginBottom: 8,
+                }}
+              >
+                {t("searchNoResultTitle")}
+              </div>
+
+              <div
+                style={{
+                  color: "#71717a",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                }}
+              >
+                {t("searchNoResultDescription")}
+              </div>
+            </section>
           ) : (
             <>
               <section
@@ -689,7 +781,7 @@ export default function WalletDetailPage() {
                   userSelect: "none",
                 }}
               >
-                {visibleCards.map((card, index) => {
+                {filteredVisibleCards.map((card, index) => {
                   const offset = index - activeIndex;
 
                   if (Math.abs(offset) > MAX_VISIBLE_DISTANCE) {
@@ -853,14 +945,14 @@ export default function WalletDetailPage() {
                     color: "#52525b",
                   }}
                 >
-                  {visibleCards.length > 0
-                    ? `${activeIndex + 1} / ${visibleCards.length}`
+                  {filteredVisibleCards.length > 0
+                    ? `${activeIndex + 1} / ${filteredVisibleCards.length}`
                     : "0 / 0"}
                 </div>
 
                 <button
                   onClick={goNext}
-                  disabled={activeIndex >= visibleCards.length - 1}
+                  disabled={activeIndex >= filteredVisibleCards.length - 1}
                   style={{
                     height: 46,
                     minWidth: 64,
@@ -872,10 +964,11 @@ export default function WalletDetailPage() {
                     fontSize: 18,
                     fontWeight: 700,
                     cursor:
-                      activeIndex >= visibleCards.length - 1
+                      activeIndex >= filteredVisibleCards.length - 1
                         ? "default"
                         : "pointer",
-                    opacity: activeIndex >= visibleCards.length - 1 ? 0.5 : 1,
+                    opacity:
+                      activeIndex >= filteredVisibleCards.length - 1 ? 0.5 : 1,
                   }}
                 >
                   →

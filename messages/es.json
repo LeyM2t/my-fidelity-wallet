@@ -148,29 +148,32 @@
     }
   },
   "walletDetail": {
-    "back": "Volver",
-    "refresh": "Actualizar",
-    "refreshing": "Actualizando...",
-    "mainWallet": "Mi wallet principal",
-    "fallbackWallet": "Wallet",
-    "headerLabel": "Wallet",
-    "realCards_one": "1 tarjeta de fidelidad real",
-    "realCards_other": "{count} tarjetas de fidelidad reales",
-    "customWalletReady": "Wallet personalizado listo. La asociación real de las tarjetas llegará después.",
-    "errorTitle": "Error",
-    "openCard": "Abrir tarjeta",
-    "rewardReady": "Recompensa lista",
-    "active": "Activa",
-    "moveCard": "Mover tarjeta",
-    "moveBackToMain": "Volver al wallet principal",
-    "empty": {
-      "title": "No hay tarjetas en este wallet",
-      "description": "Es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asociación real de las tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
-    },
-    "errors": {
-      "unknown": "Error desconocido"
-    }
+  "back": "Volver",
+  "refresh": "Actualizar",
+  "refreshing": "Actualizando...",
+  "mainWallet": "Mi wallet principal",
+  "fallbackWallet": "Wallet",
+  "headerLabel": "Wallet",
+  "realCards_one": "1 tarjeta de fidelidad real",
+  "realCards_other": "{count} tarjetas de fidelidad reales",
+  "customWalletReady": "Wallet personalizado listo. La asignación real de tarjetas llegará después.",
+  "errorTitle": "Error",
+  "openCard": "Abrir tarjeta",
+  "rewardReady": "Recompensa lista",
+  "active": "Activa",
+  "moveCard": "Mover tarjeta",
+  "moveBackToMain": "Volver al wallet principal",
+  "searchPlaceholder": "Buscar una tarjeta por nombre...",
+  "searchNoResultTitle": "No se encontró ninguna tarjeta",
+  "searchNoResultDescription": "Ninguna tarjeta coincide con tu búsqueda en este wallet.",
+  "empty": {
+    "title": "No hay tarjetas en este wallet",
+    "description": "Esto es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asignación real de tarjetas se añadirá cuando creemos el modelo Firestore de wallets."
   },
+  "errors": {
+    "unknown": "Error desconocido"
+  }
+},
   "card": {
     "back": "Volver",
     "loading": "Cargando...",
