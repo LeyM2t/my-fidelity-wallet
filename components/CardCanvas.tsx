@@ -30,20 +30,16 @@ type Box = {
 type CardTemplate = {
   title?: string;
   scoreText?: string;
-
   textColor?: string;
   font?: string;
-
   bgType?: BgType;
   bgColor?: string;
   bgGradient?: string;
   gradient?: Gradient;
-
   bgImageUrl?: string;
   bgImageEnabled?: boolean;
   bgImageOpacity?: number;
   bgImageBox?: Box;
-
   logoUrl?: string;
   logoBox?: Box;
 };
@@ -52,10 +48,10 @@ const BASE_W = 420;
 const BASE_H = 220;
 
 const CARD_PADDING = 18;
-const LOGO_SAFE_MARGIN = 12;
-const LOGO_MIN_SIZE = 28;
-const LOGO_MAX_WIDTH = 160;
-const LOGO_MAX_HEIGHT = 160;
+const LOGO_SAFE_MARGIN = 0;
+const LOGO_MIN_SIZE = 36;
+const LOGO_MAX_WIDTH = 220;
+const LOGO_MAX_HEIGHT = 180;
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "800"] });
@@ -115,38 +111,46 @@ function normalizeBox(
   fallback: Required<Box>
 ): Required<Box> {
   return {
-    x: clampNumber(box?.x, -999, 999, fallback.x),
-    y: clampNumber(box?.y, -999, 999, fallback.y),
+    x: clampNumber(box?.x, -9999, 9999, fallback.x),
+    y: clampNumber(box?.y, -9999, 9999, fallback.y),
     width: clampNumber(box?.width, 10, 9999, fallback.width),
     height: clampNumber(box?.height, 10, 9999, fallback.height),
   };
 }
 
-function constrainBox(
-  box: Required<Box>,
-  bounds: { width: number; height: number; margin: number },
-  options?: {
-    minWidth?: number;
-    minHeight?: number;
-    maxWidth?: number;
-    maxHeight?: number;
-  }
-): Required<Box> {
-  const minWidth = options?.minWidth ?? 10;
-  const minHeight = options?.minHeight ?? 10;
-  const maxWidth = options?.maxWidth ?? bounds.width - bounds.margin * 2;
-  const maxHeight = options?.maxHeight ?? bounds.height - bounds.margin * 2;
+function constrainLogoBox(box: Required<Box>): Required<Box> {
+  const maxWidth = Math.max(10, BASE_W - LOGO_SAFE_MARGIN * 2);
+  const maxHeight = Math.max(10, BASE_H - LOGO_SAFE_MARGIN * 2);
 
-  let width = clampNumber(box.width, minWidth, maxWidth, minWidth);
-  let height = clampNumber(box.height, minHeight, maxHeight, minHeight);
+  const width = clampNumber(
+    box.width,
+    LOGO_MIN_SIZE,
+    Math.min(LOGO_MAX_WIDTH, maxWidth),
+    LOGO_MIN_SIZE
+  );
+  const height = clampNumber(
+    box.height,
+    LOGO_MIN_SIZE,
+    Math.min(LOGO_MAX_HEIGHT, maxHeight),
+    LOGO_MIN_SIZE
+  );
 
-  const maxX = bounds.width - bounds.margin - width;
-  const maxY = bounds.height - bounds.margin - height;
+  const maxX = Math.max(LOGO_SAFE_MARGIN, BASE_W - LOGO_SAFE_MARGIN - width);
+  const maxY = Math.max(LOGO_SAFE_MARGIN, BASE_H - LOGO_SAFE_MARGIN - height);
 
-  const x = clampNumber(box.x, bounds.margin, maxX, bounds.margin);
-  const y = clampNumber(box.y, bounds.margin, maxY, bounds.margin);
+  const x = clampNumber(box.x, LOGO_SAFE_MARGIN, maxX, LOGO_SAFE_MARGIN);
+  const y = clampNumber(box.y, LOGO_SAFE_MARGIN, maxY, LOGO_SAFE_MARGIN);
 
   return { x, y, width, height };
+}
+
+function constrainBgImageBox(box: Required<Box>): Required<Box> {
+  return {
+    x: clampNumber(box.x, -BASE_W * 2, BASE_W * 2, 0),
+    y: clampNumber(box.y, -BASE_H * 2, BASE_H * 2, 0),
+    width: clampNumber(box.width, 40, BASE_W * 3, BASE_W),
+    height: clampNumber(box.height, 40, BASE_H * 3, BASE_H),
+  };
 }
 
 function safeImageSrc(url?: string) {
@@ -170,47 +174,25 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
     [template.font]
   );
 
-  const rawLogoBox = normalizeBox(template.logoBox, {
-    x: 18,
-    y: 18,
-    width: 56,
-    height: 56,
-  });
-
-  const logoBox = useMemo(
-    () =>
-      constrainBox(
-        rawLogoBox,
-        {
-          width: BASE_W,
-          height: BASE_H,
-          margin: LOGO_SAFE_MARGIN,
-        },
-        {
-          minWidth: LOGO_MIN_SIZE,
-          minHeight: LOGO_MIN_SIZE,
-          maxWidth: LOGO_MAX_WIDTH,
-          maxHeight: LOGO_MAX_HEIGHT,
-        }
-      ),
-    [rawLogoBox]
-  );
-
-  const rawBgImageBox = normalizeBox(template.bgImageBox, {
-    x: 0,
-    y: 0,
-    width: BASE_W,
-    height: BASE_H,
-  });
+  const logoBox = useMemo(() => {
+    const raw = normalizeBox(template.logoBox, {
+      x: 18,
+      y: 18,
+      width: 56,
+      height: 56,
+    });
+    return constrainLogoBox(raw);
+  }, [template.logoBox]);
 
   const bgImageBox = useMemo(() => {
-    const width = clampNumber(rawBgImageBox.width, 40, BASE_W * 3, BASE_W);
-    const height = clampNumber(rawBgImageBox.height, 40, BASE_H * 3, BASE_H);
-    const x = clampNumber(rawBgImageBox.x, -BASE_W * 2, BASE_W * 2, 0);
-    const y = clampNumber(rawBgImageBox.y, -BASE_H * 2, BASE_H * 2, 0);
-
-    return { x, y, width, height };
-  }, [rawBgImageBox]);
+    const raw = normalizeBox(template.bgImageBox, {
+      x: 0,
+      y: 0,
+      width: BASE_W,
+      height: BASE_H,
+    });
+    return constrainBgImageBox(raw);
+  }, [template.bgImageBox]);
 
   const background = useMemo(() => {
     if (template.bgGradient) return template.bgGradient;
@@ -224,6 +206,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
         typeof template.gradient.angle === "number"
           ? template.gradient.angle
           : 45;
+
       return `linear-gradient(${angle}deg, ${template.gradient.from}, ${template.gradient.to})`;
     }
 
@@ -239,7 +222,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
       ? template.bgImageEnabled
       : true);
 
-  const bgOpacity = clamp01(template.bgImageOpacity ?? 0.6);
+  const bgOpacity = clamp01(template.bgImageOpacity ?? 0.7);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -313,6 +296,7 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                 height: bgImageBox.height * scale,
                 objectFit: "cover",
                 opacity: bgOpacity,
+                display: "block",
               }}
             />
           ) : null}
@@ -383,14 +367,13 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                   width: logoBox.width * scale,
                   height: logoBox.height * scale,
                   borderRadius: 16 * scale,
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.15)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   overflow: "hidden",
                   padding: 0,
-                  backdropFilter: showBgImage ? "blur(2px)" : undefined,
+                  background: "transparent",
+                  border: "none",
                 }}
               >
                 <img
@@ -400,8 +383,11 @@ export default function CardCanvas({ template }: { template: CardTemplate }) {
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "cover",
+                    objectFit: "contain",
+                    objectPosition: "center",
                     display: "block",
+                    background: "transparent",
+                    border: "none",
                   }}
                 />
               </div>
