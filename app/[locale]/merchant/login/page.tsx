@@ -157,7 +157,7 @@ export default function MerchantLoginPage() {
     >
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ marginBottom: 16 }}>
-          <LanguageSwitcher />
+          <LanguageSwitcher align="left" />
         </div>
 
         <div

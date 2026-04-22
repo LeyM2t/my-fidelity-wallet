@@ -150,7 +150,7 @@ export default function ClientLoginPage() {
             justifyContent: "flex-start",
           }}
         >
-          <LanguageSwitcher />
+          <LanguageSwitcher align="left" />
         </div>
 
         <div
