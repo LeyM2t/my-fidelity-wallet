@@ -103,6 +103,8 @@ export default function LanguageSwitcher({ align = "right" }: Props) {
       ref={rootRef}
       style={{
         position: "relative",
+        display: "inline-block",
+        flexShrink: 0,
       }}
     >
       <button
@@ -134,12 +136,14 @@ export default function LanguageSwitcher({ align = "right" }: Props) {
             top: 52,
             [align]: 0,
             minWidth: 180,
+            maxWidth: "min(280px, calc(100vw - 32px))",
             borderRadius: 18,
             border: "1px solid #e4e4e7",
             background: "#ffffff",
             boxShadow: "0 24px 60px rgba(0,0,0,0.16)",
             padding: 8,
             zIndex: 2000,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -181,7 +185,9 @@ export default function LanguageSwitcher({ align = "right" }: Props) {
               >
                 <span>{t(locale)}</span>
                 {active ? (
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>{t("current")}</span>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>
+                    {t("current")}
+                  </span>
                 ) : null}
               </button>
             );
