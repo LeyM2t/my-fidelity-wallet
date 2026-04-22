@@ -26,7 +26,7 @@ import TemplateEditorCard from "@/components/TemplateEditorCard";
 const CARD_WIDTH = 420;
 const CARD_HEIGHT = 220;
 
-const LOGO_SAFE_MARGIN = 8;
+const LOGO_SAFE_MARGIN = 0;
 const LOGO_MIN_SIZE = 36;
 const LOGO_MAX_WIDTH = 220;
 const LOGO_MAX_HEIGHT = 180;
