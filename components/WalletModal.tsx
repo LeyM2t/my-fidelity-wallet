@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import WalletColorPicker from "@/components/WalletColorPicker";
+import WalletColorPicker from "./WalletColorPicker";
 
 type Props = {
   open: boolean;
