@@ -360,14 +360,13 @@ export default function MerchantPage() {
           >
             <section
               style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) auto",
+                alignItems: "start",
                 gap: 12,
-                flexWrap: "wrap",
               }}
             >
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div
                   style={{
                     fontSize: 13,
@@ -408,6 +407,9 @@ export default function MerchantPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
+                  justifySelf: "end",
+                  alignSelf: "start",
+                  flexShrink: 0,
                 }}
               >
                 <LanguageSwitcher />
@@ -538,8 +540,9 @@ export default function MerchantPage() {
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: 18,
+                alignItems: "stretch",
               }}
             >
               <div
@@ -549,6 +552,7 @@ export default function MerchantPage() {
                   padding: 28,
                   boxShadow: "0 18px 40px rgba(24,24,27,0.08)",
                   border: "1px solid #e5e7eb",
+                  minWidth: 0,
                 }}
               >
                 <div
@@ -641,6 +645,7 @@ export default function MerchantPage() {
                   boxShadow: "0 18px 40px rgba(24,24,27,0.18)",
                   overflow: "hidden",
                   position: "relative",
+                  minWidth: 0,
                 }}
               >
                 <div
@@ -672,6 +677,7 @@ export default function MerchantPage() {
                       lineHeight: 1.05,
                       fontWeight: 800,
                       marginBottom: 10,
+                      wordBreak: "break-word",
                     }}
                   >
                     {name.trim() || t("placeholder")}
@@ -702,6 +708,7 @@ export default function MerchantPage() {
                       fontSize: 14,
                       lineHeight: 1.5,
                       color: "rgba(255,255,255,0.86)",
+                      wordBreak: "break-word",
                     }}
                   >
                     {t("createDescription")}
