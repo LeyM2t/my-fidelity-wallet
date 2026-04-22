@@ -1,11 +1,9 @@
-// app/[locale]/client/login/page.tsx
-
 "use client";
 
 import { useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { auth } from "@/lib/firebaseClient";
+import { auth, ensureAuthPersistence } from "@/lib/firebaseClient";
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
@@ -77,6 +75,8 @@ export default function ClientLoginPage() {
         throw new Error(t("errors.requiredFields"));
       }
 
+      await ensureAuthPersistence();
+
       const userCredential = await resolveUserCredential(cleanEmail, cleanPassword);
       const idToken = await userCredential.user.getIdToken();
 
@@ -116,7 +116,9 @@ export default function ClientLoginPage() {
         throw new Error(t("forgotPassword.emailRequired"));
       }
 
+      await ensureAuthPersistence();
       await sendPasswordResetEmail(auth, cleanEmail);
+
       setInfo(t("forgotPassword.resetSent"));
     } catch (err) {
       const message =

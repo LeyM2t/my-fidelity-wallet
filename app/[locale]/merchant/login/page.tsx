@@ -1,8 +1,6 @@
-// app/[locale]/merchant/login/page.tsx
-
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
@@ -10,7 +8,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
-import { auth } from "@/lib/firebaseClient";
+import { auth, ensureAuthPersistence } from "@/lib/firebaseClient";
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -98,6 +96,8 @@ export default function MerchantLoginPage() {
         throw new Error(t("errors.requiredFields"));
       }
 
+      await ensureAuthPersistence();
+
       const cred = await resolveUserCredential(cleanEmail, cleanPassword);
       const idToken = await cred.user.getIdToken();
 
@@ -133,7 +133,9 @@ export default function MerchantLoginPage() {
         throw new Error(t("forgotPassword.emailRequired"));
       }
 
+      await ensureAuthPersistence();
       await sendPasswordResetEmail(auth, cleanEmail);
+
       setInfo(t("forgotPassword.resetSent"));
     } catch (e: any) {
       setErr(e?.message || t("forgotPassword.resetFailed"));

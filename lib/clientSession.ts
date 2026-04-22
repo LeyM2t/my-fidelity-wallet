@@ -1,5 +1,3 @@
-// lib/clientSession.ts
-
 import "@/lib/firebaseAdmin";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
@@ -7,7 +5,8 @@ import { db } from "@/lib/firebaseAdmin";
 
 export const CLIENT_SESSION_COOKIE = "clientSession";
 
-const EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000;
+const EXPIRES_DAYS = Number(process.env.FIREBASE_SESSION_EXPIRES_DAYS || "30");
+const EXPIRES_IN_MS = EXPIRES_DAYS * 24 * 60 * 60 * 1000;
 
 type AppUserRole = "client" | "merchant";
 

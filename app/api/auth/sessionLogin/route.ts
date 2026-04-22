@@ -1,5 +1,3 @@
-// app/api/auth/sessionLogin/route.ts
-
 import "@/lib/firebaseAdmin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -116,7 +114,7 @@ export async function POST(req: Request) {
     await ensureMerchantProfile(uid, email);
 
     const expiresDays = Number(
-      process.env.FIREBASE_SESSION_EXPIRES_DAYS || "5"
+      process.env.FIREBASE_SESSION_EXPIRES_DAYS || "30"
     );
     const expiresIn = expiresDays * 24 * 60 * 60 * 1000;
 
