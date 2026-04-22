@@ -92,11 +92,19 @@ const nunito = Nunito({ subsets: ["latin"], weight: ["400", "600", "800"] });
 const FONT_OPTIONS = [
   { key: "inter", label: "Inter (modern)", family: inter.style.fontFamily },
   { key: "poppins", label: "Poppins (rounded)", family: poppins.style.fontFamily },
-  { key: "montserrat", label: "Montserrat (professional)", family: montserrat.style.fontFamily },
+  {
+    key: "montserrat",
+    label: "Montserrat (professional)",
+    family: montserrat.style.fontFamily,
+  },
   { key: "nunito", label: "Nunito (friendly)", family: nunito.style.fontFamily },
   { key: "roboto", label: "Roboto (classic)", family: roboto.style.fontFamily },
   { key: "lora", label: "Lora (reading)", family: lora.style.fontFamily },
-  { key: "playfair", label: "Playfair (elegant)", family: playfair.style.fontFamily },
+  {
+    key: "playfair",
+    label: "Playfair (elegant)",
+    family: playfair.style.fontFamily,
+  },
   { key: "oswald", label: "Oswald (impact)", family: oswald.style.fontFamily },
 ] as const;
 
@@ -302,8 +310,8 @@ export default function MerchantTemplatePage() {
   const storeId = (searchParams.get("storeId") || "").trim();
 
   const loadRequestIdRef = useRef(0);
+  const loadedStoreIdRef = useRef<string>("");
 
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [tpl, setTpl] = useState<CardTemplate>(DEFAULT);
 
   const [loading, setLoading] = useState(true);
@@ -321,7 +329,11 @@ export default function MerchantTemplatePage() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [cardScale, setCardScale] = useState(1);
+  const [viewportReady, setViewportReady] = useState(false);
   const [cloudinaryReady, setCloudinaryReady] = useState(false);
+
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const fontFamily = useMemo(() => getFontFamily(tpl.font), [tpl.font]);
 
@@ -330,12 +342,15 @@ export default function MerchantTemplatePage() {
   useEffect(() => {
     const checkViewport = () => {
       const width = window.innerWidth;
-      setIsMobile(width < 900);
+      const nextIsMobile = width < 900;
+
+      setIsMobile(nextIsMobile);
 
       const pagePadding = width < 640 ? 28 : 72;
       const availableWidth = Math.max(280, width - pagePadding);
       const targetWidth = Math.min(CARD_WIDTH, availableWidth);
       setCardScale(targetWidth / CARD_WIDTH);
+      setViewportReady(true);
     };
 
     checkViewport();
@@ -355,9 +370,13 @@ export default function MerchantTemplatePage() {
     ) as HTMLScriptElement | null;
 
     if (existingScript) {
-      existingScript.addEventListener("load", () => setCloudinaryReady(true));
+      const onLoad = () => setCloudinaryReady(true);
+      existingScript.addEventListener("load", onLoad);
       if (window.cloudinary) setCloudinaryReady(true);
-      return;
+
+      return () => {
+        existingScript.removeEventListener("load", onLoad);
+      };
     }
 
     const script = document.createElement("script");
@@ -479,7 +498,7 @@ export default function MerchantTemplatePage() {
     widget.open();
   }
 
-  async function load() {
+  async function load(force = false) {
     const requestId = ++loadRequestIdRef.current;
 
     setLoading(true);
@@ -490,6 +509,10 @@ export default function MerchantTemplatePage() {
       if (!storeId) {
         setErr(t("cloudinaryErrors.missingStoreId"));
         setTpl(DEFAULT);
+        return;
+      }
+
+      if (!force && loadedStoreIdRef.current === storeId) {
         return;
       }
 
@@ -540,6 +563,7 @@ export default function MerchantTemplatePage() {
       if (!clampHex(merged.textColor)) merged.textColor = DEFAULT.textColor;
 
       setTpl(sanitizeTemplateBoxes(merged));
+      loadedStoreIdRef.current = storeId;
     } catch (e: unknown) {
       if (requestId !== loadRequestIdRef.current) return;
       const message = e instanceof Error ? e.message : t("errors.network");
@@ -552,7 +576,7 @@ export default function MerchantTemplatePage() {
     }
   }
 
-  async function save() {
+  async function saveConfirmed() {
     setSaving(true);
     setErr("");
     setMsg("");
@@ -624,6 +648,8 @@ export default function MerchantTemplatePage() {
       setTpl(payload);
       setMsg(t("saved"));
       setConfirmPassword("");
+      setSaveModalOpen(false);
+      loadedStoreIdRef.current = storeId;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("errors.reauthFailed");
       setErr(message);
@@ -633,7 +659,8 @@ export default function MerchantTemplatePage() {
   }
 
   useEffect(() => {
-    load();
+    loadedStoreIdRef.current = "";
+    load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
@@ -648,7 +675,7 @@ export default function MerchantTemplatePage() {
           flexWrap: "wrap",
         }}
       >
-        <SectionTitle>{t("confirmPassword")}</SectionTitle>
+        <SectionTitle>{t("titleLabel")}</SectionTitle>
         <button
           onClick={resetLayout}
           type="button"
@@ -668,18 +695,6 @@ export default function MerchantTemplatePage() {
         </button>
       </div>
 
-      <input
-        type="password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        placeholder={t("confirmPasswordPlaceholder")}
-        style={inputStyle}
-        autoComplete="current-password"
-      />
-
-      <div style={{ height: 16 }} />
-
-      <SectionTitle>{t("titleLabel")}</SectionTitle>
       <input
         value={tpl.title}
         onChange={(e) => setTpl({ ...tpl, title: e.target.value })}
@@ -860,7 +875,10 @@ export default function MerchantTemplatePage() {
                     style={{
                       height: 32,
                       borderRadius: 10,
-                      border: tpl.bgColor === c ? "2px solid #18181b" : "1px solid #d4d4d8",
+                      border:
+                        tpl.bgColor === c
+                          ? "2px solid #18181b"
+                          : "1px solid #d4d4d8",
                       background: c,
                       cursor: "pointer",
                     }}
@@ -1115,27 +1133,38 @@ export default function MerchantTemplatePage() {
         </div>
 
         <div style={cardShellStyle}>
-          <TemplateEditorCard
-            tpl={tpl}
-            isMobile={isMobile}
-            cardScale={cardScale}
-            showBgImg={showBgImg}
-            fontOptions={FONT_OPTIONS}
-            cardBaseStyle={cardBaseStyle}
-            editLogo={!loading && editLogo}
-            editBg={false}
-            previewScore={t("previewScore")}
-            loyaltyCardText={t("loyaltyCard")}
-            loyaltyProgramText={t("loyaltyProgram")}
-            ownerPreviewText={t("ownerPreview")}
-            editLogoLabel={t("editLogo")}
-            editBackgroundLabel={t("editBackground")}
-            fontDefaultLabel={t("fontDefault")}
-            onChange={(updater) => {
-              if (loading) return;
-              setTpl((prev) => sanitizeTemplateBoxes(updater(prev)));
-            }}
-          />
+          {viewportReady ? (
+            <TemplateEditorCard
+              tpl={tpl}
+              isMobile={isMobile}
+              cardScale={cardScale}
+              showBgImg={showBgImg}
+              fontOptions={FONT_OPTIONS}
+              cardBaseStyle={cardBaseStyle}
+              editLogo={!loading && editLogo}
+              editBg={false}
+              previewScore={t("previewScore")}
+              loyaltyCardText={t("loyaltyCard")}
+              loyaltyProgramText={t("loyaltyProgram")}
+              ownerPreviewText={t("ownerPreview")}
+              editLogoLabel={t("editLogo")}
+              editBackgroundLabel={t("editBackground")}
+              fontDefaultLabel={t("fontDefault")}
+              onChange={(updater) => {
+                if (loading) return;
+                setTpl((prev) => sanitizeTemplateBoxes(updater(prev)));
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: 22,
+                background: "#e5e7eb",
+              }}
+            />
+          )}
         </div>
 
         <div
@@ -1153,187 +1182,315 @@ export default function MerchantTemplatePage() {
   );
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: isMobile ? 14 : 18,
-        background: "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
-        fontFamily:
-          'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        color: "#18181b",
-      }}
-    >
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: 18 }}>
-        <section
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                textTransform: "uppercase",
-                color: "#71717a",
-                marginBottom: 6,
-              }}
-            >
-              {t("merchantTemplate")}
+    <>
+      <main
+        style={{
+          minHeight: "100vh",
+          padding: isMobile ? 14 : 18,
+          background:
+            "linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f8fafc 100%)",
+          fontFamily:
+            'Inter, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          color: "#18181b",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: 18 }}>
+          <section
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: 0.6,
+                  textTransform: "uppercase",
+                  color: "#71717a",
+                  marginBottom: 6,
+                }}
+              >
+                {t("merchantTemplate")}
+              </div>
+
+              <h1
+                style={{
+                  fontSize: isMobile ? 28 : 32,
+                  lineHeight: 1.05,
+                  margin: 0,
+                  color: "#18181b",
+                }}
+              >
+                {t("pageTitle")}
+              </h1>
+
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "#52525b",
+                  fontSize: 15,
+                  maxWidth: 720,
+                }}
+              >
+                {t("pageDescription")}
+              </p>
             </div>
 
-            <h1
+            <div
               style={{
-                fontSize: isMobile ? 28 : 32,
-                lineHeight: 1.05,
-                margin: 0,
-                color: "#18181b",
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                flexWrap: "wrap",
+                width: isMobile ? "100%" : "auto",
               }}
             >
-              {t("pageTitle")}
-            </h1>
+              <Link
+                href={`/${locale}/merchant`}
+                style={{
+                  height: 44,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 16,
+                  border: "none",
+                  background: "#18181b",
+                  color: "#fff",
+                  padding: "0 16px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  minWidth: isMobile ? 0 : undefined,
+                  flex: isMobile ? 1 : undefined,
+                }}
+              >
+                ← {t("back")}
+              </Link>
 
-            <p
+              <button
+                onClick={() => {
+                  loadedStoreIdRef.current = "";
+                  load(true);
+                }}
+                disabled={loading}
+                style={{
+                  height: 44,
+                  borderRadius: 16,
+                  border: "1px solid #d4d4d8",
+                  background: "#f4f4f5",
+                  color: "#18181b",
+                  padding: "0 16px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: loading ? "default" : "pointer",
+                  flex: isMobile ? 1 : undefined,
+                }}
+              >
+                {loading ? t("loading") : t("refresh")}
+              </button>
+
+              <button
+                onClick={() => {
+                  setErr("");
+                  setMsg("");
+                  setSaveModalOpen(true);
+                }}
+                disabled={saving || uploadingLogo || loading}
+                style={{
+                  height: 44,
+                  borderRadius: 16,
+                  border: "none",
+                  background: "#18181b",
+                  color: "#fff",
+                  padding: "0 16px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor:
+                    saving || uploadingLogo || loading ? "default" : "pointer",
+                  boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
+                  flex: isMobile ? 1 : undefined,
+                }}
+              >
+                {saving ? t("saving") : t("save")}
+              </button>
+            </div>
+          </section>
+
+          {err ? (
+            <section
               style={{
-                margin: "8px 0 0",
-                color: "#52525b",
-                fontSize: 15,
-                maxWidth: 720,
+                border: "1px solid #fecaca",
+                background: "#fff1f2",
+                color: "#881337",
+                padding: 14,
+                borderRadius: 18,
               }}
             >
-              {t("pageDescription")}
-            </p>
-          </div>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("error")}</div>
+              <div>{err}</div>
+            </section>
+          ) : null}
+
+          {msg ? (
+            <section
+              style={{
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#166534",
+                padding: 14,
+                borderRadius: 18,
+              }}
+            >
+              <div style={{ fontWeight: 800 }}>{msg}</div>
+            </section>
+          ) : null}
 
           <div
             style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-              width: isMobile ? "100%" : "auto",
+              display: "grid",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : "minmax(360px, 440px) minmax(0, 1fr)",
+              gap: 16,
+              alignItems: "start",
             }}
           >
-            <Link
-              href={`/${locale}/merchant`}
-              style={{
-                height: 44,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 16,
-                border: "none",
-                background: "#18181b",
-                color: "#fff",
-                padding: "0 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                textDecoration: "none",
-                minWidth: isMobile ? 0 : undefined,
-                flex: isMobile ? 1 : undefined,
-              }}
-            >
-              ← {t("back")}
-            </Link>
-
-            <button
-              onClick={load}
-              disabled={loading}
-              style={{
-                height: 44,
-                borderRadius: 16,
-                border: "1px solid #d4d4d8",
-                background: "#f4f4f5",
-                color: "#18181b",
-                padding: "0 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: loading ? "default" : "pointer",
-                flex: isMobile ? 1 : undefined,
-              }}
-            >
-              {loading ? t("loading") : t("refresh")}
-            </button>
-
-            <button
-              onClick={save}
-              disabled={saving || uploadingLogo}
-              style={{
-                height: 44,
-                borderRadius: 16,
-                border: "none",
-                background: "#18181b",
-                color: "#fff",
-                padding: "0 16px",
-                fontSize: 14,
-                fontWeight: 800,
-                cursor: saving || uploadingLogo ? "default" : "pointer",
-                boxShadow: "0 10px 24px rgba(24,24,27,0.22)",
-                flex: isMobile ? 1 : undefined,
-              }}
-            >
-              {saving ? t("saving") : t("save")}
-            </button>
+            {isMobile ? (
+              <>
+                {previewPanel}
+                {controlsPanel}
+              </>
+            ) : (
+              <>
+                {controlsPanel}
+                {previewPanel}
+              </>
+            )}
           </div>
-        </section>
+        </div>
+      </main>
 
-        {err ? (
-          <section
-            style={{
-              border: "1px solid #fecaca",
-              background: "#fff1f2",
-              color: "#881337",
-              padding: 14,
-              borderRadius: 18,
-            }}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>{t("error")}</div>
-            <div>{err}</div>
-          </section>
-        ) : null}
-
-        {msg ? (
-          <section
-            style={{
-              border: "1px solid #bbf7d0",
-              background: "#f0fdf4",
-              color: "#166534",
-              padding: 14,
-              borderRadius: 18,
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>{msg}</div>
-          </section>
-        ) : null}
-
+      {saveModalOpen ? (
         <div
+          onClick={() => {
+            if (saving) return;
+            setSaveModalOpen(false);
+            setConfirmPassword("");
+          }}
           style={{
-            display: "grid",
-            gridTemplateColumns: isMobile
-              ? "1fr"
-              : "minmax(360px, 440px) minmax(0, 1fr)",
-            gap: 16,
-            alignItems: "start",
+            position: "fixed",
+            inset: 0,
+            zIndex: 2200,
+            background: "rgba(24,24,27,0.56)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
           }}
         >
-          {isMobile ? (
-            <>
-              {previewPanel}
-              {controlsPanel}
-            </>
-          ) : (
-            <>
-              {controlsPanel}
-              {previewPanel}
-            </>
-          )}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              borderRadius: 28,
+              background: "#ffffff",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: 22,
+                borderBottom: "1px solid #e4e4e7",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 22,
+                  lineHeight: 1.1,
+                  fontWeight: 900,
+                  color: "#18181b",
+                  marginBottom: 8,
+                }}
+              >
+                {t("confirmPassword")}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.45,
+                  color: "#52525b",
+                }}
+              >
+                {t("confirmPasswordPlaceholder")}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: 22,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={t("confirmPasswordPlaceholder")}
+                autoComplete="current-password"
+                style={inputStyle}
+              />
+
+              <button
+                type="button"
+                onClick={saveConfirmed}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#18181b",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  cursor: saving ? "not-allowed" : "pointer",
+                }}
+              >
+                {saving ? t("saving") : t("save")}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (saving) return;
+                  setSaveModalOpen(false);
+                  setConfirmPassword("");
+                }}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #d4d4d8",
+                  background: "#ffffff",
+                  color: "#18181b",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {t("back")}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      ) : null}
+    </>
   );
 }
