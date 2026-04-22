@@ -103,6 +103,7 @@ export default function WalletPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteInfo, setDeleteInfo] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const [walletModalMode, setWalletModalMode] = useState<WalletModalMode>(null);
   const [selectedWallet, setSelectedWallet] = useState<LocalWallet | null>(null);
@@ -240,7 +241,10 @@ export default function WalletPage() {
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setProfileMenuOpen(false);
+      if (event.key === "Escape") {
+        setProfileMenuOpen(false);
+        setDeleteModalOpen(false);
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -276,7 +280,6 @@ export default function WalletPage() {
     try {
       setDeleteError("");
       setDeleteInfo("");
-      setProfileMenuOpen(false);
 
       const cleanPassword = deletePassword.trim();
 
@@ -488,99 +491,6 @@ export default function WalletPage() {
       ? tWalletEditor("modalConfirmCreate")
       : tWalletEditor("modalConfirmSave");
 
-  const deletePanel = (
-    <section
-      style={{
-        border: "1px solid #fecaca",
-        background: "#fff1f2",
-        color: "#881337",
-        padding: 18,
-        borderRadius: 22,
-      }}
-    >
-      <div style={{ fontWeight: 800, marginBottom: 8 }}>
-        {tDanger("sectionTitle")}
-      </div>
-
-      <div
-        style={{
-          fontSize: 14,
-          lineHeight: 1.45,
-          marginBottom: 12,
-        }}
-      >
-        {tDanger("sectionDescription")}
-      </div>
-
-      <input
-        type="password"
-        value={deletePassword}
-        onChange={(e) => setDeletePassword(e.target.value)}
-        placeholder={tDanger("passwordPlaceholder")}
-        autoComplete="current-password"
-        style={{
-          width: "100%",
-          padding: 12,
-          marginBottom: 12,
-          borderRadius: 12,
-          border: "1px solid #fda4af",
-          fontSize: 14,
-          color: "#111827",
-          background: "#ffffff",
-          boxSizing: "border-box",
-        }}
-      />
-
-      <button
-        type="button"
-        onClick={handleDeleteAccount}
-        disabled={deleteLoading}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "none",
-          background: "#b91c1c",
-          color: "#ffffff",
-          fontWeight: 800,
-          cursor: deleteLoading ? "not-allowed" : "pointer",
-        }}
-      >
-        {deleteLoading ? `⏳ ${tDanger("loading")}` : tDanger("button")}
-      </button>
-
-      {deleteInfo ? (
-        <div
-          style={{
-            marginTop: 12,
-            background: "#dcfce7",
-            color: "#166534",
-            padding: 10,
-            borderRadius: 10,
-            fontSize: 13,
-          }}
-        >
-          ✅ {deleteInfo}
-        </div>
-      ) : null}
-
-      {deleteError ? (
-        <div
-          style={{
-            marginTop: 12,
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: 10,
-            borderRadius: 10,
-            fontSize: 13,
-          }}
-        >
-          ❌ {deleteError}
-        </div>
-      ) : null}
-    </section>
-  );
-
   return (
     <>
       <main
@@ -735,8 +645,9 @@ export default function WalletPage() {
                       type="button"
                       onClick={() => {
                         setProfileMenuOpen(false);
-                        const panel = document.getElementById("wallet-danger-zone");
-                        panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        setDeleteModalOpen(true);
+                        setDeleteError("");
+                        setDeleteInfo("");
                       }}
                       style={{
                         width: "100%",
@@ -1041,8 +952,6 @@ export default function WalletPage() {
               </div>
             </section>
           ) : null}
-
-          <div id="wallet-danger-zone">{deletePanel}</div>
         </div>
       </main>
 
@@ -1161,6 +1070,164 @@ export default function WalletPage() {
                 }}
               >
                 {tWalletEditor("deleteModalConfirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteModalOpen ? (
+        <div
+          onClick={() => {
+            if (deleteLoading) return;
+            setDeleteModalOpen(false);
+            setDeleteError("");
+            setDeleteInfo("");
+            setDeletePassword("");
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2200,
+            background: "rgba(24,24,27,0.56)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              borderRadius: 28,
+              background: "#ffffff",
+              boxShadow: "0 30px 80px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: 22,
+                borderBottom: "1px solid #e4e4e7",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 22,
+                  lineHeight: 1.1,
+                  fontWeight: 900,
+                  color: "#991b1b",
+                  marginBottom: 8,
+                }}
+              >
+                {tDanger("sectionTitle")}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.45,
+                  color: "#52525b",
+                }}
+              >
+                {tDanger("sectionDescription")}
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: 22,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder={tDanger("passwordPlaceholder")}
+                autoComplete="current-password"
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #fda4af",
+                  fontSize: 14,
+                  color: "#111827",
+                  background: "#ffffff",
+                  boxSizing: "border-box",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#b91c1c",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {deleteLoading ? `⏳ ${tDanger("loading")}` : tDanger("button")}
+              </button>
+
+              {deleteInfo ? (
+                <div
+                  style={{
+                    background: "#dcfce7",
+                    color: "#166534",
+                    padding: 10,
+                    borderRadius: 10,
+                    fontSize: 13,
+                  }}
+                >
+                  ✅ {deleteInfo}
+                </div>
+              ) : null}
+
+              {deleteError ? (
+                <div
+                  style={{
+                    background: "#fee2e2",
+                    color: "#991b1b",
+                    padding: 10,
+                    borderRadius: 10,
+                    fontSize: 13,
+                  }}
+                >
+                  ❌ {deleteError}
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteLoading) return;
+                  setDeleteModalOpen(false);
+                  setDeleteError("");
+                  setDeleteInfo("");
+                  setDeletePassword("");
+                }}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #d4d4d8",
+                  background: "#ffffff",
+                  color: "#18181b",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {tWalletEditor("modalCancel")}
               </button>
             </div>
           </div>
