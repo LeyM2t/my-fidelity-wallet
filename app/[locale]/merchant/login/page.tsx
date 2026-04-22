@@ -173,24 +173,14 @@ export default function MerchantLoginPage() {
             style={{
               fontSize: 24,
               fontWeight: 700,
-              marginBottom: 6,
+              margin: 0,
+              marginBottom: 20,
               textAlign: "center",
               color: "#111",
             }}
           >
             {mode === "login" ? t("title.login") : t("title.signup")}
           </h1>
-
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: 13,
-              color: "#6b7280",
-              marginBottom: 20,
-            }}
-          >
-            {mode === "login" ? t("subtitle.login") : t("subtitle.signup")}
-          </p>
 
           <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
             <input

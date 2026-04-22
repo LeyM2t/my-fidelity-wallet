@@ -168,26 +168,12 @@ export default function ClientLoginPage() {
               lineHeight: 1.15,
               fontWeight: 800,
               margin: 0,
-              marginBottom: 14,
+              marginBottom: 28,
               color: "#111827",
             }}
           >
             {mode === "login" ? t("title.login") : t("title.signup")}
           </h1>
-
-          <p
-            style={{
-              margin: 0,
-              marginBottom: 28,
-              fontSize: 15,
-              lineHeight: 1.5,
-              color: "#64748b",
-            }}
-          >
-            {mode === "login"
-              ? t("buttons.switchToSignup")
-              : t("buttons.switchToLogin")}
-          </p>
 
           <div style={{ display: "grid", gap: 16 }}>
             <input
