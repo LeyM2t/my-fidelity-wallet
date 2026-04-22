@@ -13,7 +13,7 @@
     "es": "Español"
   },
   "profileMenu": {
-    "aria": "Abrir menú del perfil",
+    "aria": "Abrir el menú del perfil",
     "title": "Cuenta",
     "logout": "Cerrar sesión",
     "deleteAccount": "Eliminar cuenta"
@@ -21,7 +21,7 @@
   "clientLogin": {
     "title": {
       "login": "Inicio de sesión cliente",
-      "signup": "Crear una cuenta cliente"
+      "signup": "Crear cuenta cliente"
     },
     "placeholders": {
       "email": "Email",
@@ -79,15 +79,15 @@
     },
     "errors": {
       "unknown": "Error desconocido.",
-      "logoutFailed": "No se pudo cerrar la sesión."
+      "logoutFailed": "Error al cerrar sesión."
     }
   },
   "walletEditor": {
     "editButton": "Editar",
     "deleteButton": "Eliminar",
     "modalCreateTitle": "Crear un wallet",
-    "modalEditMainTitle": "Editar el wallet principal",
-    "modalEditCustomTitle": "Editar el wallet",
+    "modalEditMainTitle": "Editar wallet principal",
+    "modalEditCustomTitle": "Editar wallet",
     "modalNameLabel": "Nombre del wallet",
     "modalColorLabel": "Color del wallet",
     "modalConfirmCreate": "Crear",
@@ -101,14 +101,14 @@
   },
   "walletDanger": {
     "sectionTitle": "Zona peligrosa",
-    "sectionDescription": "Elimina definitivamente tu cuenta de cliente, tus tarjetas y tus wallets locales.",
+    "sectionDescription": "Elimina permanentemente tu cuenta cliente, tus tarjetas y tus wallets locales.",
     "passwordPlaceholder": "Confirma tu contraseña",
     "button": "Eliminar mi cuenta",
     "loading": "Eliminando...",
     "confirmFirst": "Introduce tu contraseña para confirmar la eliminación.",
-    "notAuthenticated": "Cuenta de cliente no conectada.",
+    "notAuthenticated": "Cuenta cliente no conectada.",
     "deleteApiFailed": "No se pudieron eliminar los datos de la cuenta.",
-    "deleteAuthFailed": "No se pudo eliminar la cuenta de cliente.",
+    "deleteAuthFailed": "No se pudo eliminar la cuenta cliente.",
     "successRedirect": "Cuenta eliminada. Redirigiendo..."
   },
   "scan": {
@@ -125,10 +125,10 @@
     "scanAnother": "Escanear otro cliente",
     "addStamps": "Añadir sellos",
     "detectedCard": "Tarjeta detectada",
-    "scannerActive": "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que decidas escanear otro cliente.",
+    "scannerActive": "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente.",
     "scannerPaused": "Escáner en pausa.",
     "status": {
-      "pending": "Esperando el escaneo...",
+      "pending": "Esperando escaneo...",
       "invalid": "QR no reconocido",
       "detected": "Cliente detectado",
       "cameraError": "Error de cámara",
@@ -142,8 +142,8 @@
     "errors": {
       "invalidQR": "QR no reconocido. Escanea el QR mostrado por el comerciante.",
       "sessionCheckFailed": "No se pudo verificar la sesión del cliente.",
-      "sessionError": "Error al verificar la sesión.",
-      "cameraUnavailable": "La cámara no puede usarse. Usa HTTPS o permite el acceso a la cámara.",
+      "sessionError": "Error de verificación de sesión.",
+      "cameraUnavailable": "No se puede usar la cámara. Usa HTTPS o permite el acceso a la cámara.",
       "cameraError": "Error de cámara / permiso."
     }
   },
@@ -165,7 +165,7 @@
     "moveBackToMain": "Volver al wallet principal",
     "empty": {
       "title": "No hay tarjetas en este wallet",
-      "description": "Esto es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asociación real de las tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
+      "description": "Es normal por ahora. Los wallets personalizados ya son visibles en la interfaz, pero la asociación real de las tarjetas se añadirá cuando creemos el modelo Firestore del wallet."
     },
     "errors": {
       "unknown": "Error desconocido"
@@ -211,20 +211,20 @@
     "regenerate": "Regenerar QR",
     "qrLoading": "Cargando QR...",
     "qrUnavailable": "QR no disponible",
-    "openScan": "Abrir escáner merchant",
-    "customize": "Personalizar la tarjeta",
+    "openScan": "Abrir escáner comerciante",
+    "customize": "Personalizar tarjeta",
     "errors": {
-      "loadStore": "Error al cargar el store",
+      "loadStore": "Error al cargar la tienda",
       "network": "Error de red",
       "nameRequired": "Introduce un nombre de comercio",
-      "createStore": "Error al crear",
+      "createStore": "Error de creación",
       "token": "Error de token",
       "logout": "Error al cerrar sesión"
     }
   },
   "merchantDanger": {
     "sectionTitle": "Zona peligrosa",
-    "sectionDescription": "Elimina definitivamente tu cuenta merchant y el comercio vinculado.",
+    "sectionDescription": "Elimina permanentemente tu cuenta merchant y el comercio vinculado.",
     "passwordPlaceholder": "Confirma tu contraseña",
     "button": "Eliminar mi cuenta",
     "loading": "Eliminando...",
@@ -237,7 +237,7 @@
   "merchantLogin": {
     "title": {
       "login": "Inicio de sesión merchant",
-      "signup": "Crear una cuenta merchant"
+      "signup": "Crear cuenta merchant"
     },
     "subtitle": {
       "login": "Inicia sesión para acceder a tu espacio comerciante",
@@ -264,7 +264,7 @@
     "errors": {
       "requiredFields": "Email y contraseña obligatorios",
       "sessionLogin": "Error de sesión",
-      "login": "Error de conexión"
+      "login": "Error de inicio de sesión"
     }
   },
   "merchantQr": {
@@ -292,9 +292,9 @@
     "loading": "Cargando...",
     "saved": "Template guardado ✅",
     "error": "Error",
-    "confirmPassword": "Confirmar la contraseña",
+    "confirmPassword": "Confirmar contraseña",
     "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta merchant",
-    "resetLayout": "Restablecer la disposición",
+    "resetLayout": "Restablecer disposición",
     "titleLabel": "Título de la tarjeta",
     "presets": "Estilos predefinidos",
     "background": "Fondo",
@@ -309,11 +309,11 @@
     "logoUrlPlaceholder": "https://.../logo.png",
     "backgroundImageUrl": "URL de la imagen de fondo",
     "backgroundImagePlaceholder": "https://.../background.jpg",
-    "showBackgroundImage": "Mostrar la imagen de fondo",
+    "showBackgroundImage": "Mostrar imagen de fondo",
     "imageOpacity": "Opacidad de la imagen",
-    "imagesHelp": "Puedes añadir un logo y una imagen de fondo. Luego puedes moverlos y redimensionarlos directamente en la vista previa.",
+    "imagesHelp": "Puedes añadir un logo y una imagen de fondo. Después, muévelos y cambia su tamaño directamente en la vista previa.",
     "preview": "Vista previa",
-    "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar el logo directamente sobre ella.",
+    "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y cambiar el tamaño del logo directamente sobre ella.",
     "previewScore": "Puntuación",
     "previewTitleExample": "Tarjeta de fidelidad",
     "loyaltyCard": "Tarjeta de fidelidad",
@@ -335,7 +335,7 @@
       "gradient": "Degradado"
     },
     "cloudinaryButtons": {
-      "browseLogo": "Buscar logo",
+      "browseLogo": "Explorar logo",
       "removeLogo": "Eliminar logo",
       "uploadingLogo": "Subiendo logo...",
       "loadingUploader": "Cargando herramienta..."
@@ -350,8 +350,8 @@
       "loadWidgetFailed": "No se pudo cargar el widget de Cloudinary.",
       "missingStoreId": "Falta storeId en la URL.",
       "missingEnv": "Faltan variables de entorno de Cloudinary.",
-      "widgetNotReady": "El widget de Cloudinary todavía no está listo.",
-      "uploadFailed": "Error al subir el logo.",
+      "widgetNotReady": "El widget de Cloudinary aún no está listo.",
+      "uploadFailed": "Falló la subida del logo.",
       "missingImageUrl": "Cloudinary no devolvió una URL de imagen."
     },
     "cloudinaryAlt": {
@@ -361,18 +361,18 @@
       "load": "No se pudo cargar el template.",
       "save": "No se pudo guardar el template.",
       "network": "Error de red.",
-      "passwordRequired": "Introduce la contraseña para confirmar el cambio.",
-      "notAuthenticated": "La cuenta merchant no está conectada.",
-      "reauthFailed": "Contraseña incorrecta o fallo en la confirmación."
+      "passwordRequired": "Introduce la contraseña para confirmar la modificación.",
+      "notAuthenticated": "Cuenta merchant no conectada.",
+      "reauthFailed": "Contraseña incorrecta o no se pudo confirmar."
     }
   },
   "addClient": {
-    "title": "Añadir la tarjeta",
+    "title": "Añadir tarjeta",
     "token": "Token",
     "empty": "(vacío)",
     "status": "Estado",
     "checkingSession": "Verificando la sesión...",
-    "addingCard": "Añadiendo la tarjeta...",
+    "addingCard": "Añadiendo tarjeta...",
     "success": "Tarjeta lista ✅ Abriendo...",
     "errors": {
       "missingToken": "Falta el token (ejemplo: /add?token=XXXX)",
@@ -381,5 +381,13 @@
       "http": "Error HTTP",
       "network": "Error de red"
     }
+  },
+  "pwaInstall": {
+    "title": "Instalar la aplicación",
+    "description": "Añade My Fidelity Wallet a tu pantalla de inicio para un acceso más rápido.",
+    "iosDescription": "En iPhone, abre el menú Compartir y luego elige “Añadir a pantalla de inicio”.",
+    "install": "Instalar",
+    "installing": "Instalando...",
+    "later": "Más tarde"
   }
 }

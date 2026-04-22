@@ -381,5 +381,13 @@
       "http": "Erreur HTTP",
       "network": "Erreur réseau"
     }
+  },
+  "pwaInstall": {
+    "title": "Installer l’application",
+    "description": "Ajoute My Fidelity Wallet sur ton écran d’accueil pour un accès plus rapide.",
+    "iosDescription": "Sur iPhone, ouvre le menu Partager puis choisis « Sur l’écran d’accueil ».",
+    "install": "Installer",
+    "installing": "Installation...",
+    "later": "Plus tard"
   }
 }

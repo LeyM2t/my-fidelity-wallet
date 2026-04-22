@@ -21,7 +21,7 @@
   "clientLogin": {
     "title": {
       "login": "Client login",
-      "signup": "Create a client account"
+      "signup": "Create client account"
     },
     "placeholders": {
       "email": "Email",
@@ -38,12 +38,12 @@
     "forgotPassword": {
       "button": "Forgot password?",
       "emailRequired": "Enter your email to reset your password.",
-      "resetSent": "Reset email sent. Check your inbox.",
-      "resetFailed": "Could not send the reset email."
+      "resetSent": "Password reset email sent. Check your inbox.",
+      "resetFailed": "Unable to send the reset email."
     },
     "errors": {
       "requiredFields": "Email and password are required",
-      "sessionCreationFailed": "Could not create the session",
+      "sessionCreationFailed": "Unable to create the session",
       "generic": "An error occurred"
     }
   },
@@ -94,21 +94,21 @@
     "modalConfirmSave": "Save",
     "modalCancel": "Cancel",
     "deleteModalTitle": "Delete this wallet?",
-    "deleteModalDescription": "This custom wallet will be deleted. Its cards will go back to the main wallet.",
+    "deleteModalDescription": "This custom wallet will be deleted. Cards will return to the main wallet.",
     "deleteModalConfirm": "Delete",
     "deleteModalCancel": "Cancel",
     "invalidName": "Invalid wallet name."
   },
   "walletDanger": {
     "sectionTitle": "Danger zone",
-    "sectionDescription": "Permanently delete your client account, your cards, and your local wallets.",
+    "sectionDescription": "Permanently delete your client account, cards, and local wallets.",
     "passwordPlaceholder": "Confirm your password",
     "button": "Delete my account",
     "loading": "Deleting...",
     "confirmFirst": "Enter your password to confirm deletion.",
-    "notAuthenticated": "Client account is not signed in.",
-    "deleteApiFailed": "Could not delete account data.",
-    "deleteAuthFailed": "Could not delete client account.",
+    "notAuthenticated": "Client account not signed in.",
+    "deleteApiFailed": "Unable to delete account data.",
+    "deleteAuthFailed": "Unable to delete client account.",
     "successRedirect": "Account deleted. Redirecting..."
   },
   "scan": {
@@ -121,7 +121,7 @@
     "cameraUnavailable": "Camera unavailable",
     "earn": "+1 stamp",
     "reward": "Reward",
-    "quantity": "Stamp quantity",
+    "quantity": "Number of stamps",
     "scanAnother": "Scan another client",
     "addStamps": "Add stamps",
     "detectedCard": "Card detected",
@@ -129,20 +129,20 @@
     "scannerPaused": "Scanner paused.",
     "status": {
       "pending": "Waiting for scan...",
-      "invalid": "Unrecognized QR",
+      "invalid": "QR not recognized",
       "detected": "Client detected",
       "cameraError": "Camera error",
       "adding": "Adding stamp...",
       "added": "Stamp added",
-      "addError": "Could not add stamp",
+      "addError": "Unable to add stamp",
       "validating": "Validating reward...",
       "validated": "Reward validated",
       "rewardError": "Reward error"
     },
     "errors": {
-      "invalidQR": "Unrecognized QR. Scan the QR displayed by the merchant.",
-      "sessionCheckFailed": "Could not verify the client session.",
-      "sessionError": "Session check error.",
+      "invalidQR": "QR not recognized. Scan the QR shown by the merchant.",
+      "sessionCheckFailed": "Unable to verify client session.",
+      "sessionError": "Session verification error.",
       "cameraUnavailable": "The camera cannot be used. Use HTTPS or allow camera access.",
       "cameraError": "Camera / permission error."
     }
@@ -156,7 +156,7 @@
     "headerLabel": "Wallet",
     "realCards_one": "1 real loyalty card",
     "realCards_other": "{count} real loyalty cards",
-    "customWalletReady": "Custom wallet ready. Real card association will come next.",
+    "customWalletReady": "Custom wallet ready. Real card assignment will come next.",
     "errorTitle": "Error",
     "openCard": "Open card",
     "rewardReady": "Reward ready",
@@ -165,7 +165,7 @@
     "moveBackToMain": "Move back to main wallet",
     "empty": {
       "title": "No cards in this wallet",
-      "description": "This is normal for now. Custom wallets are already visible in the interface, but real card association will be added when we create the Firestore wallet model."
+      "description": "This is normal for now. Custom wallets are already visible in the interface, but the real card assignment will be added when we create the Firestore wallet model."
     },
     "errors": {
       "unknown": "Unknown error"
@@ -214,7 +214,7 @@
     "openScan": "Open merchant scan",
     "customize": "Customize card",
     "errors": {
-      "loadStore": "Error loading store",
+      "loadStore": "Store loading error",
       "network": "Network error",
       "nameRequired": "Enter a store name",
       "createStore": "Creation error",
@@ -224,23 +224,23 @@
   },
   "merchantDanger": {
     "sectionTitle": "Danger zone",
-    "sectionDescription": "Permanently delete your merchant account and the linked store.",
+    "sectionDescription": "Permanently delete your merchant account and linked store.",
     "passwordPlaceholder": "Confirm your password",
     "button": "Delete my account",
     "loading": "Deleting...",
     "confirmFirst": "Enter your password to confirm deletion.",
-    "notAuthenticated": "Merchant account is not signed in.",
-    "deleteApiFailed": "Could not delete store data.",
-    "deleteAuthFailed": "Could not delete merchant account.",
+    "notAuthenticated": "Merchant account not signed in.",
+    "deleteApiFailed": "Unable to delete store data.",
+    "deleteAuthFailed": "Unable to delete merchant account.",
     "successRedirect": "Account deleted. Redirecting..."
   },
   "merchantLogin": {
     "title": {
       "login": "Merchant login",
-      "signup": "Create a merchant account"
+      "signup": "Create merchant account"
     },
     "subtitle": {
-      "login": "Log in to access your merchant area",
+      "login": "Sign in to access your merchant area",
       "signup": "Create your account to manage your store"
     },
     "placeholders": {
@@ -258,8 +258,8 @@
     "forgotPassword": {
       "button": "Forgot password?",
       "emailRequired": "Enter your email to reset your password.",
-      "resetSent": "Reset email sent. Check your inbox.",
-      "resetFailed": "Could not send the reset email."
+      "resetSent": "Password reset email sent. Check your inbox.",
+      "resetFailed": "Unable to send the reset email."
     },
     "errors": {
       "requiredFields": "Email and password are required",
@@ -271,19 +271,19 @@
     "title": "Merchant QR",
     "merchantId": "Merchant ID (unique)",
     "merchantIdHelp": "Tip: letters/numbers/underscore. Example: GETYOURCREPE",
-    "merchantName": "Name displayed on the card",
+    "merchantName": "Name shown on the card",
     "goal": "Goal (stamps)",
     "defaultName": "Store",
     "copy": "Copy link",
     "open": "Open (test)",
     "loadingQR": "Loading QR...",
     "copySuccess": "Link copied ✅",
-    "copyFail": "Could not copy automatically. Manual copy: ",
-    "note": "Note: locally, the QR will contain your IP/port. In production, it will use your domain."
+    "copyFail": "Unable to copy automatically. Manual copy: ",
+    "note": "Note: locally, the QR will contain your IP/port. In production, it will be your domain."
   },
   "merchantTemplate": {
     "pageTitle": "Card builder",
-    "pageDescription": "Customize style, colors, logo, and layout.",
+    "pageDescription": "Customize the style, colors, logo, and layout.",
     "merchantTemplate": "Merchant template",
     "back": "Back",
     "save": "Save",
@@ -293,7 +293,7 @@
     "saved": "Template saved ✅",
     "error": "Error",
     "confirmPassword": "Confirm password",
-    "confirmPasswordPlaceholder": "Re-enter the merchant account password",
+    "confirmPasswordPlaceholder": "Retype the merchant account password",
     "resetLayout": "Reset layout",
     "titleLabel": "Card title",
     "presets": "Preset styles",
@@ -347,7 +347,7 @@
       "logoUploaded": "Logo uploaded successfully."
     },
     "cloudinaryErrors": {
-      "loadWidgetFailed": "Could not load the Cloudinary widget.",
+      "loadWidgetFailed": "Unable to load the Cloudinary widget.",
       "missingStoreId": "Missing storeId in URL.",
       "missingEnv": "Missing Cloudinary environment variables.",
       "widgetNotReady": "The Cloudinary widget is not ready yet.",
@@ -358,28 +358,36 @@
       "logo": "logo"
     },
     "errors": {
-      "load": "Could not load template.",
-      "save": "Could not save template.",
+      "load": "Unable to load template.",
+      "save": "Unable to save template.",
       "network": "Network error.",
       "passwordRequired": "Enter the password to confirm the change.",
-      "notAuthenticated": "Merchant account is not signed in.",
+      "notAuthenticated": "Merchant account not signed in.",
       "reauthFailed": "Incorrect password or confirmation failed."
     }
   },
   "addClient": {
-    "title": "Add the card",
+    "title": "Add card",
     "token": "Token",
     "empty": "(empty)",
     "status": "Status",
     "checkingSession": "Checking session...",
-    "addingCard": "Adding the card...",
+    "addingCard": "Adding card...",
     "success": "Card ready ✅ Opening...",
     "errors": {
       "missingToken": "Missing token (example: /add?token=XXXX)",
-      "sessionCheck": "Client session check failed",
+      "sessionCheck": "Client session verification failed",
       "missingCardId": "Missing cardId in server response",
       "http": "HTTP error",
       "network": "Network error"
     }
+  },
+  "pwaInstall": {
+    "title": "Install the app",
+    "description": "Add My Fidelity Wallet to your home screen for quicker access.",
+    "iosDescription": "On iPhone, open the Share menu then choose “Add to Home Screen”.",
+    "install": "Install",
+    "installing": "Installing...",
+    "later": "Later"
   }
 }
