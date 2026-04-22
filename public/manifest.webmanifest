@@ -1,9 +1,9 @@
 {
-  "id": "/fr/client/login",
+  "id": "/fr",
   "name": "My Fidelity Wallet",
   "short_name": "My Fidelity",
   "description": "Digital loyalty card wallet",
-  "start_url": "/fr/client/login",
+  "start_url": "/fr",
   "scope": "/",
   "display": "standalone",
   "background_color": "#e9dfd2",
