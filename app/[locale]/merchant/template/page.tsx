@@ -318,7 +318,6 @@ export default function MerchantTemplatePage() {
   const [colorSubTab, setColorSubTab] = useState<"color" | "gradient">("color");
 
   const [editLogo, setEditLogo] = useState(true);
-  const [editBg, setEditBg] = useState(true);
 
   const [isMobile, setIsMobile] = useState(false);
   const [cardScale, setCardScale] = useState(1);
@@ -326,8 +325,7 @@ export default function MerchantTemplatePage() {
 
   const fontFamily = useMemo(() => getFontFamily(tpl.font), [tpl.font]);
 
-  const hasBgImg = !!(tpl.bgImageUrl && tpl.bgImageUrl.trim());
-  const showBgImg = tpl.bgImageEnabled && hasBgImg;
+  const showBgImg = false;
 
   useEffect(() => {
     const checkViewport = () => {
@@ -367,7 +365,7 @@ export default function MerchantTemplatePage() {
     script.async = true;
     script.onload = () => setCloudinaryReady(true);
     script.onerror = () => {
-      setErr("Failed to load Cloudinary widget.");
+      setErr(t("cloudinaryErrors.loadWidgetFailed"));
       setCloudinaryReady(false);
     };
     document.body.appendChild(script);
@@ -376,7 +374,7 @@ export default function MerchantTemplatePage() {
       script.onload = null;
       script.onerror = null;
     };
-  }, []);
+  }, [t]);
 
   const baseBackground = useMemo(() => {
     if (tpl.bgType === "gradient") {
@@ -408,17 +406,17 @@ export default function MerchantTemplatePage() {
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (!storeId) {
-      setErr("Missing storeId in URL.");
+      setErr(t("cloudinaryErrors.missingStoreId"));
       return;
     }
 
     if (!cloudName || !uploadPreset) {
-      setErr("Missing Cloudinary environment variables.");
+      setErr(t("cloudinaryErrors.missingEnv"));
       return;
     }
 
     if (!window.cloudinary) {
-      setErr("Cloudinary widget not ready yet.");
+      setErr(t("cloudinaryErrors.widgetNotReady"));
       return;
     }
 
@@ -445,7 +443,7 @@ export default function MerchantTemplatePage() {
       (error, result) => {
         if (error) {
           setUploadingLogo(false);
-          setErr("Logo upload failed.");
+          setErr(t("cloudinaryErrors.uploadFailed"));
           return;
         }
 
@@ -457,7 +455,7 @@ export default function MerchantTemplatePage() {
 
           if (!secureUrl) {
             setUploadingLogo(false);
-            setErr("Cloudinary did not return an image URL.");
+            setErr(t("cloudinaryErrors.missingImageUrl"));
             return;
           }
 
@@ -468,7 +466,7 @@ export default function MerchantTemplatePage() {
             })
           );
           setUploadingLogo(false);
-          setMsg("Logo uploaded successfully.");
+          setMsg(t("cloudinarySuccess.logoUploaded"));
           return;
         }
 
@@ -490,7 +488,7 @@ export default function MerchantTemplatePage() {
 
     try {
       if (!storeId) {
-        setErr("Missing storeId in URL.");
+        setErr(t("cloudinaryErrors.missingStoreId"));
         setTpl(DEFAULT);
         return;
       }
@@ -518,19 +516,11 @@ export default function MerchantTemplatePage() {
         bgImageUrl?: string;
       };
 
-      const compatBgImageEnabled =
-        typeof raw?.bgImageEnabled === "boolean"
-          ? raw.bgImageEnabled
-          : raw?.bgType === "image" ||
-            !!(raw?.bgImageUrl && String(raw.bgImageUrl).trim());
-
       const merged: CardTemplate = {
         ...DEFAULT,
         ...raw,
         bgType:
-          raw.bgType === "color" ||
-          raw.bgType === "gradient" ||
-          raw.bgType === "image"
+          raw.bgType === "color" || raw.bgType === "gradient"
             ? raw.bgType
             : "color",
         gradient: {
@@ -540,13 +530,9 @@ export default function MerchantTemplatePage() {
         },
         logoBox: normalizeBox(raw?.logoBox, DEFAULT.logoBox),
         bgImageBox: normalizeBox(raw?.bgImageBox, DEFAULT.bgImageBox),
-        bgImageEnabled: compatBgImageEnabled,
-        bgImageOpacity: clampNumber(
-          raw?.bgImageOpacity,
-          0,
-          1,
-          DEFAULT.bgImageOpacity
-        ),
+        bgImageEnabled: false,
+        bgImageOpacity: DEFAULT.bgImageOpacity,
+        bgImageUrl: "",
       };
 
       if (!FONT_OPTIONS.some((f) => f.key === merged.font)) merged.font = "inter";
@@ -573,7 +559,7 @@ export default function MerchantTemplatePage() {
 
     try {
       if (!storeId) {
-        setErr("Missing storeId in URL.");
+        setErr(t("cloudinaryErrors.missingStoreId"));
         return;
       }
 
@@ -599,7 +585,7 @@ export default function MerchantTemplatePage() {
         title: (tpl.title || "").slice(0, 40),
         textColor: clampHex(tpl.textColor) || DEFAULT.textColor,
         font: FONT_OPTIONS.some((f) => f.key === tpl.font) ? tpl.font : "inter",
-        bgType: tpl.bgType,
+        bgType: tpl.bgType === "gradient" ? "gradient" : "color",
         bgColor: clampHex(tpl.bgColor) || DEFAULT.bgColor,
         gradient: {
           from: clampHex(tpl.gradient.from) || DEFAULT.gradient.from,
@@ -612,14 +598,9 @@ export default function MerchantTemplatePage() {
           ),
         },
         logoUrl: (tpl.logoUrl || "").slice(0, 500),
-        bgImageUrl: (tpl.bgImageUrl || "").slice(0, 500),
-        bgImageEnabled: !!tpl.bgImageEnabled,
-        bgImageOpacity: clampNumber(
-          tpl.bgImageOpacity,
-          0,
-          1,
-          DEFAULT.bgImageOpacity
-        ),
+        bgImageUrl: "",
+        bgImageEnabled: false,
+        bgImageOpacity: DEFAULT.bgImageOpacity,
         logoBox: normalizeBox(tpl.logoBox, DEFAULT.logoBox),
         bgImageBox: normalizeBox(tpl.bgImageBox, DEFAULT.bgImageBox),
       });
@@ -1042,10 +1023,10 @@ export default function MerchantTemplatePage() {
               }}
             >
               {uploadingLogo
-                ? "Uploading logo..."
+                ? t("cloudinaryButtons.uploadingLogo")
                 : cloudinaryReady
-                  ? "Browse logo"
-                  : "Loading uploader..."}
+                  ? t("cloudinaryButtons.browseLogo")
+                  : t("cloudinaryButtons.loadingUploader")}
             </button>
 
             {!!tpl.logoUrl && (
@@ -1066,131 +1047,13 @@ export default function MerchantTemplatePage() {
                   cursor: "pointer",
                 }}
               >
-                Remove logo
+                {t("cloudinaryButtons.removeLogo")}
               </button>
             )}
           </div>
-
-          <div style={{ fontSize: 12, color: "#71717a", marginBottom: 14 }}>
-            Use the button above to upload a public logo with Cloudinary, or paste a logo URL manually.
-          </div>
-
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            {t("backgroundImageUrl")}
-          </div>
-          <input
-            value={tpl.bgImageUrl || ""}
-            onChange={(e) =>
-              setTpl({ ...tpl, bgImageUrl: e.target.value, bgImageEnabled: true })
-            }
-            placeholder={t("backgroundImagePlaceholder")}
-            style={inputStyle}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              marginTop: 8,
-              marginBottom: 12,
-            }}
-          >
-            {!!tpl.bgImageUrl && (
-              <button
-                type="button"
-                onClick={() =>
-                  setTpl((prev) => ({
-                    ...prev,
-                    bgImageUrl: "",
-                    bgImageEnabled: false,
-                  }))
-                }
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid #d4d4d8",
-                  background: "#fff",
-                  color: "#18181b",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Remove background
-              </button>
-            )}
-          </div>
-
-          <label
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              fontWeight: 900,
-              flexWrap: "wrap",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={tpl.bgImageEnabled}
-              onChange={(e) => setTpl({ ...tpl, bgImageEnabled: e.target.checked })}
-            />
-            {t("showBackgroundImage")}
-          </label>
-
-          <div style={{ height: 10 }} />
-
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>
-            {t("imageOpacity")}: {Math.round(tpl.bgImageOpacity * 100)}%
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(tpl.bgImageOpacity * 100)}
-            onChange={(e) =>
-              setTpl({ ...tpl, bgImageOpacity: Number(e.target.value) / 100 })
-            }
-            style={{ width: "100%" }}
-          />
 
           <div style={{ fontSize: 12, color: "#71717a", marginTop: 8 }}>
-            {t("imagesHelp")}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "fonts" ? (
-        <div>
-          <SectionTitle>{t("tabs.fonts")}</SectionTitle>
-          <div style={{ display: "grid", gap: 10 }}>
-            {FONT_OPTIONS.map((f) => {
-              const active = tpl.font === f.key;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setTpl({ ...tpl, font: f.key })}
-                  style={{
-                    textAlign: "left",
-                    padding: 12,
-                    borderRadius: 14,
-                    border: active ? "2px solid #18181b" : "1px solid #d4d4d8",
-                    background: "#fff",
-                    color: "#18181b",
-                    cursor: "pointer",
-                    minWidth: 0,
-                  }}
-                >
-                  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
-                    {f.label}
-                  </div>
-                  <div style={{ fontFamily: f.family, fontWeight: 900, fontSize: 18 }}>
-                    {t("previewTitleExample")}
-                  </div>
-                </button>
-              );
-            })}
+            {t("cloudinaryHelp.logoOnly")}
           </div>
         </div>
       ) : null}
@@ -1245,24 +1108,6 @@ export default function MerchantTemplatePage() {
               {t("editLogo")}
             </label>
 
-            <label
-              style={{
-                display: "flex",
-                gap: 6,
-                alignItems: "center",
-                fontSize: 12,
-                color: "#52525b",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={editBg}
-                disabled={loading}
-                onChange={(e) => setEditBg(e.target.checked)}
-              />
-              {t("editBackground")}
-            </label>
-
             <div style={{ color: "#71717a", fontSize: 12 }}>
               {loading ? t("loading") : t("live")} • {storeId || "no-store"}
             </div>
@@ -1278,7 +1123,7 @@ export default function MerchantTemplatePage() {
             fontOptions={FONT_OPTIONS}
             cardBaseStyle={cardBaseStyle}
             editLogo={!loading && editLogo}
-            editBg={!loading && editBg}
+            editBg={false}
             previewScore={t("previewScore")}
             loyaltyCardText={t("loyaltyCard")}
             loyaltyProgramText={t("loyaltyProgram")}
