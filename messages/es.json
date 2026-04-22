@@ -4,13 +4,27 @@
     "fr": "Francés",
     "es": "Español"
   },
+  "languageMenu": {
+    "aria": "Cambiar idioma",
+    "title": "Idioma",
+    "current": "Actual",
+    "fr": "Francés",
+    "en": "Inglés",
+    "es": "Español"
+  },
+  "profileMenu": {
+    "aria": "Abrir menú del perfil",
+    "title": "Cuenta",
+    "logout": "Cerrar sesión",
+    "deleteAccount": "Eliminar cuenta"
+  },
   "clientLogin": {
     "title": {
       "login": "Inicio de sesión cliente",
-      "signup": "Crear una cuenta de cliente"
+      "signup": "Crear una cuenta cliente"
     },
     "placeholders": {
-      "email": "Correo electrónico",
+      "email": "Email",
       "password": "Contraseña"
     },
     "buttons": {
@@ -23,12 +37,12 @@
     },
     "forgotPassword": {
       "button": "¿Olvidaste tu contraseña?",
-      "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
+      "emailRequired": "Introduce tu email para restablecer tu contraseña.",
       "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
       "resetFailed": "No se pudo enviar el correo de restablecimiento."
     },
     "errors": {
-      "requiredFields": "Correo y contraseña obligatorios",
+      "requiredFields": "Email y contraseña obligatorios",
       "sessionCreationFailed": "No se pudo crear la sesión",
       "generic": "Ocurrió un error"
     }
@@ -39,9 +53,9 @@
     "title": "Mis wallets",
     "subtitle": "Crea y organiza tus tarjetas de fidelidad",
     "main": "Mi wallet principal",
-    "custom": "Wallet personalizada",
+    "custom": "Wallet personalizado",
     "create": "+ Crear un wallet",
-    "creating": "Creación...",
+    "creating": "Creando...",
     "scan": "Escanear un QR",
     "refresh": "Actualizar",
     "refreshing": "Actualizando...",
@@ -62,7 +76,40 @@
     },
     "confirm": {
       "deleteWallet": "¿Eliminar este wallet?"
+    },
+    "errors": {
+      "unknown": "Error desconocido.",
+      "logoutFailed": "No se pudo cerrar la sesión."
     }
+  },
+  "walletEditor": {
+    "editButton": "Editar",
+    "deleteButton": "Eliminar",
+    "modalCreateTitle": "Crear un wallet",
+    "modalEditMainTitle": "Editar el wallet principal",
+    "modalEditCustomTitle": "Editar el wallet",
+    "modalNameLabel": "Nombre del wallet",
+    "modalColorLabel": "Color del wallet",
+    "modalConfirmCreate": "Crear",
+    "modalConfirmSave": "Guardar",
+    "modalCancel": "Cancelar",
+    "deleteModalTitle": "¿Eliminar este wallet?",
+    "deleteModalDescription": "Este wallet personalizado será eliminado. Las tarjetas volverán al wallet principal.",
+    "deleteModalConfirm": "Eliminar",
+    "deleteModalCancel": "Cancelar",
+    "invalidName": "Nombre de wallet no válido."
+  },
+  "walletDanger": {
+    "sectionTitle": "Zona peligrosa",
+    "sectionDescription": "Elimina definitivamente tu cuenta de cliente, tus tarjetas y tus wallets locales.",
+    "passwordPlaceholder": "Confirma tu contraseña",
+    "button": "Eliminar mi cuenta",
+    "loading": "Eliminando...",
+    "confirmFirst": "Introduce tu contraseña para confirmar la eliminación.",
+    "notAuthenticated": "Cuenta de cliente no conectada.",
+    "deleteApiFailed": "No se pudieron eliminar los datos de la cuenta.",
+    "deleteAuthFailed": "No se pudo eliminar la cuenta de cliente.",
+    "successRedirect": "Cuenta eliminada. Redirigiendo..."
   },
   "scan": {
     "checkingSession": "Verificando la sesión del cliente...",
@@ -78,7 +125,7 @@
     "scanAnother": "Escanear otro cliente",
     "addStamps": "Añadir sellos",
     "detectedCard": "Tarjeta detectada",
-    "scannerActive": "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que elijas escanear otro cliente.",
+    "scannerActive": "Escáner activo. Una vez detectado el cliente, la tarjeta permanece seleccionada hasta que decidas escanear otro cliente.",
     "scannerPaused": "Escáner en pausa.",
     "status": {
       "pending": "Esperando el escaneo...",
@@ -109,12 +156,12 @@
     "headerLabel": "Wallet",
     "realCards_one": "1 tarjeta de fidelidad real",
     "realCards_other": "{count} tarjetas de fidelidad reales",
-    "customWalletReady": "Wallet personalizada lista. La asociación real de tarjetas llegará después.",
+    "customWalletReady": "Wallet personalizado listo. La asociación real de las tarjetas llegará después.",
     "errorTitle": "Error",
     "openCard": "Abrir tarjeta",
     "rewardReady": "Recompensa lista",
     "active": "Activa",
-    "moveCard": "Mover la tarjeta",
+    "moveCard": "Mover tarjeta",
     "moveBackToMain": "Volver al wallet principal",
     "empty": {
       "title": "No hay tarjetas en este wallet",
@@ -132,7 +179,7 @@
     "store": "Comercio",
     "rewardReady": "Recompensa lista",
     "active": "Tarjeta activa",
-    "moveCard": "Mover la tarjeta",
+    "moveCard": "Mover tarjeta",
     "moveBackToMain": "Volver al wallet principal",
     "delete": "Eliminar tarjeta",
     "deleting": "Eliminando...",
@@ -141,7 +188,7 @@
       "loadCards": "Error al cargar las tarjetas",
       "loadCard": "Error al cargar la tarjeta",
       "notFound": "Tarjeta no encontrada",
-      "invalidId": "ID de tarjeta inválido",
+      "invalidId": "ID de tarjeta no válido",
       "deleteFailed": "Error al eliminar"
     }
   },
@@ -149,6 +196,8 @@
     "brand": "FIDELITY WALLET",
     "setupLabel": "Comerciante",
     "setupPreviewLabel": "Configuración comerciante",
+    "sectionMerchant": "Merchant",
+    "setupTitle": "Configuración merchant",
     "loading": "Cargando...",
     "logoutLoading": "Cerrando sesión...",
     "logout": "Cerrar sesión",
@@ -162,16 +211,28 @@
     "regenerate": "Regenerar QR",
     "qrLoading": "Cargando QR...",
     "qrUnavailable": "QR no disponible",
-    "openScan": "Abrir escáner comerciante",
+    "openScan": "Abrir escáner merchant",
     "customize": "Personalizar la tarjeta",
     "errors": {
-      "loadStore": "Error al cargar el comercio",
+      "loadStore": "Error al cargar el store",
       "network": "Error de red",
       "nameRequired": "Introduce un nombre de comercio",
-      "createStore": "Error de creación",
+      "createStore": "Error al crear",
       "token": "Error de token",
       "logout": "Error al cerrar sesión"
     }
+  },
+  "merchantDanger": {
+    "sectionTitle": "Zona peligrosa",
+    "sectionDescription": "Elimina definitivamente tu cuenta merchant y el comercio vinculado.",
+    "passwordPlaceholder": "Confirma tu contraseña",
+    "button": "Eliminar mi cuenta",
+    "loading": "Eliminando...",
+    "confirmFirst": "Introduce tu contraseña para confirmar la eliminación.",
+    "notAuthenticated": "Cuenta merchant no conectada.",
+    "deleteApiFailed": "No se pudieron eliminar los datos del comercio.",
+    "deleteAuthFailed": "No se pudo eliminar la cuenta merchant.",
+    "successRedirect": "Cuenta eliminada. Redirigiendo..."
   },
   "merchantLogin": {
     "title": {
@@ -179,11 +240,11 @@
       "signup": "Crear una cuenta merchant"
     },
     "subtitle": {
-      "login": "Inicia sesión para acceder a tu espacio de comerciante",
+      "login": "Inicia sesión para acceder a tu espacio comerciante",
       "signup": "Crea tu cuenta para gestionar tu comercio"
     },
     "placeholders": {
-      "email": "Correo electrónico",
+      "email": "Email",
       "password": "Contraseña"
     },
     "buttons": {
@@ -196,14 +257,14 @@
     },
     "forgotPassword": {
       "button": "¿Olvidaste tu contraseña?",
-      "emailRequired": "Introduce tu correo para restablecer tu contraseña.",
+      "emailRequired": "Introduce tu email para restablecer tu contraseña.",
       "resetSent": "Correo de restablecimiento enviado. Revisa tu bandeja de entrada.",
       "resetFailed": "No se pudo enviar el correo de restablecimiento."
     },
     "errors": {
-      "requiredFields": "Correo y contraseña obligatorios",
+      "requiredFields": "Email y contraseña obligatorios",
       "sessionLogin": "Error de sesión",
-      "login": "Error de inicio de sesión"
+      "login": "Error de conexión"
     }
   },
   "merchantQr": {
@@ -221,7 +282,7 @@
     "note": "Nota: en local, el QR contendrá tu IP/puerto. En producción, será tu dominio."
   },
   "merchantTemplate": {
-    "pageTitle": "Creador de tarjetas",
+    "pageTitle": "Creador de tarjeta",
     "pageDescription": "Personaliza el estilo, los colores, el logo y la disposición.",
     "merchantTemplate": "Template merchant",
     "back": "Volver",
@@ -231,9 +292,9 @@
     "loading": "Cargando...",
     "saved": "Template guardado ✅",
     "error": "Error",
-    "confirmPassword": "Confirmar contraseña",
+    "confirmPassword": "Confirmar la contraseña",
     "confirmPasswordPlaceholder": "Vuelve a escribir la contraseña de la cuenta merchant",
-    "resetLayout": "Restablecer diseño",
+    "resetLayout": "Restablecer la disposición",
     "titleLabel": "Título de la tarjeta",
     "presets": "Estilos predefinidos",
     "background": "Fondo",
@@ -248,16 +309,16 @@
     "logoUrlPlaceholder": "https://.../logo.png",
     "backgroundImageUrl": "URL de la imagen de fondo",
     "backgroundImagePlaceholder": "https://.../background.jpg",
-    "showBackgroundImage": "Mostrar imagen de fondo",
+    "showBackgroundImage": "Mostrar la imagen de fondo",
     "imageOpacity": "Opacidad de la imagen",
-    "imagesHelp": "Puedes añadir un logo y una imagen de fondo. Luego muévelos y redimensiónalos directamente en la vista previa.",
+    "imagesHelp": "Puedes añadir un logo y una imagen de fondo. Luego puedes moverlos y redimensionarlos directamente en la vista previa.",
     "preview": "Vista previa",
     "previewHelp": "La vista previa muestra el resultado final de la tarjeta. Puedes mover y redimensionar el logo directamente sobre ella.",
     "previewScore": "Puntuación",
     "previewTitleExample": "Tarjeta de fidelidad",
     "loyaltyCard": "Tarjeta de fidelidad",
     "loyaltyProgram": "Programa de fidelidad",
-    "ownerPreview": "Vista previa del cliente",
+    "ownerPreview": "Vista previa cliente",
     "live": "En directo",
     "editLogo": "Editar logo",
     "editBackground": "Editar fondo",
@@ -289,8 +350,8 @@
       "loadWidgetFailed": "No se pudo cargar el widget de Cloudinary.",
       "missingStoreId": "Falta storeId en la URL.",
       "missingEnv": "Faltan variables de entorno de Cloudinary.",
-      "widgetNotReady": "El widget de Cloudinary aún no está listo.",
-      "uploadFailed": "Falló la subida del logo.",
+      "widgetNotReady": "El widget de Cloudinary todavía no está listo.",
+      "uploadFailed": "Error al subir el logo.",
       "missingImageUrl": "Cloudinary no devolvió una URL de imagen."
     },
     "cloudinaryAlt": {
@@ -301,21 +362,21 @@
       "save": "No se pudo guardar el template.",
       "network": "Error de red.",
       "passwordRequired": "Introduce la contraseña para confirmar el cambio.",
-      "notAuthenticated": "Cuenta merchant no conectada.",
-      "reauthFailed": "Contraseña incorrecta o no se pudo confirmar."
+      "notAuthenticated": "La cuenta merchant no está conectada.",
+      "reauthFailed": "Contraseña incorrecta o fallo en la confirmación."
     }
   },
   "addClient": {
-    "title": "Añadir tarjeta",
+    "title": "Añadir la tarjeta",
     "token": "Token",
     "empty": "(vacío)",
     "status": "Estado",
     "checkingSession": "Verificando la sesión...",
-    "addingCard": "Añadiendo tarjeta...",
+    "addingCard": "Añadiendo la tarjeta...",
     "success": "Tarjeta lista ✅ Abriendo...",
     "errors": {
       "missingToken": "Falta el token (ejemplo: /add?token=XXXX)",
-      "sessionCheck": "Error al verificar la sesión del cliente",
+      "sessionCheck": "Falló la verificación de sesión del cliente",
       "missingCardId": "Falta cardId en la respuesta del servidor",
       "http": "Error HTTP",
       "network": "Error de red"

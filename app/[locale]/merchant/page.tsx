@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/firebaseClient";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -18,54 +19,6 @@ type MerchantStore = {
     title?: string;
   };
 };
-
-function getDeleteTexts(locale: string) {
-  if (locale === "fr") {
-    return {
-      sectionTitle: "Zone dangereuse",
-      sectionDescription:
-        "Supprime définitivement ton compte merchant et le commerce lié.",
-      passwordPlaceholder: "Confirme ton mot de passe",
-      button: "Supprimer mon compte",
-      loading: "Suppression...",
-      confirmFirst: "Entre ton mot de passe pour confirmer la suppression.",
-      notAuthenticated: "Compte merchant non connecté.",
-      deleteApiFailed: "Impossible de supprimer les données du commerce.",
-      deleteAuthFailed: "Impossible de supprimer le compte merchant.",
-      successRedirect: "Compte supprimé. Redirection...",
-    };
-  }
-
-  if (locale === "es") {
-    return {
-      sectionTitle: "Zona peligrosa",
-      sectionDescription:
-        "Elimina definitivamente tu cuenta merchant y el comercio vinculado.",
-      passwordPlaceholder: "Confirma tu contraseña",
-      button: "Eliminar mi cuenta",
-      loading: "Eliminando...",
-      confirmFirst: "Introduce tu contraseña para confirmar la eliminación.",
-      notAuthenticated: "Cuenta merchant no conectada.",
-      deleteApiFailed: "No se pudieron eliminar los datos del comercio.",
-      deleteAuthFailed: "No se pudo eliminar la cuenta merchant.",
-      successRedirect: "Cuenta eliminada. Redirigiendo...",
-    };
-  }
-
-  return {
-    sectionTitle: "Danger zone",
-    sectionDescription:
-      "Permanently delete your merchant account and the linked store.",
-    passwordPlaceholder: "Confirm your password",
-    button: "Delete my account",
-    loading: "Deleting...",
-    confirmFirst: "Enter your password to confirm deletion.",
-    notAuthenticated: "Merchant account is not signed in.",
-    deleteApiFailed: "Could not delete store data.",
-    deleteAuthFailed: "Could not delete merchant account.",
-    successRedirect: "Account deleted. Redirecting...",
-  };
-}
 
 function getDisplayStoreName(
   store: MerchantStore | null,
@@ -83,12 +36,32 @@ function getDisplayStoreName(
   return fallback;
 }
 
+function ProfileIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
+}
+
 export default function MerchantPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("merchant");
-  const deleteTexts = useMemo(() => getDeleteTexts(locale), [locale]);
+  const tProfile = useTranslations("profileMenu");
+  const tDanger = useTranslations("merchantDanger");
 
   const [store, setStore] = useState<MerchantStore | null>(null);
   const [storeLoading, setStoreLoading] = useState(true);
@@ -107,6 +80,9 @@ export default function MerchantPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteInfo, setDeleteInfo] = useState("");
+
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   async function redirectToMerchantLogin() {
     router.replace(
@@ -220,6 +196,7 @@ export default function MerchantPage() {
     try {
       setLogoutLoading(true);
       setStoreError("");
+      setProfileMenuOpen(false);
 
       await signOut(auth).catch(() => null);
 
@@ -244,11 +221,12 @@ export default function MerchantPage() {
     try {
       setDeleteError("");
       setDeleteInfo("");
+      setProfileMenuOpen(false);
 
       const cleanPassword = deletePassword.trim();
 
       if (!cleanPassword) {
-        setDeleteError(deleteTexts.confirmFirst);
+        setDeleteError(tDanger("confirmFirst"));
         return;
       }
 
@@ -256,7 +234,7 @@ export default function MerchantPage() {
       const email = user?.email || "";
 
       if (!user || !email) {
-        setDeleteError(deleteTexts.notAuthenticated);
+        setDeleteError(tDanger("notAuthenticated"));
         return;
       }
 
@@ -278,7 +256,7 @@ export default function MerchantPage() {
       }
 
       if (!deleteRes.ok) {
-        throw new Error(deleteData?.error || deleteTexts.deleteApiFailed);
+        throw new Error(deleteData?.error || tDanger("deleteApiFailed"));
       }
 
       await user.delete();
@@ -287,13 +265,13 @@ export default function MerchantPage() {
         method: "POST",
       }).catch(() => null);
 
-      setDeleteInfo(deleteTexts.successRedirect);
+      setDeleteInfo(tDanger("successRedirect"));
       setDeletePassword("");
 
       router.replace(`/${locale}/merchant/login`);
       router.refresh();
     } catch (e: any) {
-      const message = e?.message || deleteTexts.deleteAuthFailed;
+      const message = e?.message || tDanger("deleteAuthFailed");
       setDeleteError(message);
     } finally {
       setDeleteLoading(false);
@@ -314,6 +292,27 @@ export default function MerchantPage() {
     }
   }, [store?.storeId]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   const claimUrl = useMemo(() => {
     if (!token) return "";
     if (typeof window === "undefined") return "";
@@ -327,6 +326,7 @@ export default function MerchantPage() {
 
   const deletePanel = (
     <section
+      id="merchant-danger-zone"
       style={{
         width: "100%",
         maxWidth: 420,
@@ -346,7 +346,7 @@ export default function MerchantPage() {
           marginBottom: 8,
         }}
       >
-        {deleteTexts.sectionTitle}
+        {tDanger("sectionTitle")}
       </div>
 
       <p
@@ -358,14 +358,14 @@ export default function MerchantPage() {
           color: "#7f1d1d",
         }}
       >
-        {deleteTexts.sectionDescription}
+        {tDanger("sectionDescription")}
       </p>
 
       <input
         type="password"
         value={deletePassword}
         onChange={(e) => setDeletePassword(e.target.value)}
-        placeholder={deleteTexts.passwordPlaceholder}
+        placeholder={tDanger("passwordPlaceholder")}
         autoComplete="current-password"
         style={{
           width: "100%",
@@ -395,7 +395,7 @@ export default function MerchantPage() {
           cursor: deleteLoading ? "not-allowed" : "pointer",
         }}
       >
-        {deleteLoading ? `⏳ ${deleteTexts.loading}` : deleteTexts.button}
+        {deleteLoading ? `⏳ ${tDanger("loading")}` : tDanger("button")}
       </button>
 
       {deleteInfo ? (
@@ -462,7 +462,7 @@ export default function MerchantPage() {
           <section
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
               gap: 12,
               flexWrap: "wrap",
@@ -479,7 +479,7 @@ export default function MerchantPage() {
                   marginBottom: 6,
                 }}
               >
-                FIDELITY WALLET
+                {t("brand")}
               </div>
 
               <h1
@@ -504,23 +504,118 @@ export default function MerchantPage() {
               </p>
             </div>
 
-            <button
-              onClick={logout}
-              disabled={logoutLoading}
+            <div
               style={{
-                height: 44,
-                borderRadius: 16,
-                border: "1px solid #a1a1aa",
-                background: "#ffffff",
-                color: "#18181b",
-                padding: "0 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: logoutLoading ? "default" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
-              {logoutLoading ? t("logoutLoading") : t("logout")}
-            </button>
+              <LanguageSwitcher />
+
+              <div
+                ref={profileMenuRef}
+                style={{
+                  position: "relative",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={tProfile("aria")}
+                  title={tProfile("aria")}
+                  onClick={() => setProfileMenuOpen((prev) => !prev)}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 16,
+                    border: "1px solid #d4d4d8",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <ProfileIcon />
+                </button>
+
+                {profileMenuOpen ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 52,
+                      right: 0,
+                      minWidth: 220,
+                      borderRadius: 18,
+                      border: "1px solid #e4e4e7",
+                      background: "#ffffff",
+                      boxShadow: "0 24px 60px rgba(0,0,0,0.16)",
+                      padding: 8,
+                      zIndex: 2000,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "8px 10px 6px",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.7,
+                        color: "#71717a",
+                      }}
+                    >
+                      {tProfile("title")}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={logout}
+                      disabled={logoutLoading}
+                      style={{
+                        width: "100%",
+                        height: 42,
+                        borderRadius: 12,
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#18181b",
+                        textAlign: "left",
+                        padding: "0 12px",
+                        cursor: logoutLoading ? "default" : "pointer",
+                        fontSize: 14,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {logoutLoading ? t("logoutLoading") : tProfile("logout")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        const panel = document.getElementById("merchant-danger-zone");
+                        panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      style={{
+                        width: "100%",
+                        height: 42,
+                        borderRadius: 12,
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#b91c1c",
+                        textAlign: "left",
+                        padding: "0 12px",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {tProfile("deleteAccount")}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </section>
 
           {storeError ? (
@@ -566,7 +661,7 @@ export default function MerchantPage() {
                   marginBottom: 10,
                 }}
               >
-                Merchant
+                {t("sectionMerchant")}
               </div>
 
               <h2
@@ -668,7 +763,7 @@ export default function MerchantPage() {
                     marginBottom: 12,
                   }}
                 >
-                  Merchant setup
+                  {t("setupTitle")}
                 </div>
 
                 <div
@@ -740,7 +835,7 @@ export default function MerchantPage() {
           maxWidth: 420,
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           marginBottom: 20,
           gap: 12,
         }}
@@ -756,22 +851,119 @@ export default function MerchantPage() {
           {displayStoreName}
         </strong>
 
-        <button
-          onClick={logout}
-          disabled={logoutLoading}
+        <div
           style={{
-            padding: "8px 12px",
-            borderRadius: 10,
-            border: "1px solid #d1d5db",
-            background: "#ffffff",
-            color: "#111827",
-            fontWeight: 600,
-            cursor: logoutLoading ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
             flexShrink: 0,
           }}
         >
-          {logoutLoading ? `⏳ ${t("logoutLoading")}` : t("logout")}
-        </button>
+          <LanguageSwitcher />
+
+          <div
+            ref={profileMenuRef}
+            style={{
+              position: "relative",
+            }}
+          >
+            <button
+              type="button"
+              aria-label={tProfile("aria")}
+              title={tProfile("aria")}
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 16,
+                border: "1px solid #d4d4d8",
+                background: "#ffffff",
+                color: "#18181b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <ProfileIcon />
+            </button>
+
+            {profileMenuOpen ? (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 52,
+                  right: 0,
+                  minWidth: 220,
+                  borderRadius: 18,
+                  border: "1px solid #e4e4e7",
+                  background: "#ffffff",
+                  boxShadow: "0 24px 60px rgba(0,0,0,0.16)",
+                  padding: 8,
+                  zIndex: 2000,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "8px 10px 6px",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.7,
+                    color: "#71717a",
+                  }}
+                >
+                  {tProfile("title")}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={logout}
+                  disabled={logoutLoading}
+                  style={{
+                    width: "100%",
+                    height: 42,
+                    borderRadius: 12,
+                    border: "none",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    textAlign: "left",
+                    padding: "0 12px",
+                    cursor: logoutLoading ? "default" : "pointer",
+                    fontSize: 14,
+                    fontWeight: 700,
+                  }}
+                >
+                  {logoutLoading ? t("logoutLoading") : tProfile("logout")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    const panel = document.getElementById("merchant-danger-zone");
+                    panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  style={{
+                    width: "100%",
+                    height: 42,
+                    borderRadius: 12,
+                    border: "none",
+                    background: "#ffffff",
+                    color: "#b91c1c",
+                    textAlign: "left",
+                    padding: "0 12px",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  {tProfile("deleteAccount")}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div

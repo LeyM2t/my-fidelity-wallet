@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import {
@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/firebaseClient";
 import WalletModal from "@/components/WalletModal";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   DEFAULT_CUSTOM_WALLET_COLOR,
   DEFAULT_MAIN_WALLET_COLOR,
@@ -47,117 +48,6 @@ type MainWalletState = {
 
 type WalletModalMode = "create" | "edit-main" | "edit-custom" | null;
 
-function getDeleteTexts(locale: string) {
-  if (locale === "fr") {
-    return {
-      sectionTitle: "Zone dangereuse",
-      sectionDescription:
-        "Supprime définitivement ton compte client, tes cartes et tes wallets locaux.",
-      passwordPlaceholder: "Confirme ton mot de passe",
-      button: "Supprimer mon compte",
-      loading: "Suppression...",
-      confirmFirst: "Entre ton mot de passe pour confirmer la suppression.",
-      notAuthenticated: "Compte client non connecté.",
-      deleteApiFailed: "Impossible de supprimer les données du compte.",
-      deleteAuthFailed: "Impossible de supprimer le compte client.",
-      successRedirect: "Compte supprimé. Redirection...",
-    };
-  }
-
-  if (locale === "es") {
-    return {
-      sectionTitle: "Zona peligrosa",
-      sectionDescription:
-        "Elimina definitivamente tu cuenta de cliente, tus tarjetas y tus wallets locales.",
-      passwordPlaceholder: "Confirma tu contraseña",
-      button: "Eliminar mi cuenta",
-      loading: "Eliminando...",
-      confirmFirst: "Introduce tu contraseña para confirmar la eliminación.",
-      notAuthenticated: "Cuenta de cliente no conectada.",
-      deleteApiFailed: "No se pudieron eliminar los datos de la cuenta.",
-      deleteAuthFailed: "No se pudo eliminar la cuenta de cliente.",
-      successRedirect: "Cuenta eliminada. Redirigiendo...",
-    };
-  }
-
-  return {
-    sectionTitle: "Danger zone",
-    sectionDescription:
-      "Permanently delete your client account, your cards, and your local wallets.",
-    passwordPlaceholder: "Confirm your password",
-    button: "Delete my account",
-    loading: "Deleting...",
-    confirmFirst: "Enter your password to confirm deletion.",
-    notAuthenticated: "Client account is not signed in.",
-    deleteApiFailed: "Could not delete account data.",
-    deleteAuthFailed: "Could not delete client account.",
-    successRedirect: "Account deleted. Redirecting...",
-  };
-}
-
-function getWalletEditorTexts(locale: string) {
-  if (locale === "fr") {
-    return {
-      editButton: "Modifier",
-      deleteButton: "Supprimer",
-      modalCreateTitle: "Créer un wallet",
-      modalEditMainTitle: "Modifier le wallet principal",
-      modalEditCustomTitle: "Modifier le wallet",
-      modalNameLabel: "Nom du wallet",
-      modalColorLabel: "Couleur du wallet",
-      modalConfirmCreate: "Créer",
-      modalConfirmSave: "Enregistrer",
-      modalCancel: "Annuler",
-      deleteModalTitle: "Supprimer ce wallet ?",
-      deleteModalDescription:
-        "Ce wallet personnalisé sera supprimé. Les cartes reviendront dans le wallet principal.",
-      deleteModalConfirm: "Supprimer",
-      deleteModalCancel: "Annuler",
-      invalidName: "Nom de wallet invalide.",
-    };
-  }
-
-  if (locale === "es") {
-    return {
-      editButton: "Editar",
-      deleteButton: "Eliminar",
-      modalCreateTitle: "Crear un wallet",
-      modalEditMainTitle: "Editar el wallet principal",
-      modalEditCustomTitle: "Editar el wallet",
-      modalNameLabel: "Nombre del wallet",
-      modalColorLabel: "Color del wallet",
-      modalConfirmCreate: "Crear",
-      modalConfirmSave: "Guardar",
-      modalCancel: "Cancelar",
-      deleteModalTitle: "¿Eliminar este wallet?",
-      deleteModalDescription:
-        "Este wallet personalizado será eliminado. Las tarjetas volverán al wallet principal.",
-      deleteModalConfirm: "Eliminar",
-      deleteModalCancel: "Cancelar",
-      invalidName: "Nombre de wallet no válido.",
-    };
-  }
-
-  return {
-    editButton: "Edit",
-    deleteButton: "Delete",
-    modalCreateTitle: "Create a wallet",
-    modalEditMainTitle: "Edit main wallet",
-    modalEditCustomTitle: "Edit wallet",
-    modalNameLabel: "Wallet name",
-    modalColorLabel: "Wallet color",
-    modalConfirmCreate: "Create",
-    modalConfirmSave: "Save",
-    modalCancel: "Cancel",
-    deleteModalTitle: "Delete this wallet?",
-    deleteModalDescription:
-      "This custom wallet will be deleted. Its cards will go back to the main wallet.",
-    deleteModalConfirm: "Delete",
-    deleteModalCancel: "Cancel",
-    invalidName: "Invalid wallet name.",
-  };
-}
-
 function buildWalletBackground(color: string, isDefault: boolean) {
   const base =
     color || (isDefault ? DEFAULT_MAIN_WALLET_COLOR : DEFAULT_CUSTOM_WALLET_COLOR);
@@ -167,14 +57,34 @@ function buildWalletBackground(color: string, isDefault: boolean) {
     : `linear-gradient(135deg, ${base} 0%, #854d0e 100%)`;
 }
 
+function ProfileIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const locale = String(params?.locale ?? "en");
   const t = useTranslations("wallet");
+  const tProfile = useTranslations("profileMenu");
+  const tWalletEditor = useTranslations("walletEditor");
+  const tDanger = useTranslations("walletDanger");
 
-  const deleteTexts = useMemo(() => getDeleteTexts(locale), [locale]);
-  const walletEditorTexts = useMemo(() => getWalletEditorTexts(locale), [locale]);
   const colorChoices = useMemo(() => getWalletColorChoices(), []);
 
   const [cards, setCards] = useState<FirestoreCard[]>([]);
@@ -199,6 +109,9 @@ export default function WalletPage() {
   const [walletModalLoading, setWalletModalLoading] = useState(false);
 
   const [walletToDelete, setWalletToDelete] = useState<LocalWallet | null>(null);
+
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const refreshWalletLocalState = useCallback(() => {
     setCustomWallets(loadLocalWallets());
@@ -283,12 +196,12 @@ export default function WalletPage() {
 
       setCards(normalized);
     } catch (e: any) {
-      setError(e?.message ?? "Unknown error");
+      setError(e?.message ?? t("errors.unknown"));
       setCards([]);
     } finally {
       setLoading(false);
     }
-  }, [locale, router]);
+  }, [locale, router, t]);
 
   useEffect(() => {
     refreshWalletLocalState();
@@ -318,9 +231,31 @@ export default function WalletPage() {
     };
   }, [fetchCards, refreshWalletLocalState]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   async function handleLogout() {
     setLoggingOut(true);
     setError("");
+    setProfileMenuOpen(false);
 
     try {
       await signOut(auth).catch(() => null);
@@ -332,7 +267,7 @@ export default function WalletPage() {
       router.replace(`/${locale}/client/login`);
       router.refresh();
     } catch (e: any) {
-      setError(e?.message ?? "Logout failed");
+      setError(e?.message ?? t("errors.logoutFailed"));
       setLoggingOut(false);
     }
   }
@@ -341,11 +276,12 @@ export default function WalletPage() {
     try {
       setDeleteError("");
       setDeleteInfo("");
+      setProfileMenuOpen(false);
 
       const cleanPassword = deletePassword.trim();
 
       if (!cleanPassword) {
-        setDeleteError(deleteTexts.confirmFirst);
+        setDeleteError(tDanger("confirmFirst"));
         return;
       }
 
@@ -353,7 +289,7 @@ export default function WalletPage() {
       const email = user?.email || "";
 
       if (!user || !email) {
-        setDeleteError(deleteTexts.notAuthenticated);
+        setDeleteError(tDanger("notAuthenticated"));
         return;
       }
 
@@ -375,7 +311,7 @@ export default function WalletPage() {
       }
 
       if (!deleteRes.ok) {
-        throw new Error(deleteData?.error || deleteTexts.deleteApiFailed);
+        throw new Error(deleteData?.error || tDanger("deleteApiFailed"));
       }
 
       await user.delete();
@@ -391,12 +327,12 @@ export default function WalletPage() {
         color: DEFAULT_MAIN_WALLET_COLOR,
       });
       setDeletePassword("");
-      setDeleteInfo(deleteTexts.successRedirect);
+      setDeleteInfo(tDanger("successRedirect"));
 
       router.replace(`/${locale}/client/login`);
       router.refresh();
     } catch (e: any) {
-      const message = e?.message || deleteTexts.deleteAuthFailed;
+      const message = e?.message || tDanger("deleteAuthFailed");
       setDeleteError(message);
     } finally {
       setDeleteLoading(false);
@@ -428,7 +364,7 @@ export default function WalletPage() {
     const trimmedName = payload.name.trim();
 
     if (!trimmedName) {
-      setError(walletEditorTexts.invalidName);
+      setError(tWalletEditor("invalidName"));
       return;
     }
 
@@ -477,7 +413,7 @@ export default function WalletPage() {
         setWalletModalMode(null);
       }
     } catch (e: any) {
-      setError(e?.message ?? walletEditorTexts.invalidName);
+      setError(e?.message ?? tWalletEditor("invalidName"));
     } finally {
       setWalletModalLoading(false);
       setCreatingWallet(false);
@@ -542,15 +478,15 @@ export default function WalletPage() {
 
   const currentModalTitle =
     walletModalMode === "create"
-      ? walletEditorTexts.modalCreateTitle
+      ? tWalletEditor("modalCreateTitle")
       : walletModalMode === "edit-main"
-        ? walletEditorTexts.modalEditMainTitle
-        : walletEditorTexts.modalEditCustomTitle;
+        ? tWalletEditor("modalEditMainTitle")
+        : tWalletEditor("modalEditCustomTitle");
 
   const currentModalConfirm =
     walletModalMode === "create"
-      ? walletEditorTexts.modalConfirmCreate
-      : walletEditorTexts.modalConfirmSave;
+      ? tWalletEditor("modalConfirmCreate")
+      : tWalletEditor("modalConfirmSave");
 
   const deletePanel = (
     <section
@@ -563,7 +499,7 @@ export default function WalletPage() {
       }}
     >
       <div style={{ fontWeight: 800, marginBottom: 8 }}>
-        {deleteTexts.sectionTitle}
+        {tDanger("sectionTitle")}
       </div>
 
       <div
@@ -573,14 +509,14 @@ export default function WalletPage() {
           marginBottom: 12,
         }}
       >
-        {deleteTexts.sectionDescription}
+        {tDanger("sectionDescription")}
       </div>
 
       <input
         type="password"
         value={deletePassword}
         onChange={(e) => setDeletePassword(e.target.value)}
-        placeholder={deleteTexts.passwordPlaceholder}
+        placeholder={tDanger("passwordPlaceholder")}
         autoComplete="current-password"
         style={{
           width: "100%",
@@ -610,7 +546,7 @@ export default function WalletPage() {
           cursor: deleteLoading ? "not-allowed" : "pointer",
         }}
       >
-        {deleteLoading ? `⏳ ${deleteTexts.loading}` : deleteTexts.button}
+        {deleteLoading ? `⏳ ${tDanger("loading")}` : tDanger("button")}
       </button>
 
       {deleteInfo ? (
@@ -668,7 +604,7 @@ export default function WalletPage() {
           <section
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
               gap: 12,
               flexWrap: "wrap",
@@ -710,23 +646,118 @@ export default function WalletPage() {
               </p>
             </div>
 
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
+            <div
               style={{
-                height: 44,
-                borderRadius: 16,
-                border: "1px solid #a1a1aa",
-                background: "#ffffff",
-                color: "#18181b",
-                padding: "0 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: loggingOut ? "default" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
-              {loggingOut ? t("logoutLoading") : t("logout")}
-            </button>
+              <LanguageSwitcher />
+
+              <div
+                ref={profileMenuRef}
+                style={{
+                  position: "relative",
+                }}
+              >
+                <button
+                  type="button"
+                  aria-label={tProfile("aria")}
+                  title={tProfile("aria")}
+                  onClick={() => setProfileMenuOpen((prev) => !prev)}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 16,
+                    border: "1px solid #d4d4d8",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <ProfileIcon />
+                </button>
+
+                {profileMenuOpen ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 52,
+                      right: 0,
+                      minWidth: 220,
+                      borderRadius: 18,
+                      border: "1px solid #e4e4e7",
+                      background: "#ffffff",
+                      boxShadow: "0 24px 60px rgba(0,0,0,0.16)",
+                      padding: 8,
+                      zIndex: 2000,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "8px 10px 6px",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.7,
+                        color: "#71717a",
+                      }}
+                    >
+                      {tProfile("title")}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      style={{
+                        width: "100%",
+                        height: 42,
+                        borderRadius: 12,
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#18181b",
+                        textAlign: "left",
+                        padding: "0 12px",
+                        cursor: loggingOut ? "default" : "pointer",
+                        fontSize: 14,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {loggingOut ? t("logoutLoading") : tProfile("logout")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        const panel = document.getElementById("wallet-danger-zone");
+                        panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      style={{
+                        width: "100%",
+                        height: 42,
+                        borderRadius: 12,
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#b91c1c",
+                        textAlign: "left",
+                        padding: "0 12px",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {tProfile("deleteAccount")}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </section>
 
           <section
@@ -926,7 +957,7 @@ export default function WalletPage() {
                             cursor: "pointer",
                           }}
                         >
-                          {walletEditorTexts.editButton}
+                          {tWalletEditor("editButton")}
                         </button>
 
                         {isCustom ? (
@@ -950,7 +981,7 @@ export default function WalletPage() {
                               cursor: "pointer",
                             }}
                           >
-                            {walletEditorTexts.deleteButton}
+                            {tWalletEditor("deleteButton")}
                           </button>
                         ) : null}
                       </div>
@@ -1011,17 +1042,17 @@ export default function WalletPage() {
             </section>
           ) : null}
 
-          {deletePanel}
+          <div id="wallet-danger-zone">{deletePanel}</div>
         </div>
       </main>
 
       <WalletModal
         open={walletModalMode !== null}
         title={currentModalTitle}
-        nameLabel={walletEditorTexts.modalNameLabel}
-        colorLabel={walletEditorTexts.modalColorLabel}
+        nameLabel={tWalletEditor("modalNameLabel")}
+        colorLabel={tWalletEditor("modalColorLabel")}
         confirmLabel={currentModalConfirm}
-        cancelLabel={walletEditorTexts.modalCancel}
+        cancelLabel={tWalletEditor("modalCancel")}
         initialName={currentModalName}
         initialColor={currentModalColor}
         colors={colorChoices}
@@ -1073,7 +1104,7 @@ export default function WalletPage() {
                   marginBottom: 8,
                 }}
               >
-                {walletEditorTexts.deleteModalTitle}
+                {tWalletEditor("deleteModalTitle")}
               </div>
 
               <div
@@ -1083,7 +1114,7 @@ export default function WalletPage() {
                   color: "#52525b",
                 }}
               >
-                {walletEditorTexts.deleteModalDescription}
+                {tWalletEditor("deleteModalDescription")}
               </div>
             </div>
 
@@ -1111,7 +1142,7 @@ export default function WalletPage() {
                   cursor: "pointer",
                 }}
               >
-                {walletEditorTexts.deleteModalCancel}
+                {tWalletEditor("deleteModalCancel")}
               </button>
 
               <button
@@ -1129,7 +1160,7 @@ export default function WalletPage() {
                   cursor: "pointer",
                 }}
               >
-                {walletEditorTexts.deleteModalConfirm}
+                {tWalletEditor("deleteModalConfirm")}
               </button>
             </div>
           </div>

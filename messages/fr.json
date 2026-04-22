@@ -4,6 +4,20 @@
     "fr": "Français",
     "es": "Espagnol"
   },
+  "languageMenu": {
+    "aria": "Changer de langue",
+    "title": "Langue",
+    "current": "Actuel",
+    "fr": "Français",
+    "en": "Anglais",
+    "es": "Espagnol"
+  },
+  "profileMenu": {
+    "aria": "Ouvrir le menu du profil",
+    "title": "Compte",
+    "logout": "Se déconnecter",
+    "deleteAccount": "Supprimer le compte"
+  },
   "clientLogin": {
     "title": {
       "login": "Connexion client",
@@ -62,7 +76,40 @@
     },
     "confirm": {
       "deleteWallet": "Supprimer ce wallet ?"
+    },
+    "errors": {
+      "unknown": "Erreur inconnue.",
+      "logoutFailed": "Échec de la déconnexion."
     }
+  },
+  "walletEditor": {
+    "editButton": "Modifier",
+    "deleteButton": "Supprimer",
+    "modalCreateTitle": "Créer un wallet",
+    "modalEditMainTitle": "Modifier le wallet principal",
+    "modalEditCustomTitle": "Modifier le wallet",
+    "modalNameLabel": "Nom du wallet",
+    "modalColorLabel": "Couleur du wallet",
+    "modalConfirmCreate": "Créer",
+    "modalConfirmSave": "Enregistrer",
+    "modalCancel": "Annuler",
+    "deleteModalTitle": "Supprimer ce wallet ?",
+    "deleteModalDescription": "Ce wallet personnalisé sera supprimé. Les cartes reviendront dans le wallet principal.",
+    "deleteModalConfirm": "Supprimer",
+    "deleteModalCancel": "Annuler",
+    "invalidName": "Nom de wallet invalide."
+  },
+  "walletDanger": {
+    "sectionTitle": "Zone dangereuse",
+    "sectionDescription": "Supprime définitivement ton compte client, tes cartes et tes wallets locaux.",
+    "passwordPlaceholder": "Confirme ton mot de passe",
+    "button": "Supprimer mon compte",
+    "loading": "Suppression...",
+    "confirmFirst": "Entre ton mot de passe pour confirmer la suppression.",
+    "notAuthenticated": "Compte client non connecté.",
+    "deleteApiFailed": "Impossible de supprimer les données du compte.",
+    "deleteAuthFailed": "Impossible de supprimer le compte client.",
+    "successRedirect": "Compte supprimé. Redirection..."
   },
   "scan": {
     "checkingSession": "Vérification de la session client...",
@@ -149,6 +196,8 @@
     "brand": "FIDELITY WALLET",
     "setupLabel": "Commerçant",
     "setupPreviewLabel": "Configuration commerçant",
+    "sectionMerchant": "Merchant",
+    "setupTitle": "Configuration merchant",
     "loading": "Chargement...",
     "logoutLoading": "Déconnexion...",
     "logout": "Se déconnecter",
@@ -172,6 +221,18 @@
       "token": "Erreur token",
       "logout": "Erreur logout"
     }
+  },
+  "merchantDanger": {
+    "sectionTitle": "Zone dangereuse",
+    "sectionDescription": "Supprime définitivement ton compte merchant et le commerce lié.",
+    "passwordPlaceholder": "Confirme ton mot de passe",
+    "button": "Supprimer mon compte",
+    "loading": "Suppression...",
+    "confirmFirst": "Entre ton mot de passe pour confirmer la suppression.",
+    "notAuthenticated": "Compte merchant non connecté.",
+    "deleteApiFailed": "Impossible de supprimer les données du commerce.",
+    "deleteAuthFailed": "Impossible de supprimer le compte merchant.",
+    "successRedirect": "Compte supprimé. Redirection..."
   },
   "merchantLogin": {
     "title": {
