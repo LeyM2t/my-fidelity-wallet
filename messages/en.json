@@ -19,6 +19,10 @@
     "deleteAccount": "Delete account"
   },
   "clientLogin": {
+    "password": {
+  "show": "Mostrar contraseña",
+  "hide": "Ocultar contraseña"
+},
     "title": {
       "login": "Client login",
       "signup": "Create client account"

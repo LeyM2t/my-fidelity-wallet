@@ -36,6 +36,7 @@ export default function ClientLoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
@@ -96,8 +97,7 @@ export default function ClientLoginPage() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t("errors.generic");
+      const message = err instanceof Error ? err.message : t("errors.generic");
       setError(message);
     } finally {
       setLoading(false);
@@ -196,26 +196,53 @@ export default function ClientLoginPage() {
             />
 
             <div style={{ display: "grid", gap: 10 }}>
-              <input
-                type="password"
-                placeholder={t("placeholders.password")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
-                }
-                style={{
-                  width: "100%",
-                  padding: "18px 20px",
-                  borderRadius: 18,
-                  border: "1px solid #d1d5db",
-                  fontSize: 16,
-                  color: "#111827",
-                  background: "#ffffff",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t("placeholders.password")}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  style={{
+                    width: "100%",
+                    padding: "18px 56px 18px 20px",
+                    borderRadius: 18,
+                    border: "1px solid #d1d5db",
+                    fontSize: 16,
+                    color: "#111827",
+                    background: "#ffffff",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={t(showPassword ? "password.hide" : "password.show")}
+                  title={t(showPassword ? "password.hide" : "password.show")}
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    border: "1px solid #d1d5db",
+                    background: "#ffffff",
+                    color: "#111827",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
 
               {mode === "login" ? (
                 <button
@@ -268,6 +295,7 @@ export default function ClientLoginPage() {
                 setMode((prev) => (prev === "login" ? "signup" : "login"));
                 setError("");
                 setInfo("");
+                setShowPassword(false);
               }}
               style={{
                 width: "100%",

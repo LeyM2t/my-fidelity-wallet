@@ -30,6 +30,7 @@ export default function MerchantLoginPage() {
   const [nextPath, setNextPath] = useState(`/${locale}/merchant`);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -44,11 +45,7 @@ export default function MerchantLoginPage() {
       return;
     }
 
-    if (
-      n.startsWith("/en/") ||
-      n.startsWith("/fr/") ||
-      n.startsWith("/es/")
-    ) {
+    if (n.startsWith("/en/") || n.startsWith("/fr/") || n.startsWith("/es/")) {
       setNextPath(n);
       return;
     }
@@ -201,24 +198,53 @@ export default function MerchantLoginPage() {
             />
 
             <div style={{ display: "grid", gap: 8 }}>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                placeholder={t("placeholders.password")}
-                required
-                autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
-                }
-                style={{
-                  padding: 12,
-                  borderRadius: 12,
-                  border: "1px solid #ddd",
-                  fontSize: 14,
-                  color: "#111",
-                  background: "#fff",
-                }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t("placeholders.password")}
+                  required
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  style={{
+                    width: "100%",
+                    padding: "12px 48px 12px 12px",
+                    borderRadius: 12,
+                    border: "1px solid #ddd",
+                    fontSize: 14,
+                    color: "#111",
+                    background: "#fff",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={t(showPassword ? "password.hide" : "password.show")}
+                  title={t(showPassword ? "password.hide" : "password.show")}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    background: "#fff",
+                    color: "#111",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 15,
+                    lineHeight: 1,
+                  }}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
 
               {mode === "login" ? (
                 <button
@@ -270,6 +296,7 @@ export default function MerchantLoginPage() {
                 setMode((prev) => (prev === "login" ? "signup" : "login"));
                 setErr(null);
                 setInfo("");
+                setShowPassword(false);
               }}
               style={{
                 padding: 12,
