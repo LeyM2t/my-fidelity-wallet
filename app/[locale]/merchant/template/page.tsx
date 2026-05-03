@@ -372,9 +372,9 @@ export default function MerchantTemplatePage() {
   const [viewportReady, setViewportReady] = useState(false);
   const [cloudinaryReady, setCloudinaryReady] = useState(false);
 
-const [saveModalOpen, setSaveModalOpen] = useState(false);
-const [confirmPassword, setConfirmPassword] = useState("");
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const fontFamily = useMemo(() => getFontFamily(tpl.font), [tpl.font]);
 
@@ -1059,6 +1059,70 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
         </div>
       ) : null}
 
+      {activeTab === "fonts" ? (
+        <div>
+          <SectionTitle>{t("tabs.fonts")}</SectionTitle>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gap: 10,
+            }}
+          >
+            {FONT_OPTIONS.map((font) => {
+              const active = tpl.font === font.key;
+
+              return (
+                <button
+                  key={font.key}
+                  type="button"
+                  onClick={() =>
+                    setTpl((prev) => ({
+                      ...prev,
+                      font: font.key,
+                    }))
+                  }
+                  style={{
+                    textAlign: "left",
+                    padding: 12,
+                    borderRadius: 14,
+                    border: active
+                      ? "2px solid #18181b"
+                      : "1px solid #d4d4d8",
+                    background: active ? "#f4f4f5" : "#fff",
+                    color: "#18181b",
+                    cursor: "pointer",
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: font.family,
+                      fontWeight: 900,
+                      fontSize: 18,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {font.label}
+                  </div>
+
+                  <div
+                    style={{
+                      fontFamily: font.family,
+                      fontSize: 14,
+                      color: "#52525b",
+                    }}
+                  >
+                    The quick brown fox
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {activeTab === "images" ? (
         <div>
           <SectionTitle>{t("tabs.images")}</SectionTitle>
@@ -1496,45 +1560,45 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
               }}
             >
               <div style={{ position: "relative" }}>
-  <input
-    type={showConfirmPassword ? "text" : "password"}
-    value={confirmPassword}
-    onChange={(e) => setConfirmPassword(e.target.value)}
-    placeholder={t("confirmPasswordPlaceholder")}
-    autoComplete="current-password"
-    style={{
-      ...inputStyle,
-      paddingRight: 48,
-    }}
-  />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t("confirmPasswordPlaceholder")}
+                  autoComplete="current-password"
+                  style={{
+                    ...inputStyle,
+                    paddingRight: 48,
+                  }}
+                />
 
-  <button
-    type="button"
-    onClick={() => setShowConfirmPassword((prev) => !prev)}
-    aria-label={t(showConfirmPassword ? "password.hide" : "password.show")}
-    title={t(showConfirmPassword ? "password.hide" : "password.show")}
-    style={{
-      position: "absolute",
-      right: 8,
-      top: "50%",
-      transform: "translateY(-50%)",
-      width: 34,
-      height: 34,
-      borderRadius: 10,
-      border: "1px solid #d4d4d8",
-      background: "#ffffff",
-      color: "#18181b",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 15,
-      lineHeight: 1,
-    }}
-  >
-    {showConfirmPassword ? "🙈" : "👁️"}
-  </button>
-</div>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={t(showConfirmPassword ? "password.hide" : "password.show")}
+                  title={t(showConfirmPassword ? "password.hide" : "password.show")}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    border: "1px solid #d4d4d8",
+                    background: "#ffffff",
+                    color: "#18181b",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 15,
+                    lineHeight: 1,
+                  }}
+                >
+                  {showConfirmPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
 
               <button
                 type="button"
