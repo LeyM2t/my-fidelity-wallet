@@ -18,7 +18,9 @@ import { useTranslations } from "next-intl";
 import { auth } from "@/lib/firebaseClient";
 import {
   EmailAuthProvider,
+  onAuthStateChanged,
   reauthenticateWithCredential,
+  type User,
 } from "firebase/auth";
 import TemplatePreviewSticky from "@/components/TemplatePreviewSticky";
 import TemplateEditorCard from "@/components/TemplateEditorCard";
@@ -300,6 +302,44 @@ function TabButton({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <div style={{ fontWeight: 900, marginBottom: 10 }}>{children}</div>;
+}
+
+function waitForCurrentUser(timeoutMs = 5000): Promise<User | null> {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+
+  return new Promise((resolve) => {
+    let done = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const finish = (user: User | null) => {
+      if (done) return;
+      done = true;
+      if (unsubscribe) unsubscribe();
+      resolve(user);
+    };
+
+    const timer = window.setTimeout(() => {
+      finish(auth.currentUser);
+    }, timeoutMs);
+
+    unsubscribe = onAuthStateChanged(auth, (user) => {
+      window.clearTimeout(timer);
+      finish(user);
+    });
+  });
+}
+
+function getFirebaseErrorCode(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+
+  return "";
 }
 
 export default function MerchantTemplatePage() {
@@ -587,12 +627,14 @@ export default function MerchantTemplatePage() {
         return;
       }
 
-      if (!confirmPassword.trim()) {
+      const cleanPassword = confirmPassword.trim();
+
+      if (!cleanPassword) {
         setErr(t("errors.passwordRequired"));
         return;
       }
 
-      const user = auth.currentUser;
+      const user = await waitForCurrentUser();
       const email = user?.email || "";
 
       if (!user || !email) {
@@ -600,8 +642,18 @@ export default function MerchantTemplatePage() {
         return;
       }
 
-      const credential = EmailAuthProvider.credential(email, confirmPassword);
-      await reauthenticateWithCredential(user, credential);
+      const credential = EmailAuthProvider.credential(email, cleanPassword);
+
+      try {
+        await reauthenticateWithCredential(user, credential);
+      } catch (reauthError) {
+        const code = getFirebaseErrorCode(reauthError);
+        const baseMessage =
+          reauthError instanceof Error ? reauthError.message : t("errors.reauthFailed");
+
+        setErr(code ? `${baseMessage} (${code})` : baseMessage);
+        return;
+      }
 
       const idToken = await user.getIdToken(true);
 
