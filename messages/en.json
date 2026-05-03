@@ -285,7 +285,11 @@
     "note": "Note: locally, the QR will contain your IP/port. In production, it will be your domain."
   },
   "merchantTemplate": {
-    "pageTitle": "Card builder",
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "pageTitle": "Card builder",
     "pageDescription": "Customize the style, colors, logo, and layout.",
     "merchantTemplate": "Merchant template",
     "back": "Back",

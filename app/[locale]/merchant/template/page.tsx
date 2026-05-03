@@ -372,8 +372,9 @@ export default function MerchantTemplatePage() {
   const [viewportReady, setViewportReady] = useState(false);
   const [cloudinaryReady, setCloudinaryReady] = useState(false);
 
-  const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState("");
+const [saveModalOpen, setSaveModalOpen] = useState(false);
+const [confirmPassword, setConfirmPassword] = useState("");
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const fontFamily = useMemo(() => getFontFamily(tpl.font), [tpl.font]);
 
@@ -701,6 +702,7 @@ export default function MerchantTemplatePage() {
       setMsg(t("saved"));
       setConfirmPassword("");
       setSaveModalOpen(false);
+      setShowConfirmPassword(false);
       loadedStoreIdRef.current = storeId;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("errors.reauthFailed");
@@ -1433,6 +1435,7 @@ export default function MerchantTemplatePage() {
             if (saving) return;
             setSaveModalOpen(false);
             setConfirmPassword("");
+            setShowConfirmPassword(false);
           }}
           style={{
             position: "fixed",
@@ -1492,14 +1495,46 @@ export default function MerchantTemplatePage() {
                 gap: 12,
               }}
             >
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("confirmPasswordPlaceholder")}
-                autoComplete="current-password"
-                style={inputStyle}
-              />
+              <div style={{ position: "relative" }}>
+  <input
+    type={showConfirmPassword ? "text" : "password"}
+    value={confirmPassword}
+    onChange={(e) => setConfirmPassword(e.target.value)}
+    placeholder={t("confirmPasswordPlaceholder")}
+    autoComplete="current-password"
+    style={{
+      ...inputStyle,
+      paddingRight: 48,
+    }}
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword((prev) => !prev)}
+    aria-label={t(showConfirmPassword ? "password.hide" : "password.show")}
+    title={t(showConfirmPassword ? "password.hide" : "password.show")}
+    style={{
+      position: "absolute",
+      right: 8,
+      top: "50%",
+      transform: "translateY(-50%)",
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      border: "1px solid #d4d4d8",
+      background: "#ffffff",
+      color: "#18181b",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 15,
+      lineHeight: 1,
+    }}
+  >
+    {showConfirmPassword ? "🙈" : "👁️"}
+  </button>
+</div>
 
               <button
                 type="button"
@@ -1525,6 +1560,7 @@ export default function MerchantTemplatePage() {
                   if (saving) return;
                   setSaveModalOpen(false);
                   setConfirmPassword("");
+                  setShowConfirmPassword(false);
                 }}
                 style={{
                   width: "100%",

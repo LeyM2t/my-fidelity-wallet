@@ -285,7 +285,11 @@
     "note": "Nota: en local, el QR contendrá tu IP/puerto. En producción, será tu dominio."
   },
   "merchantTemplate": {
-    "pageTitle": "Creador de tarjeta",
+  "password": {
+    "show": "Mostrar contraseña",
+    "hide": "Ocultar contraseña"
+  },
+  "pageTitle": "Creador de tarjeta",
     "pageDescription": "Personaliza el estilo, los colores, el logo y la disposición.",
     "merchantTemplate": "Template merchant",
     "back": "Volver",

@@ -148,32 +148,32 @@
     }
   },
   "walletDetail": {
-  "back": "Retour",
-  "refresh": "Rafraîchir",
-  "refreshing": "Rafraîchissement...",
-  "mainWallet": "Mon wallet principal",
-  "fallbackWallet": "Wallet",
-  "headerLabel": "Wallet",
-  "realCards_one": "1 vraie carte de fidélité",
-  "realCards_other": "{count} vraies cartes de fidélité",
-  "customWalletReady": "Wallet personnalisé prêt. L’attribution réelle des cartes viendra ensuite.",
-  "errorTitle": "Erreur",
-  "openCard": "Ouvrir la carte",
-  "rewardReady": "Récompense prête",
-  "active": "Active",
-  "moveCard": "Déplacer la carte",
-  "moveBackToMain": "Remettre dans le wallet principal",
-  "searchPlaceholder": "Rechercher une carte par nom...",
-  "searchNoResultTitle": "Aucune carte trouvée",
-  "searchNoResultDescription": "Aucune carte ne correspond à votre recherche dans ce wallet.",
-  "empty": {
-    "title": "Aucune carte dans ce wallet",
-    "description": "C’est normal pour l’instant. Les wallets personnalisés sont déjà visibles dans l’interface, mais l’attribution réelle des cartes sera ajoutée quand nous créerons le modèle Firestore des wallets."
+    "back": "Retour",
+    "refresh": "Rafraîchir",
+    "refreshing": "Rafraîchissement...",
+    "mainWallet": "Mon wallet principal",
+    "fallbackWallet": "Wallet",
+    "headerLabel": "Wallet",
+    "realCards_one": "1 vraie carte de fidélité",
+    "realCards_other": "{count} vraies cartes de fidélité",
+    "customWalletReady": "Wallet personnalisé prêt. L’attribution réelle des cartes viendra ensuite.",
+    "errorTitle": "Erreur",
+    "openCard": "Ouvrir la carte",
+    "rewardReady": "Récompense prête",
+    "active": "Active",
+    "moveCard": "Déplacer la carte",
+    "moveBackToMain": "Remettre dans le wallet principal",
+    "searchPlaceholder": "Rechercher une carte par nom...",
+    "searchNoResultTitle": "Aucune carte trouvée",
+    "searchNoResultDescription": "Aucune carte ne correspond à votre recherche dans ce wallet.",
+    "empty": {
+      "title": "Aucune carte dans ce wallet",
+      "description": "C’est normal pour l’instant. Les wallets personnalisés sont déjà visibles dans l’interface, mais l’attribution réelle des cartes sera ajoutée quand nous créerons le modèle Firestore des wallets."
+    },
+    "errors": {
+      "unknown": "Erreur inconnue"
+    }
   },
-  "errors": {
-    "unknown": "Erreur inconnue"
-  }
-},
   "card": {
     "back": "Retour",
     "loading": "Chargement...",
@@ -285,6 +285,10 @@
     "note": "Note : en local, le QR contiendra ton IP/port. En production, ce sera ton domaine."
   },
   "merchantTemplate": {
+    "password": {
+      "show": "Afficher le mot de passe",
+      "hide": "Masquer le mot de passe"
+    },
     "pageTitle": "Créateur de carte",
     "pageDescription": "Personnalise le style, les couleurs, le logo et la mise en page.",
     "merchantTemplate": "Template merchant",
