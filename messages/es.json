@@ -13,11 +13,12 @@
     "es": "Español"
   },
   "profileMenu": {
-    "aria": "Abrir el menú del perfil",
-    "title": "Cuenta",
-    "logout": "Cerrar sesión",
-    "deleteAccount": "Eliminar cuenta"
-  },
+  "aria": "Abrir el menú del perfil",
+  "title": "Cuenta",
+  "logout": "Cerrar sesión",
+  "deleteAccount": "Eliminar cuenta",
+  "contact": "Contacto"
+},
   "clientLogin": {
     "password": {
   "show": "Mostrar contraseña",

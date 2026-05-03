@@ -643,6 +643,30 @@ export default function WalletPage() {
                       {loggingOut ? t("logoutLoading") : tProfile("logout")}
                     </button>
 
+                    <a
+                      href="mailto:ris.soudage@gmail.com?subject=Question%20My%20Fidelity%20Wallet"
+                      onClick={() => setProfileMenuOpen(false)}
+                      style={{
+                        width: "100%",
+                        height: 42,
+                        borderRadius: 12,
+                        border: "none",
+                        background: "#ffffff",
+                        color: "#18181b",
+                        textAlign: "left",
+                        padding: "0 12px",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        textDecoration: "none",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {tProfile("contact")}
+                    </a>
+
                     <button
                       type="button"
                       onClick={() => {
